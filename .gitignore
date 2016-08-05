@@ -1,0 +1,11 @@
+src/*.swp
+flux
+build/*
+!build/vendors.js
+.idea
+react-tutorial
+./redux
+npm-debug-log
+.haste_cache/*
+coverage/*
+.alm/*
