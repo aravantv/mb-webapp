@@ -1,20 +1,5 @@
-export interface WithKey {
-    key: string
-}
-
-export function named<T>(x: T, name: string): T {
-    (x as any).name = name
-    return x
-}
-
-export function namedObserver<T>(x: T, name: string): T {
-    (x as any).displayName = name
-    return x
-}
-
-export class Ref<T> {
-    constructor(public content: T) { }
-}
+export const ENTER_KEY = 13
+export const ESCAPE_KEY = 27
 
 interface Indexed {
     [key: string]: any
@@ -34,33 +19,6 @@ export function extend<T extends Indexed, U extends Indexed>(first: T, second: U
     return result
 }
 
-export class Option<T> {
-    private none: boolean
-    private value: T
-
-    constructor(none: boolean, value: T) {
-        this.none = none
-        this.value = value
-    }
-
-    public getValue(): T {
-        return this.value
-    }
-
-    public isNone(): boolean {
-        return this.none
-    }
-
-    public is(val: T) {
-        return !this.none && this.value === val
-    }
-}
-
-export const none = new Option(true, null)
-
-export function some<T>(value: T): Option<T> {
-    return new Option(false, value)
-}
-
-export const ESCAPE_KEY = 27
-export const ENTER_KEY = 13
+export const isEnter = (ev: Event) => (ev as KeyboardEvent).keyCode === ENTER_KEY
+export const isEscape = (ev: Event) => (ev as KeyboardEvent).keyCode === ESCAPE_KEY
+export const getText = (ev: Event) => (ev.target as HTMLInputElement).value
