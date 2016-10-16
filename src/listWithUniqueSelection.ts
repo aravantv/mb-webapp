@@ -30,8 +30,9 @@ function get_hack_last_value() {
 
 function ItemComponent(ri: RawInput, initString: string) {
   const subInput = keyMousePreprocessor(ri)
-  const change$ = subInput.change$.startWith(initString).debug()
-  const confirm$ = subInput.confirm$.startWith(null).compose(delay(1)).debug()
+  const initString$ = Stream.of(initString).debug(x => console.log('initString$ ' + x))
+  const change$ = Stream.merge(subInput.change$, initString$).debug(x => console.log('change$ ' + x))
+  const confirm$ = Stream.merge(subInput.confirm$, initString$.map(s => null)).debug(x => console.log('confirm$'))
   return SelectableText(extend({ change$, confirm$ }, subInput))
 }
 
