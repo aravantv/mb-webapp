@@ -17,6 +17,9 @@ export interface Input {
   cancel$: Stream<void>,
   select$: Stream<void>,
   change$: Stream<string>,
+  initUIValue?: string,
+  initValidatedValue?: string,
+  initIsSelected?: boolean,
 }
 
 interface IState {
@@ -35,9 +38,7 @@ export function keyMousePreprocessor(i: RawInput): Input {
   }
 }
 
-const initState: IState = { validatedName: null, uiValue: '', isSelected: true }
-
-function react$(i: Input): Stream<IState> {
+function react$(i: Input, initState: IState): Stream<IState> {
   return Stream.merge(
     i.confirm$.mapTo(s => extend({ validatedName: s.uiValue, isSelected: false }, s)),
     i.cancel$.mapTo(s => extend({ uiValue: s.validatedName, isSelected: false }, s)),
@@ -54,7 +55,10 @@ function render$(s$: Stream<IState>): Stream<VNode> {
 }
 
 export function SelectableText(i: Input): Output {
-  const state$ = react$(i)
+  const isSelected = i.initIsSelected !== null ? i.initIsSelected : true
+  const uiValue = i.initUIValue ? i.initUIValue : ''
+  const validatedName = i.initValidatedValue
+  const state$ = react$(i, { isSelected, uiValue, validatedName })
   return {
     dom: render$(state$),
     confirmed$: state$.map(s => i.confirm$.map(() => s.uiValue)).flatten(),
