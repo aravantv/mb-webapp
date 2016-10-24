@@ -28,6 +28,7 @@
     "@cycle/dom": "*",
     "@cycle/xstream-run": "*",
     "@cycle/isolate": "*",
+    "@cycle/collection": "*",
     "immutable": "*",
     "xstream": "*"
   },
