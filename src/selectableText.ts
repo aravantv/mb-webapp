@@ -41,14 +41,18 @@ export function keyMousePreprocessor(i: RawInput): Input<InputType> {
 
 // "Model"
 function react$(i: Input<InputType>, initState: IState): Stream<IState> {
-  return Stream.merge(
-    filterOnType(i, InputType.Change).map(n => s =>
-      extend({ uiValue: n.payload }, s)),
-    filterOnType(i, InputType.Confirm).mapTo(s =>
-      extend({ validatedName: s.uiValue, isSelected: false }, s)),
-    filterOnType(i, InputType.Cancel).mapTo(s => extend({ uiValue: s.validatedName, isSelected: false }, s)),
-    filterOnType(i, InputType.Select).mapTo(s => extend({ isSelected: true }, s))
-  ).fold((acc, f: (prev: IState) => IState) => f(acc), initState)
+  return i.map(n => s => {
+    switch (n.type) {
+      case InputType.Confirm:
+        return extend({ validatedName: s.uiValue, isSelected: false }, s)
+      case InputType.Cancel:
+        return extend({ uiValue: s.validatedName, isSelected: false }, s)
+      case InputType.Change:
+        return extend({ uiValue: n.payload }, s)
+      case InputType.Select:
+        return extend({ isSelected: true }, s)
+    }
+  }).fold((acc, f: (prev: IState) => IState) => f(acc), initState)
 }
 
 // "View"
