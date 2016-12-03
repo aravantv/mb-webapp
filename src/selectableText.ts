@@ -1,4 +1,4 @@
-import { isEnter, isEscape, getText, extend } from './lib'
+import { isEnter, isEscape, getText, extend, Input, filterOnType } from './lib'
 import { Stream } from 'xstream'
 import { span, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
@@ -8,18 +8,14 @@ export interface RawInput {
 }
 
 export interface Output {
-  dom: Stream<VNode>,
-  confirmed$: Stream<string>,
+  dom: Stream<VNode>
 }
 
-export interface Input {
-  confirm$: Stream<void>,
-  cancel$: Stream<void>,
-  select$: Stream<void>,
-  change$: Stream<string>,
-  initUIValue?: string,
-  initValidatedValue?: string,
-  initIsSelected?: boolean,
+export const enum InputType {
+  Confirm, // no payload
+  Cancel, // no payload
+  Select, // no payload
+  Change, // payload: string
 }
 
 interface IState {
@@ -28,25 +24,34 @@ interface IState {
   isSelected: boolean,
 }
 
-export function keyMousePreprocessor(i: RawInput): Input {
-  const keyups$ = i.dom.select('.field').events('keyup')
-  return {
-    confirm$: keyups$.filter(isEnter).mapTo(null),
-    cancel$: keyups$.filter(isEscape).mapTo(null),
-    change$: keyups$.filter(ev => !isEscape(ev) && !isEnter(ev)).map(getText),
-    select$: i.dom.select('.field').events('dblclick').mapTo(null),
-  }
+function getChange(ev: Event) {
+  return { type: InputType.Change, payload: getText(ev) }
 }
 
-function react$(i: Input, initState: IState): Stream<IState> {
+// "Intent"
+export function keyMousePreprocessor(i: RawInput): Input<InputType> {
+  const keyups$ = i.dom.select('.field').events('keyup')
   return Stream.merge(
-    i.confirm$.mapTo(s => extend({ validatedName: s.uiValue, isSelected: false }, s)),
-    i.cancel$.mapTo(s => extend({ uiValue: s.validatedName, isSelected: false }, s)),
-    i.change$.map(n => s => extend({ uiValue: n }, s)),
-    i.select$.mapTo(s => extend({ isSelected: true }, s))
+    keyups$.filter(isEnter).mapTo({ type: InputType.Confirm }),
+    keyups$.filter(isEscape).mapTo({ type: InputType.Cancel }),
+    keyups$.filter(ev => !isEscape(ev) && !isEnter(ev)).map(getChange),
+    i.dom.select('.field').events('dblclick').mapTo({ type: InputType.Select })
+  )
+}
+
+// "Model"
+function react$(i: Input<InputType>, initState: IState): Stream<IState> {
+  return Stream.merge(
+    filterOnType(i, InputType.Change).map(n => s =>
+      extend({ uiValue: n.payload }, s)),
+    filterOnType(i, InputType.Confirm).mapTo(s =>
+      extend({ validatedName: s.uiValue, isSelected: false }, s)),
+    filterOnType(i, InputType.Cancel).mapTo(s => extend({ uiValue: s.validatedName, isSelected: false }, s)),
+    filterOnType(i, InputType.Select).mapTo(s => extend({ isSelected: true }, s))
   ).fold((acc, f: (prev: IState) => IState) => f(acc), initState)
 }
 
+// "View"
 function render$(s$: Stream<IState>): Stream<VNode> {
   return s$.map(s =>
     s.isSelected
@@ -54,13 +59,7 @@ function render$(s$: Stream<IState>): Stream<VNode> {
       : span('.field', s.validatedName))
 }
 
-export function SelectableText(i: Input): Output {
-  const isSelected = i.initIsSelected !== null ? i.initIsSelected : true
-  const uiValue = i.initUIValue ? i.initUIValue : ''
-  const validatedName = i.initValidatedValue
-  const state$ = react$(i, { isSelected, uiValue, validatedName })
-  return {
-    dom: render$(state$),
-    confirmed$: state$.map(s => i.confirm$.map(() => s.uiValue)).flatten(),
-  }
+export function SelectableText(i: Input<InputType>): Output {
+  const state$ = react$(i.debug(), { isSelected: true, uiValue: '', validatedName: null })
+  return { dom: render$(state$) }
 }

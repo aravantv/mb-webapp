@@ -1,8 +1,9 @@
 import { Stream } from 'xstream'
 import { li, ul, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
-import { isEnter, getText, extend } from './lib'
-import { SelectableText, keyMousePreprocessor, Input as ItemInput } from './selectableText'
+import { isEnter, getText, extend, filterOnType } from './lib'
+import sampleCombine from 'xstream/extra/sampleCombine'
+import { SelectableText, keyMousePreprocessor, InputType as ItemInput, Output as ItemOutput } from './selectableText'
 import Collection from '@cycle/collection'
 
 export interface RawInput {
@@ -30,17 +31,19 @@ function get_hack_last_value() {
 export function ListWithUniqueSelection(ri: RawInput): Output {
   const keyups$ = ri.dom.select('.field2').events('keyup')
   const acceptNew$ = keyups$.filter(isEnter).map(getText)
-  const add$: Stream<ItemInput> =
-    acceptNew$
-      .map(v => {
-        const subInput = keyMousePreprocessor(ri)
-        return extend({ initValidatedValue: v, initIsSelected: false}, subInput)
-      })
-  const list$ = Collection(SelectableText, {}, add$).debug()
+  const add$ = acceptNew$.map(initialValue => {
+    return { initialValue }
+  })
+  const list$: Stream<any> = Collection(ri2 =>
+    SelectableText(keyMousePreprocessor(ri2)
+      .startWith({ type: ItemInput.Confirm })
+      .startWith({ type: ItemInput.Change, payload: ri2.initialValue }))
+    , ri, add$)
 
-  let itemVtrees$ = Collection.pluck(list$, (item: Output) => item.dom)
+  let itemVtrees$ = Collection.pluck(list$, (item: ItemOutput) => item.dom)
   const field = input('.field2', { props: { type: 'text', value: get_hack_last_value() } })
-  const dom = itemVtrees$.map(([...addedComps]) => ul([field, ...addedComps].map(item => li([item]))))
+  const dom = itemVtrees$.map(([...addedComps]) =>
+    ul([...addedComps, field].reverse().map(item => li([item]))))
   return {
     dom,
   }

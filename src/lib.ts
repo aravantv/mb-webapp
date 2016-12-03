@@ -1,3 +1,4 @@
+import { Stream } from 'xstream'
 export const ENTER_KEY = 13
 export const ESCAPE_KEY = 27
 
@@ -22,3 +23,14 @@ export function extend<T extends Indexed, U extends Indexed>(first: T, second: U
 export const isEnter = (ev: Event) => (ev as KeyboardEvent).keyCode === ENTER_KEY
 export const isEscape = (ev: Event) => (ev as KeyboardEvent).keyCode === ESCAPE_KEY
 export const getText = (ev: Event) => (ev.target as HTMLInputElement).value
+
+export type InputMessage<T> = {
+    type: T,
+    payload?: any,
+}
+
+export type Input<T> = Stream<InputMessage<T>>
+
+export function filterOnType<T>(s: Input<T>, t: T) {
+    return s.filter(a => a.type === t)
+}
