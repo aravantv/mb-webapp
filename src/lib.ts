@@ -30,7 +30,3 @@ export type InputMessage<T> = {
 }
 
 export type Input<T> = Stream<InputMessage<T>>
-
-export function filterOnType<T>(s: Input<T>, t: T) {
-    return s.filter(a => a.type === t)
-}

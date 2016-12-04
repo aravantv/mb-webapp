@@ -1,8 +1,7 @@
 import { Stream } from 'xstream'
 import { li, ul, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
-import { isEnter, getText, extend, filterOnType } from './lib'
-import sampleCombine from 'xstream/extra/sampleCombine'
+import { isEnter, getText } from './lib'
 import { SelectableText, keyMousePreprocessor, InputType as ItemInput, Output as ItemOutput } from './selectableText'
 import Collection from '@cycle/collection'
 

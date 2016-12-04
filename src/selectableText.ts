@@ -1,4 +1,4 @@
-import { isEnter, isEscape, getText, extend, Input, filterOnType } from './lib'
+import { isEnter, isEscape, getText, extend, Input } from './lib'
 import { Stream } from 'xstream'
 import { span, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
