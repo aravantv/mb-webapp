@@ -6,7 +6,7 @@ interface Indexed {
     [key: string]: any
 }
 
-/** Merges [first] and [second]. In case a field exists in both parameters, the Fields of [first] have priority. */
+/** Merges [first] and [second]. In case a field exists in both parameters, the fields of [first] have priority. */
 export function extend<T extends Indexed, U extends Indexed>(first: T, second: U): T & U {
     let result = {} as T & U
     for (let id in first) {
