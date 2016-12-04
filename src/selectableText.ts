@@ -64,6 +64,6 @@ function render$(s$: Stream<IState>): Stream<VNode> {
 }
 
 export function SelectableText(i: Input<InputType>): Output {
-  const state$ = react$(i.debug(), { isSelected: true, uiValue: '', validatedName: null })
+  const state$ = react$(i, { isSelected: true, uiValue: '', validatedName: null })
   return { dom: render$(state$) }
 }
