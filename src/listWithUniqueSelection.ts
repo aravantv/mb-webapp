@@ -34,7 +34,8 @@ export function ListWithUniqueSelection(ri: RawInput): Output {
   const add$ = acceptNew$.map(initialValue => {
     return { initialValue }
   })
-  const list$: Stream<any> = Collection(ri2 =>
+
+  const list$ = Collection(ri2 =>
     SelectableText(keyMousePreprocessor(ri2)
       .startWith({ type: ItemInput.Confirm })
       .startWith({ type: ItemInput.Change, payload: ri2.initialValue }))
