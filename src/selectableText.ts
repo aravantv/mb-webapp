@@ -1,6 +1,6 @@
 import { isEnter, isEscape, getText, extend, Input } from './lib'
 import { Stream } from 'xstream'
-import { span, input, VNode } from '@cycle/dom'
+import { span, input, VNode, li } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
 
 export interface RawInput {
@@ -60,8 +60,8 @@ function render$(s$: Stream<IState>): Stream<VNode> {
   return s$.map(s =>
     s.isSelected
       ? input('.field', { props: { type: 'text', value: s.uiValue } })
-      : span('.field', s.validatedName))
-}
+      : span('.field', s.validatedName)).map(v => li([v]))
+};
 
 export function SelectableText(i: Input<InputType>): Output {
   const state$ = react$(i, { isSelected: true, uiValue: '', validatedName: null })
