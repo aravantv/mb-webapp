@@ -1,7 +1,7 @@
 import { Stream } from 'xstream'
 import { li, ul, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
-import { isEnter, getText } from './lib'
+import { isEnter, getText, extend } from './lib'
 import { SelectableText, keyMousePreprocessor, InputType as ItemInput, Output as ItemOutput } from './selectableText'
 import Collection from '@cycle/collection'
 
@@ -27,6 +27,15 @@ function get_hack_last_value() {
   return hack_last_value
 }
 
+function Item(ri: RawInput & { initialValue: string }) {
+  const v = SelectableText(
+    keyMousePreprocessor(ri)
+      .startWith({ type: ItemInput.Confirm })
+      .startWith({ type: ItemInput.Change, payload: ri.initialValue })
+  )
+  return extend({ dom: v.dom.map(vtree => li([vtree])) }, v)
+}
+
 export function ListWithUniqueSelection(ri: RawInput): Output {
   const keyups$ = ri.dom.select('.field2').events('keyup')
   const acceptNew$ = keyups$.filter(isEnter).map(getText)
@@ -34,16 +43,11 @@ export function ListWithUniqueSelection(ri: RawInput): Output {
     return { initialValue }
   })
 
-  const list$ = Collection(ri2 =>
-    SelectableText(keyMousePreprocessor(ri2)
-      .startWith({ type: ItemInput.Confirm })
-      .startWith({ type: ItemInput.Change, payload: ri2.initialValue }))
-    , ri, add$)
+  const list$ = Collection(Item, ri, add$)
 
   let itemVtrees$ = Collection.pluck(list$, (item: ItemOutput) => item.dom)
-  const field = input('.field2', { props: { type: 'text', value: get_hack_last_value() } })
-  const dom = itemVtrees$.map(([...addedComps]) =>
-    ul([...addedComps, field].reverse().map(item => li([item]))))
+  const field = li([input('.field2', { props: { type: 'text', value: get_hack_last_value() } })])
+  const dom = itemVtrees$.map(([...addedComps]) => ul([...addedComps, field].reverse()))
   return {
     dom,
   }
