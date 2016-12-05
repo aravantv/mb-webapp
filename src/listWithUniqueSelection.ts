@@ -1,5 +1,5 @@
 import { Stream } from 'xstream'
-import { li, ul, input, VNode } from '@cycle/dom'
+import { div, ul, input, VNode } from '@cycle/dom'
 import { DOMSource } from '@cycle/dom/xstream-typings'
 import { isEnter, getText } from './lib'
 import { SelectableText, keyMousePreprocessor, InputType as ItemInput, Output as ItemOutput } from './selectableText'
@@ -42,8 +42,12 @@ export function ListWithUniqueSelection(ri: RawInput): Output {
 
   let itemVtrees$ = Collection.pluck(list$, (item: ItemOutput) => item.dom)
   const field = input('.field2', { props: { type: 'text', value: get_hack_last_value() } })
-  const dom = itemVtrees$.map(([...addedComps]) =>
-    ul([...addedComps, field].reverse().map(item => li([item]))))
+  const dom = itemVtrees$.map(addedComps =>
+    div([
+      field,
+
+      ul(addedComps)
+    ])
   return {
     dom,
   }
