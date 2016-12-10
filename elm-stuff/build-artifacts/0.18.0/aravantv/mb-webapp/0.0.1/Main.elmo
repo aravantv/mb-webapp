@@ -5,6 +5,10 @@ var _aravantv$mb_webapp$Main$onKeyUp = function (decoder) {
 		'keyup',
 		A2(_elm_lang$core$Json_Decode$andThen, decoder, _elm_lang$html$Html_Events$keyCode));
 };
+var _aravantv$mb_webapp$Main$updateWidget = F4(
+	function (refIndex, msg, candidateIndex, model) {
+		return _elm_lang$core$Native_Utils.eq(candidateIndex, refIndex) ? A2(_aravantv$mb_webapp$SelectableText$update, msg, model) : model;
+	});
 var _aravantv$mb_webapp$Main$update = F2(
 	function (msg, model) {
 		var _p0 = msg;
@@ -27,8 +31,8 @@ var _aravantv$mb_webapp$Main$update = F2(
 					model,
 					{
 						contents: A2(
-							_elm_lang$core$List$map,
-							_aravantv$mb_webapp$SelectableText$update(_p0._0),
+							_elm_lang$core$List$indexedMap,
+							A2(_aravantv$mb_webapp$Main$updateWidget, _p0._0, _p0._1),
 							model.contents)
 					});
 		}
@@ -41,9 +45,24 @@ var _aravantv$mb_webapp$Main$Model = F2(
 	function (a, b) {
 		return {uiToAdd: a, contents: b};
 	});
-var _aravantv$mb_webapp$Main$WidgetMsg = function (a) {
-	return {ctor: 'WidgetMsg', _0: a};
-};
+var _aravantv$mb_webapp$Main$WidgetMsg = F2(
+	function (a, b) {
+		return {ctor: 'WidgetMsg', _0: a, _1: b};
+	});
+var _aravantv$mb_webapp$Main$viewWidget = F2(
+	function (i, m) {
+		return A2(
+			_elm_lang$html$Html$li,
+			{ctor: '[]'},
+			{
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$map,
+					_aravantv$mb_webapp$Main$WidgetMsg(i),
+					_aravantv$mb_webapp$SelectableText$view(m)),
+				_1: {ctor: '[]'}
+			});
+	});
 var _aravantv$mb_webapp$Main$ChangeToAdd = function (a) {
 	return {ctor: 'ChangeToAdd', _0: a};
 };
@@ -78,22 +97,7 @@ var _aravantv$mb_webapp$Main$view = function (model) {
 				_0: A2(
 					_elm_lang$html$Html$ul,
 					{ctor: '[]'},
-					A2(
-						_elm_lang$core$List$map,
-						function (x) {
-							return A2(
-								_elm_lang$html$Html$li,
-								{ctor: '[]'},
-								{
-									ctor: '::',
-									_0: A2(
-										_elm_lang$html$Html$map,
-										_aravantv$mb_webapp$Main$WidgetMsg,
-										_aravantv$mb_webapp$SelectableText$view(x)),
-									_1: {ctor: '[]'}
-								});
-						},
-						model.contents)),
+					A2(_elm_lang$core$List$indexedMap, _aravantv$mb_webapp$Main$viewWidget, model.contents)),
 				_1: {ctor: '[]'}
 			}
 		});
