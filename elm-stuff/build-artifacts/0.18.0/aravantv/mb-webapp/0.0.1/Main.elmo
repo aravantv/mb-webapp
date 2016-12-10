@@ -1,0 +1,82 @@
+var _aravantv$mb_webapp$Main$escapeKey = 27;
+var _aravantv$mb_webapp$Main$enterKey = 13;
+var _aravantv$mb_webapp$Main$onKeyUp = function (decoder) {
+	return A2(
+		_elm_lang$html$Html_Events$on,
+		'keyup',
+		A2(_elm_lang$core$Json_Decode$andThen, decoder, _elm_lang$html$Html_Events$keyCode));
+};
+var _aravantv$mb_webapp$Main$update = F2(
+	function (msg, model) {
+		var _p0 = msg;
+		switch (_p0.ctor) {
+			case 'Change':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{uiContent: _p0._0});
+			case 'Confirm':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{editMode: false, content: model.uiContent});
+			case 'Cancel':
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{editMode: false, uiContent: model.content});
+			default:
+				return _elm_lang$core$Native_Utils.update(
+					model,
+					{editMode: true, uiContent: model.content});
+		}
+	});
+var _aravantv$mb_webapp$Main$Model = F3(
+	function (a, b, c) {
+		return {content: a, uiContent: b, editMode: c};
+	});
+var _aravantv$mb_webapp$Main$model = A3(_aravantv$mb_webapp$Main$Model, '', '', true);
+var _aravantv$mb_webapp$Main$Edit = {ctor: 'Edit'};
+var _aravantv$mb_webapp$Main$Cancel = {ctor: 'Cancel'};
+var _aravantv$mb_webapp$Main$Confirm = {ctor: 'Confirm'};
+var _aravantv$mb_webapp$Main$keyUpDecoder = function (n) {
+	return _elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$enterKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Confirm) : (_elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$escapeKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Cancel) : _elm_lang$core$Json_Decode$fail('key useless for selectable text'));
+};
+var _aravantv$mb_webapp$Main$Change = function (a) {
+	return {ctor: 'Change', _0: a};
+};
+var _aravantv$mb_webapp$Main$view = function (model) {
+	return A2(
+		_elm_lang$html$Html$div,
+		{ctor: '[]'},
+		{
+			ctor: '::',
+			_0: model.editMode ? A2(
+				_elm_lang$html$Html$input,
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html_Events$onInput(_aravantv$mb_webapp$Main$Change),
+					_1: {
+						ctor: '::',
+						_0: _aravantv$mb_webapp$Main$onKeyUp(_aravantv$mb_webapp$Main$keyUpDecoder),
+						_1: {
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$value(model.uiContent),
+							_1: {ctor: '[]'}
+						}
+					}
+				},
+				{ctor: '[]'}) : A2(
+				_elm_lang$html$Html$label,
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html_Events$onDoubleClick(_aravantv$mb_webapp$Main$Edit),
+					_1: {ctor: '[]'}
+				},
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html$text(model.uiContent),
+					_1: {ctor: '[]'}
+				}),
+			_1: {ctor: '[]'}
+		});
+};
+var _aravantv$mb_webapp$Main$main = _elm_lang$html$Html$beginnerProgram(
+	{model: _aravantv$mb_webapp$Main$model, view: _aravantv$mb_webapp$Main$view, update: _aravantv$mb_webapp$Main$update})();
