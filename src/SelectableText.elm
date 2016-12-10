@@ -4,6 +4,7 @@ import Html exposing (Html, Attribute, div, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick, on, keyCode)
 import Json.Decode exposing (Decoder, oneOf, fail, succeed, andThen)
+import Dict exposing (Dict)
 
 
 -- MODEL
@@ -61,9 +62,18 @@ update msg model =
 -- VIEW
 
 
-onKeyUp : (Int -> Decoder Msg) -> Attribute Msg
-onKeyUp decoder =
-    on "keyup" (andThen decoder keyCode)
+onKeyUp : List ( Int, Msg ) -> Attribute Msg
+onKeyUp l =
+    let
+        keyUpDecoder n =
+            case Dict.get n <| Dict.fromList l of
+                Just msg ->
+                    succeed msg
+
+                Nothing ->
+                    fail "Key not handled"
+    in
+        on "keyup" (andThen keyUpDecoder keyCode)
 
 
 enterKey : number
@@ -76,23 +86,13 @@ escapeKey =
     27
 
 
-keyUpDecoder : Int -> Decoder Msg
-keyUpDecoder n =
-    if n == enterKey then
-        succeed Confirm
-    else if n == escapeKey then
-        succeed Cancel
-    else
-        fail "key useless for selectable text"
-
-
 view : Model -> Html Msg
 view model =
     div []
         [ if model.editMode then
             input
                 [ onInput Change
-                , onKeyUp keyUpDecoder
+                , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
                 , value model.uiContent
                 ]
                 []
