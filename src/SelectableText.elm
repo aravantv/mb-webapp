@@ -1,19 +1,9 @@
-module Main exposing (..)
+module SelectableText exposing (..)
 
 import Html exposing (Html, Attribute, div, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick, on, keyCode)
 import Json.Decode exposing (Decoder, oneOf, fail, succeed, andThen)
-
-
-main : Program Never Model Msg
-main =
-    Html.beginnerProgram
-        { model = model
-        , view = view
-        , update = update
-        }
-
 
 
 -- MODEL
@@ -29,6 +19,15 @@ type alias Model =
 model : Model
 model =
     Model "" "" True
+
+
+
+-- ICI2 plus tard: ne pas faire d'initialisaion mais envoyer des commandes
+
+
+initModel : String -> Model
+initModel content =
+    Model content content False
 
 
 

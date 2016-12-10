@@ -4,7 +4,8 @@
     "repository": "https://github.com/aravantv/mb-webapp.git",
     "license": "MIT",
     "source-directories": [
-        "nesting"
+        "nesting",
+        "src"
     ],
     "exposed-modules": [],
     "dependencies": {
