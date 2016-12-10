@@ -1,4 +1,3 @@
-var _aravantv$mb_webapp$Main$escapeKey = 27;
 var _aravantv$mb_webapp$Main$enterKey = 13;
 var _aravantv$mb_webapp$Main$onKeyUp = function (decoder) {
 	return A2(
@@ -10,37 +9,47 @@ var _aravantv$mb_webapp$Main$update = F2(
 	function (msg, model) {
 		var _p0 = msg;
 		switch (_p0.ctor) {
-			case 'Change':
+			case 'Add':
+				return {
+					uiToAdd: '',
+					contents: {
+						ctor: '::',
+						_0: _aravantv$mb_webapp$SelectableText$initModel(model.uiToAdd),
+						_1: model.contents
+					}
+				};
+			case 'ChangeToAdd':
 				return _elm_lang$core$Native_Utils.update(
 					model,
-					{uiContent: _p0._0});
-			case 'Confirm':
-				return _elm_lang$core$Native_Utils.update(
-					model,
-					{editMode: false, content: model.uiContent});
-			case 'Cancel':
-				return _elm_lang$core$Native_Utils.update(
-					model,
-					{editMode: false, uiContent: model.content});
+					{uiToAdd: _p0._0});
 			default:
 				return _elm_lang$core$Native_Utils.update(
 					model,
-					{editMode: true, uiContent: model.content});
+					{
+						contents: A2(
+							_elm_lang$core$List$map,
+							_aravantv$mb_webapp$SelectableText$update(_p0._0),
+							model.contents)
+					});
 		}
 	});
-var _aravantv$mb_webapp$Main$Model = F3(
-	function (a, b, c) {
-		return {content: a, uiContent: b, editMode: c};
-	});
-var _aravantv$mb_webapp$Main$model = A3(_aravantv$mb_webapp$Main$Model, '', '', true);
-var _aravantv$mb_webapp$Main$Edit = {ctor: 'Edit'};
-var _aravantv$mb_webapp$Main$Cancel = {ctor: 'Cancel'};
-var _aravantv$mb_webapp$Main$Confirm = {ctor: 'Confirm'};
-var _aravantv$mb_webapp$Main$keyUpDecoder = function (n) {
-	return _elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$enterKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Confirm) : (_elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$escapeKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Cancel) : _elm_lang$core$Json_Decode$fail('key useless for selectable text'));
+var _aravantv$mb_webapp$Main$model = {
+	uiToAdd: '',
+	contents: {ctor: '[]'}
 };
-var _aravantv$mb_webapp$Main$Change = function (a) {
-	return {ctor: 'Change', _0: a};
+var _aravantv$mb_webapp$Main$Model = F2(
+	function (a, b) {
+		return {uiToAdd: a, contents: b};
+	});
+var _aravantv$mb_webapp$Main$WidgetMsg = function (a) {
+	return {ctor: 'WidgetMsg', _0: a};
+};
+var _aravantv$mb_webapp$Main$ChangeToAdd = function (a) {
+	return {ctor: 'ChangeToAdd', _0: a};
+};
+var _aravantv$mb_webapp$Main$Add = {ctor: 'Add'};
+var _aravantv$mb_webapp$Main$keyUpDecoder = function (n) {
+	return _elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$enterKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Add) : _elm_lang$core$Json_Decode$fail('key useless for selectable text');
 };
 var _aravantv$mb_webapp$Main$view = function (model) {
 	return A2(
@@ -48,34 +57,45 @@ var _aravantv$mb_webapp$Main$view = function (model) {
 		{ctor: '[]'},
 		{
 			ctor: '::',
-			_0: model.editMode ? A2(
+			_0: A2(
 				_elm_lang$html$Html$input,
 				{
 					ctor: '::',
-					_0: _elm_lang$html$Html_Events$onInput(_aravantv$mb_webapp$Main$Change),
+					_0: _elm_lang$html$Html_Events$onInput(_aravantv$mb_webapp$Main$ChangeToAdd),
 					_1: {
 						ctor: '::',
 						_0: _aravantv$mb_webapp$Main$onKeyUp(_aravantv$mb_webapp$Main$keyUpDecoder),
 						_1: {
 							ctor: '::',
-							_0: _elm_lang$html$Html_Attributes$value(model.uiContent),
+							_0: _elm_lang$html$Html_Attributes$value(model.uiToAdd),
 							_1: {ctor: '[]'}
 						}
 					}
 				},
-				{ctor: '[]'}) : A2(
-				_elm_lang$html$Html$label,
-				{
-					ctor: '::',
-					_0: _elm_lang$html$Html_Events$onDoubleClick(_aravantv$mb_webapp$Main$Edit),
-					_1: {ctor: '[]'}
-				},
-				{
-					ctor: '::',
-					_0: _elm_lang$html$Html$text(model.uiContent),
-					_1: {ctor: '[]'}
-				}),
-			_1: {ctor: '[]'}
+				{ctor: '[]'}),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$html$Html$ul,
+					{ctor: '[]'},
+					A2(
+						_elm_lang$core$List$map,
+						function (x) {
+							return A2(
+								_elm_lang$html$Html$li,
+								{ctor: '[]'},
+								{
+									ctor: '::',
+									_0: A2(
+										_elm_lang$html$Html$map,
+										_aravantv$mb_webapp$Main$WidgetMsg,
+										_aravantv$mb_webapp$SelectableText$view(x)),
+									_1: {ctor: '[]'}
+								});
+						},
+						model.contents)),
+				_1: {ctor: '[]'}
+			}
 		});
 };
 var _aravantv$mb_webapp$Main$main = _elm_lang$html$Html$beginnerProgram(
