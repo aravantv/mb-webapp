@@ -2,9 +2,8 @@ module SelectableText exposing (..)
 
 import Html exposing (Html, Attribute, div, input, text, label)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onDoubleClick, on, keyCode)
-import Json.Decode exposing (Decoder, oneOf, fail, succeed, andThen)
-import Dict exposing (Dict)
+import Html.Events exposing (onInput, onDoubleClick)
+import Utils exposing (..)
 
 
 -- MODEL
@@ -60,30 +59,6 @@ update msg model =
 
 
 -- VIEW
-
-
-onKeyUp : List ( Int, Msg ) -> Attribute Msg
-onKeyUp l =
-    let
-        keyUpDecoder n =
-            case Dict.get n <| Dict.fromList l of
-                Just msg ->
-                    succeed msg
-
-                Nothing ->
-                    fail "Key not handled"
-    in
-        on "keyup" (andThen keyUpDecoder keyCode)
-
-
-enterKey : number
-enterKey =
-    13
-
-
-escapeKey : number
-escapeKey =
-    27
 
 
 view : Model -> Html Msg

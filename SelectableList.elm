@@ -2,9 +2,9 @@ module Main exposing (..)
 
 import Html exposing (Html, Attribute, div, input, text, label, ul, li)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onDoubleClick, on, keyCode)
-import Json.Decode exposing (Decoder, oneOf, fail, succeed, andThen)
+import Html.Events exposing (onInput)
 import SelectableText as Widget
+import Utils exposing (..)
 
 
 main : Program Never Model Msg
@@ -70,30 +70,12 @@ updateWidget refIndex msg candidateIndex model =
 -- VIEW
 
 
-onKeyUp : (Int -> Decoder Msg) -> Attribute Msg
-onKeyUp decoder =
-    on "keyup" (andThen decoder keyCode)
-
-
-enterKey : number
-enterKey =
-    13
-
-
-keyUpDecoder : Int -> Decoder Msg
-keyUpDecoder n =
-    if n == enterKey then
-        succeed Add
-    else
-        fail "key useless for selectable text"
-
-
 view : Model -> Html Msg
 view model =
     div []
         [ input
             [ onInput ChangeToAdd
-            , onKeyUp keyUpDecoder
+            , onKeyUp [ ( enterKey, Add ) ]
             , value model.uiToAdd
             ]
             []

@@ -1,10 +1,3 @@
-var _aravantv$mb_webapp$Main$enterKey = 13;
-var _aravantv$mb_webapp$Main$onKeyUp = function (decoder) {
-	return A2(
-		_elm_lang$html$Html_Events$on,
-		'keyup',
-		A2(_elm_lang$core$Json_Decode$andThen, decoder, _elm_lang$html$Html_Events$keyCode));
-};
 var _aravantv$mb_webapp$Main$updateWidget = F4(
 	function (refIndex, msg, candidateIndex, model) {
 		return _elm_lang$core$Native_Utils.eq(candidateIndex, refIndex) ? A2(_aravantv$mb_webapp$SelectableText$update, msg, model) : model;
@@ -67,9 +60,6 @@ var _aravantv$mb_webapp$Main$ChangeToAdd = function (a) {
 	return {ctor: 'ChangeToAdd', _0: a};
 };
 var _aravantv$mb_webapp$Main$Add = {ctor: 'Add'};
-var _aravantv$mb_webapp$Main$keyUpDecoder = function (n) {
-	return _elm_lang$core$Native_Utils.eq(n, _aravantv$mb_webapp$Main$enterKey) ? _elm_lang$core$Json_Decode$succeed(_aravantv$mb_webapp$Main$Add) : _elm_lang$core$Json_Decode$fail('key useless for selectable text');
-};
 var _aravantv$mb_webapp$Main$view = function (model) {
 	return A2(
 		_elm_lang$html$Html$div,
@@ -83,7 +73,12 @@ var _aravantv$mb_webapp$Main$view = function (model) {
 					_0: _elm_lang$html$Html_Events$onInput(_aravantv$mb_webapp$Main$ChangeToAdd),
 					_1: {
 						ctor: '::',
-						_0: _aravantv$mb_webapp$Main$onKeyUp(_aravantv$mb_webapp$Main$keyUpDecoder),
+						_0: _aravantv$mb_webapp$Utils$onKeyUp(
+							{
+								ctor: '::',
+								_0: {ctor: '_Tuple2', _0: _aravantv$mb_webapp$Utils$enterKey, _1: _aravantv$mb_webapp$Main$Add},
+								_1: {ctor: '[]'}
+							}),
 						_1: {
 							ctor: '::',
 							_0: _elm_lang$html$Html_Attributes$value(model.uiToAdd),
