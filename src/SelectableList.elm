@@ -72,15 +72,19 @@ updateWidget refIndex msg candidateIndex model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ input
-            [ onInput ChangeToAdd
-            , onKeyUp [ ( enterKey, Add ) ]
-            , value model.uiToAdd
-            ]
-            []
-        , ul [] <| List.indexedMap viewWidget model.contents
+    ul [] <|
+        (li [] [ viewToAddField model ])
+            :: List.indexedMap viewWidget model.contents
+
+
+viewToAddField : Model -> Html Msg
+viewToAddField model =
+    input
+        [ onInput ChangeToAdd
+        , onKeyUp [ ( enterKey, Add ) ]
+        , value model.uiToAdd
         ]
+        []
 
 
 viewWidget : WidgetIndex -> Widget.Model -> Html Msg
