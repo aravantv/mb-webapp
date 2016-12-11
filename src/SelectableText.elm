@@ -54,14 +54,12 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ if model.editMode then
-            input
-                [ onInput Change
-                , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
-                , value model.uiContent
-                ]
-                []
-          else
-            label [ onDoubleClick Edit ] [ text model.uiContent ]
-        ]
+    if model.editMode then
+        input
+            [ onInput Change
+            , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
+            , value model.uiContent
+            ]
+            []
+    else
+        label [ onDoubleClick Edit ] [ text model.uiContent ]
