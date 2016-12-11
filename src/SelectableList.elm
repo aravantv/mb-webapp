@@ -73,7 +73,7 @@ update msg model =
                 else
                     let
                         confirmWidget j m =
-                            if j == i then
+                            if j == i || not (Widget.isSelected m) then
                                 m
                             else
                                 Widget.update Widget.Confirm m
