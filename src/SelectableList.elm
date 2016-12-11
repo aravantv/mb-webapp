@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Html exposing (Html, Attribute, div, input, text, label, ul, li)
+import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import SelectableText as Widget
@@ -91,4 +91,9 @@ viewToAddField model =
 
 viewWidget : WidgetIndex -> Widget.Model -> Html Msg
 viewWidget i m =
-    li [] [ Html.map (WidgetMsg i) <| Widget.view m ]
+    li []
+        [ span []
+            [ Html.map (WidgetMsg i) <| Widget.view m
+            , button [] [ text "-" ]
+            ]
+        ]
