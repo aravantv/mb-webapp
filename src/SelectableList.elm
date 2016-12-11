@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onInput, onClick)
 import SelectableText as Widget
 import Utils exposing (..)
 
@@ -42,6 +42,7 @@ type Msg
     = Add
     | ChangeToAdd String
     | WidgetMsg WidgetIndex Widget.Msg
+    | Remove WidgetIndex
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -58,6 +59,16 @@ update msg model =
 
         WidgetMsg i msg ->
             { model | contents = List.indexedMap (updateWidget i msg) model.contents } ! []
+
+        Remove i ->
+            let
+                before_i =
+                    List.take i model.contents
+
+                after_i =
+                    List.drop (i + 1) model.contents
+            in
+                { model | contents = before_i ++ after_i } ! []
 
 
 updateWidget : WidgetIndex -> Widget.Msg -> WidgetIndex -> Widget.Model -> Widget.Model
@@ -94,6 +105,6 @@ viewWidget i m =
     li []
         [ span []
             [ Html.map (WidgetMsg i) <| Widget.view m
-            , button [] [ text "-" ]
+            , button [ onClick <| Remove i ] [ text "-" ]
             ]
         ]
