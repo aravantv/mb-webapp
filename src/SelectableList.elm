@@ -59,7 +59,7 @@ update msg model =
 
         WidgetMsg i msg ->
             { model | contents = List.indexedMap (updateWidget i msg) model.contents }
-                ! if msg == Widget.Edit then
+                ! if msg == Widget.Select then
                     List.map (\j -> syncCmd <| WidgetMsg j <| Widget.Confirm)
                         (List.range 0 (i - 1) ++ List.range (i + 1) (List.length model.contents))
                   else

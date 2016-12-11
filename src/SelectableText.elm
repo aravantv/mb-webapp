@@ -29,7 +29,7 @@ type Msg
     = Change String
     | Confirm
     | Cancel
-    | Edit
+    | Select
 
 
 update : Msg -> Model -> Model
@@ -44,7 +44,7 @@ update msg model =
         Cancel ->
             { model | editMode = False, uiContent = model.content }
 
-        Edit ->
+        Select ->
             { model | editMode = True, uiContent = model.content }
 
 
@@ -62,4 +62,4 @@ view model =
             ]
             []
     else
-        label [ onDoubleClick Edit ] [ text model.uiContent ]
+        label [ onDoubleClick Select ] [ text model.uiContent ]
