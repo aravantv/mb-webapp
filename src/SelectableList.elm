@@ -58,7 +58,12 @@ update msg model =
             { model | uiToAdd = s } ! []
 
         WidgetMsg i msg ->
-            { model | contents = List.indexedMap (updateWidget i msg) model.contents } ! []
+            { model | contents = List.indexedMap (updateWidget i msg) model.contents }
+                ! if msg == Widget.Edit then
+                    List.map (\j -> syncCmd <| WidgetMsg j <| Widget.Confirm)
+                        (List.range 0 (i - 1) ++ List.range (i + 1) (List.length model.contents))
+                  else
+                    []
 
         Remove i ->
             let
