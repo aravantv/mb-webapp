@@ -7,8 +7,8 @@ import Dict exposing (Dict)
 import Task
 
 
-trivialCmd : a -> Cmd a
-trivialCmd x =
+syncCmd : a -> Cmd a
+syncCmd x =
     Task.perform identity (Task.succeed x)
 
 

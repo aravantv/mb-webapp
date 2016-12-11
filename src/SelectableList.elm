@@ -52,7 +52,7 @@ update msg model =
             { uiToAdd = ""
             , contents = Widget.model :: model.contents
             }
-                ! List.map (trivialCmd << WidgetMsg 0) [ Widget.Confirm, Widget.Change model.uiToAdd ]
+                ! List.map (syncCmd << WidgetMsg 0) [ Widget.Confirm, Widget.Change model.uiToAdd ]
 
         ChangeToAdd s ->
             { model | uiToAdd = s } ! []
