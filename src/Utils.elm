@@ -4,9 +4,12 @@ import Html
 import Html.Events exposing (on, keyCode)
 import Json.Decode exposing (fail, succeed, andThen)
 import Dict exposing (Dict)
+import Task
 
 
--- VIEW
+trivialCmd : a -> Cmd a
+trivialCmd x =
+    Task.perform identity (Task.succeed x)
 
 
 onKeyUp : List ( Int, msg ) -> Html.Attribute msg

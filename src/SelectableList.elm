@@ -9,10 +9,11 @@ import Utils exposing (..)
 
 main : Program Never Model Msg
 main =
-    Html.beginnerProgram
-        { model = model
+    Html.program
+        { init = model ! []
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }
 
 
@@ -43,19 +44,20 @@ type Msg
     | WidgetMsg WidgetIndex Widget.Msg
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Add ->
             { uiToAdd = ""
-            , contents = Widget.initModel model.uiToAdd :: model.contents
+            , contents = Widget.model :: model.contents
             }
+                ! List.map (trivialCmd << WidgetMsg 0) [ Widget.Confirm, Widget.Change model.uiToAdd ]
 
         ChangeToAdd s ->
-            { model | uiToAdd = s }
+            { model | uiToAdd = s } ! []
 
         WidgetMsg i msg ->
-            { model | contents = List.indexedMap (updateWidget i msg) model.contents }
+            { model | contents = List.indexedMap (updateWidget i msg) model.contents } ! []
 
 
 updateWidget : WidgetIndex -> Widget.Msg -> WidgetIndex -> Widget.Model -> Widget.Model

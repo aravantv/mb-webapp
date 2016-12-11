@@ -22,15 +22,6 @@ model =
 
 
 
--- ICI2 plus tard: ne pas faire d'initialisaion mais envoyer des commandes
-
-
-initModel : String -> Model
-initModel content =
-    Model content content False
-
-
-
 -- UPDATE
 
 
