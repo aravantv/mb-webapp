@@ -21,6 +21,11 @@ model =
     Model "" "" True
 
 
+isSelected : Model -> Bool
+isSelected =
+    .editMode
+
+
 
 -- UPDATE
 
