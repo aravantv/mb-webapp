@@ -9,11 +9,10 @@ import Utils exposing (..)
 
 main : Program Never Model Msg
 main =
-    Html.program
-        { init = model ! []
+    Html.beginnerProgram
+        { model = model
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
         }
 
 
@@ -45,25 +44,41 @@ type Msg
     | Remove WidgetIndex
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         Add ->
-            { uiToAdd = ""
-            , contents = Widget.model :: model.contents
-            }
-                ! List.map (syncCmd << WidgetMsg 0) [ Widget.Confirm, Widget.Change model.uiToAdd ]
+            let
+                modelWithEmptyItemAdded =
+                    { uiToAdd = "", contents = Widget.model :: model.contents }
+
+                modelWithItemChanged =
+                    update (WidgetMsg 0 <| Widget.Change model.uiToAdd) modelWithEmptyItemAdded
+
+                modelWithItemConfirmed =
+                    update (WidgetMsg 0 Widget.Confirm) modelWithItemChanged
+            in
+                modelWithItemConfirmed
 
         ChangeToAdd s ->
-            { model | uiToAdd = s } ! []
+            { model | uiToAdd = s }
 
         WidgetMsg i msg ->
-            { model | contents = List.indexedMap (updateWidget i msg) model.contents }
-                ! if msg == Widget.Select then
-                    List.map (\j -> syncCmd <| WidgetMsg j <| Widget.Confirm)
-                        (List.range 0 (i - 1) ++ List.range (i + 1) (List.length model.contents))
-                  else
-                    []
+            let
+                contentsWithWidgetUpdated =
+                    List.indexedMap (updateWidget i msg) model.contents
+            in
+                if msg /= Widget.Select then
+                    { model | contents = contentsWithWidgetUpdated }
+                else
+                    let
+                        confirmWidget j m =
+                            if j == i then
+                                m
+                            else
+                                Widget.update Widget.Confirm m
+                    in
+                        { model | contents = List.indexedMap confirmWidget contentsWithWidgetUpdated }
 
         Remove i ->
             let
@@ -73,7 +88,7 @@ update msg model =
                 after_i =
                     List.drop (i + 1) model.contents
             in
-                { model | contents = before_i ++ after_i } ! []
+                { model | contents = before_i ++ after_i }
 
 
 updateWidget : WidgetIndex -> Widget.Msg -> WidgetIndex -> Widget.Model -> Widget.Model

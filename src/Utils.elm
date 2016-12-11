@@ -7,11 +7,6 @@ import Dict exposing (Dict)
 import Task
 
 
-syncCmd : a -> Cmd a
-syncCmd x =
-    Task.perform identity (Task.succeed x)
-
-
 onKeyUp : List ( Int, msg ) -> Html.Attribute msg
 onKeyUp l =
     let
