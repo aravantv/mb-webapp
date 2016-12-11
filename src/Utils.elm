@@ -4,7 +4,6 @@ import Html
 import Html.Events exposing (on, keyCode)
 import Json.Decode exposing (fail, succeed, andThen)
 import Dict exposing (Dict)
-import Task
 
 
 onKeyUp : List ( Int, msg ) -> Html.Attribute msg
