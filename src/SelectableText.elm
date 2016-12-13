@@ -1,9 +1,24 @@
 module SelectableText exposing (..)
 
-import Html exposing (Html, Attribute, div, input, text, label)
+import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick)
 import Utils exposing (..)
+import SelectableList
+
+
+widget : SelectableList.ItemWidget Model Msg
+widget =
+    { init = wrapModelWithCmd model
+    , update = wrapUpdateWithCmd update
+    , view = view
+    , subscriptions = emptySubscription
+    , isSelected = .editMode
+    , selectMsg = Select
+    , unselectMsg = Confirm
+    , change = \s -> Change s
+    }
+
 
 
 -- MODEL
@@ -19,11 +34,6 @@ type alias Model =
 model : Model
 model =
     Model "" "" True
-
-
-isSelected : Model -> Bool
-isSelected =
-    .editMode
 
 
 
