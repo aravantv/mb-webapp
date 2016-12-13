@@ -59,23 +59,7 @@ update : ItemWidget itemModel itemMsg -> Msg itemMsg -> Model itemModel -> ( Mod
 update widget msg model =
     case msg of
         Add ->
-            let
-                ( initModel, cmd1 ) =
-                    widget.init
-
-                modelWithEmptyItemAdded =
-                    { uiToAdd = "", contents = initModel :: model.contents }
-
-                ( modelWithItemChanged, cmd2 ) =
-                    update widget (WidgetMsg 0 <| widget.change model.uiToAdd) modelWithEmptyItemAdded
-
-                ( modelWithItemConfirmed, cmd3 ) =
-                    update widget (WidgetMsg 0 widget.unselectMsg) modelWithItemChanged
-
-                cmd =
-                    Cmd.batch ([ Cmd.map (WidgetMsg 0) cmd1, cmd2, cmd3 ])
-            in
-                ( modelWithItemConfirmed, cmd )
+            addItem widget model
 
         ChangeToAdd s ->
             ( { model | uiToAdd = s }, Cmd.none )
@@ -108,6 +92,27 @@ update widget msg model =
 
         Remove i ->
             removeItem i model
+
+
+addItem : ItemWidget itemModel itemMsg -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
+addItem widget model =
+    let
+        ( initModel, cmd1 ) =
+            widget.init
+
+        modelWithEmptyItemAdded =
+            { uiToAdd = "", contents = initModel :: model.contents }
+
+        ( modelWithItemChanged, cmd2 ) =
+            update widget (WidgetMsg 0 <| widget.change model.uiToAdd) modelWithEmptyItemAdded
+
+        ( modelWithItemConfirmed, cmd3 ) =
+            update widget (WidgetMsg 0 widget.unselectMsg) modelWithItemChanged
+
+        cmd =
+            Cmd.batch ([ Cmd.map (WidgetMsg 0) cmd1, cmd2, cmd3 ])
+    in
+        ( modelWithItemConfirmed, cmd )
 
 
 removeItem : WidgetIndex -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
