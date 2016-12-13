@@ -65,33 +65,38 @@ update widget msg model =
             ( { model | uiToAdd = s }, Cmd.none )
 
         WidgetMsg i msg ->
-            let
-                updatedWidgetList =
-                    List.indexedMap (updateWidget widget i msg) model.contents
-
-                ( contentsWithWidgetUpdated, cmds ) =
-                    List.unzip updatedWidgetList
-            in
-                if msg /= widget.selectMsg then
-                    ( { model | contents = contentsWithWidgetUpdated }, Cmd.map (WidgetMsg i) <| Cmd.batch cmds )
-                else
-                    let
-                        confirmWidget j m =
-                            if j == i || not (widget.isSelected m) then
-                                ( m, Cmd.none )
-                            else
-                                widget.update widget.unselectMsg m
-
-                        ( contents, widgetCmds ) =
-                            List.unzip <| List.indexedMap confirmWidget contentsWithWidgetUpdated
-
-                        cmds =
-                            List.indexedMap (\i -> Cmd.map (WidgetMsg i)) widgetCmds
-                    in
-                        ( { model | contents = contents }, Cmd.batch cmds )
+            propagateMsgToWidget widget model i msg
 
         Remove i ->
             removeItem i model
+
+
+propagateMsgToWidget : ItemWidget itemModel itemMsg -> Model itemModel -> WidgetIndex -> itemMsg -> ( Model itemModel, Cmd (Msg itemMsg) )
+propagateMsgToWidget widget model i msg =
+    let
+        updatedWidgetList =
+            List.indexedMap (updateWidget widget i msg) model.contents
+
+        ( contentsWithWidgetUpdated, cmds ) =
+            List.unzip updatedWidgetList
+    in
+        if msg /= widget.selectMsg then
+            ( { model | contents = contentsWithWidgetUpdated }, Cmd.map (WidgetMsg i) <| Cmd.batch cmds )
+        else
+            let
+                confirmWidget j m =
+                    if j == i || not (widget.isSelected m) then
+                        ( m, Cmd.none )
+                    else
+                        widget.update widget.unselectMsg m
+
+                ( contents, widgetCmds ) =
+                    List.unzip <| List.indexedMap confirmWidget contentsWithWidgetUpdated
+
+                cmds =
+                    List.indexedMap (\i -> Cmd.map (WidgetMsg i)) widgetCmds
+            in
+                ( { model | contents = contents }, Cmd.batch cmds )
 
 
 addItem : ItemWidget itemModel itemMsg -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
