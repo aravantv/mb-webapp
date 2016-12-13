@@ -107,14 +107,19 @@ update widget msg model =
                         ( { model | contents = contents }, Cmd.batch cmds )
 
         Remove i ->
-            let
-                before_i =
-                    List.take i model.contents
+            removeItem i model
 
-                after_i =
-                    List.drop (i + 1) model.contents
-            in
-                ( { model | contents = before_i ++ after_i }, Cmd.none )
+
+removeItem : WidgetIndex -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
+removeItem i model =
+    let
+        before_i =
+            List.take i model.contents
+
+        after_i =
+            List.drop (i + 1) model.contents
+    in
+        ( { model | contents = before_i ++ after_i }, Cmd.none )
 
 
 updateWidget :
