@@ -16,7 +16,7 @@ widget =
     , isSelected = .editMode
     , selectMsg = Select
     , unselectMsg = Confirm
-    , change = \s -> Change s
+    , confirmMsg = Confirm
     }
 
 

@@ -1,7 +1,6 @@
 module SelectableList exposing (..)
 
 import Html exposing (..)
-import Html.Attributes as Attributes
 import Html.Events exposing (onInput, onClick)
 import Utils exposing (..)
 
@@ -11,10 +10,9 @@ type alias Selectable model msg base =
         | isSelected : model -> Bool
         , selectMsg : msg
         , unselectMsg : msg
-        , change :
-            String
-            -> msg
-            {--TODO remove change!--}
+        , confirmMsg :
+            msg
+            {--TODO separate item widget from addition widget --}
     }
 
 
@@ -24,7 +22,7 @@ type alias ItemWidget model msg =
 
 createListWidget : ItemWidget itemModel itemMsg -> Widget (Model itemModel) (Msg itemMsg)
 createListWidget widget =
-    { init = init, update = update widget, subscriptions = emptySubscription, view = view widget }
+    { init = init widget, update = update widget, subscriptions = emptySubscription, view = view widget }
 
 
 
@@ -32,12 +30,16 @@ createListWidget widget =
 
 
 type alias Model itemModel =
-    { uiToAdd : String, contents : List itemModel }
+    { itemToAdd : itemModel, contents : List itemModel }
 
 
-init : ( Model itemModel, Cmd (Msg itemMsg) )
-init =
-    ( { uiToAdd = "", contents = [] }, Cmd.none )
+init : ItemWidget itemModel itemMsg -> ( Model itemModel, Cmd (Msg itemMsg) )
+init widget =
+    let
+        ( itemToAdd, cmdInit ) =
+            widget.init
+    in
+        ( { itemToAdd = itemToAdd, contents = [] }, Cmd.map (WidgetMsg 0) cmdInit )
 
 
 
@@ -45,12 +47,12 @@ init =
 
 
 type alias WidgetIndex =
+    -- 0 is for the item to add, items in the list are counted starting from 1.
     Int
 
 
 type Msg itemMsg
     = Add
-    | ChangeToAdd String
     | WidgetMsg WidgetIndex itemMsg
     | Remove WidgetIndex
 
@@ -61,14 +63,45 @@ update widget msg model =
         Add ->
             addItem widget model
 
-        ChangeToAdd s ->
-            ( { model | uiToAdd = s }, Cmd.none )
-
         WidgetMsg i msg ->
-            propagateMsgToWidget widget model i msg
+            if i == 0 then
+                let
+                    ( updatedItemToAdd, cmd ) =
+                        widget.update msg model.itemToAdd
+                in
+                    if msg == widget.confirmMsg then
+                        let
+                            ( itemAdded, cmdAddition ) =
+                                addItem widget { model | itemToAdd = updatedItemToAdd }
+                        in
+                            ( itemAdded, Cmd.batch [ Cmd.map (WidgetMsg 1) cmd, cmdAddition ] )
+                    else if msg /= widget.unselectMsg then
+                        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map (WidgetMsg 0) cmd )
+                    else
+                        ( model, Cmd.none )
+            else
+                propagateMsgToWidget widget model (i - 1) msg
 
         Remove i ->
-            removeItem i model
+            removeItem (i - 1) model
+
+
+addItem : ItemWidget itemModel itemMsg -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
+addItem widget model =
+    let
+        ( initModel, initCmd ) =
+            widget.init
+
+        ( initModelSelected, selectCmd ) =
+            widget.update widget.selectMsg initModel
+
+        ( itemAddedUnselected, unselectCmd ) =
+            widget.update widget.unselectMsg model.itemToAdd
+
+        modelWithItemAdded =
+            { itemToAdd = initModelSelected, contents = model.itemToAdd :: model.contents }
+    in
+        ( modelWithItemAdded, Cmd.map (WidgetMsg 1) <| Cmd.batch [ initCmd, selectCmd ] )
 
 
 propagateMsgToWidget : ItemWidget itemModel itemMsg -> Model itemModel -> WidgetIndex -> itemMsg -> ( Model itemModel, Cmd (Msg itemMsg) )
@@ -97,27 +130,6 @@ propagateMsgToWidget widget model i msg =
                     List.indexedMap (\i -> Cmd.map (WidgetMsg i)) widgetCmds
             in
                 ( { model | contents = contents }, Cmd.batch cmds )
-
-
-addItem : ItemWidget itemModel itemMsg -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
-addItem widget model =
-    let
-        ( initModel, cmd1 ) =
-            widget.init
-
-        modelWithEmptyItemAdded =
-            { uiToAdd = "", contents = initModel :: model.contents }
-
-        ( modelWithItemChanged, cmd2 ) =
-            update widget (WidgetMsg 0 <| widget.change model.uiToAdd) modelWithEmptyItemAdded
-
-        ( modelWithItemConfirmed, cmd3 ) =
-            update widget (WidgetMsg 0 widget.unselectMsg) modelWithItemChanged
-
-        cmd =
-            Cmd.batch ([ Cmd.map (WidgetMsg 0) cmd1, cmd2, cmd3 ])
-    in
-        ( modelWithItemConfirmed, cmd )
 
 
 removeItem : WidgetIndex -> Model itemModel -> ( Model itemModel, Cmd (Msg itemMsg) )
@@ -152,19 +164,7 @@ updateWidget widget refIndex msg candidateIndex model =
 
 view : ItemWidget itemModel itemMsg -> Model itemModel -> Html (Msg itemMsg)
 view widget model =
-    ul [] <|
-        (li [] [ viewToAddField model ])
-            :: List.indexedMap (viewWidget widget) model.contents
-
-
-viewToAddField : Model itemModel -> Html (Msg itemMsg)
-viewToAddField model =
-    input
-        [ onInput ChangeToAdd
-        , onKeyUp [ ( enterKey, Add ) ]
-        , Attributes.value model.uiToAdd
-        ]
-        []
+    ul [] <| List.indexedMap (viewWidget widget) (model.itemToAdd :: model.contents)
 
 
 viewWidget : ItemWidget itemModel itemMsg -> WidgetIndex -> itemModel -> Html (Msg itemMsg)
