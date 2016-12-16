@@ -164,7 +164,9 @@ updateWidget widget refIndex msg candidateIndex model =
 
 view : ItemWidget itemModel itemMsg -> Model itemModel -> Html (Msg itemMsg)
 view widget model =
-    ul [] <| List.indexedMap (viewWidget widget) (model.itemToAdd :: model.contents)
+    ul [] <|
+        li [] [ Html.map (WidgetMsg 0) <| widget.view model.itemToAdd ]
+            :: List.indexedMap (\i -> viewWidget widget (i + 1)) model.contents
 
 
 viewWidget : ItemWidget itemModel itemMsg -> WidgetIndex -> itemModel -> Html (Msg itemMsg)
