@@ -4,6 +4,7 @@ import Html exposing (Html)
 import Html.Events exposing (on, keyCode)
 import Json.Decode exposing (fail, succeed, andThen)
 import Dict exposing (Dict)
+import Task
 
 
 onKeyUp : List ( Int, msg ) -> Html.Attribute msg
@@ -46,6 +47,11 @@ wrapUpdateWithCmd update =
 wrapModelWithCmd : model -> ( model, Cmd msg )
 wrapModelWithCmd model =
     ( model, Cmd.none )
+
+
+cmdOfMsg : msg -> Cmd msg
+cmdOfMsg msg =
+    Task.perform identity (Task.succeed msg)
 
 
 emptySubscription : model -> Sub msg
