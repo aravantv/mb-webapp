@@ -10,13 +10,12 @@ import SelectableList
 widget : SelectableList.ItemWidget Model Msg
 widget =
     { init = wrapModelWithCmd model
-    , update = wrapUpdateWithCmd update
+    , update = update
     , view = view
     , subscriptions = emptySubscription
     , isSelected = .editMode
     , selectMsg = Select
-    , unselectMsg = Confirm
-    , confirmMsg = Confirm
+    , unselectMsg = Unselect
     }
 
 
@@ -42,25 +41,25 @@ model =
 
 type Msg
     = Change String
-    | Confirm
+    | Unselect
     | Cancel
     | Select
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Change newContent ->
-            { model | uiContent = newContent }
+            ( { model | uiContent = newContent }, Cmd.none )
 
-        Confirm ->
-            { model | editMode = False, content = model.uiContent }
+        Unselect ->
+            ( { model | editMode = False, content = model.uiContent }, Cmd.none )
 
         Cancel ->
-            { model | editMode = False, uiContent = model.content }
+            ( { model | uiContent = model.content }, cmdOfMsg Unselect )
 
         Select ->
-            { model | editMode = True, uiContent = model.content }
+            ( { model | editMode = True }, Cmd.none )
 
 
 
@@ -72,7 +71,7 @@ view model =
     if model.editMode then
         input
             [ onInput Change
-            , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
+            , onKeyUp [ ( enterKey, Unselect ), ( escapeKey, Cancel ) ]
             , value model.uiContent
             ]
             []
