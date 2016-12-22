@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Elm • TodoMVC</title>
+    <script type="text/javascript" src="elm.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+</body>
+
+<script type="text/javascript">
+    function setValue(path, val, obj) {
+        var fields = path.split('.');
+        var result = obj;
+        for (var i = 0, n = fields.length; i < n && result !== undefined; i++) {
+            var field = fields[i];
+            if (i === n - 1) {
+                result[field] = val;
+            } else {
+                if (typeof result[field] === 'undefined' || !_.isObject(result[field])) {
+                    result[field] = {};
+                }
+                result = result[field];
+            }
+        }
+    }
+
+    var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
+    var state = serializedState ? JSON.parse(serializedState) : null;
+    var mbwebapp = Elm.Todo.fullscreen(state);
+    mbwebapp.ports.setValue.subscribe(function (path, value) {
+        setValue(path, value, state)
+        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
+    });
+</script>
+
+</html>
