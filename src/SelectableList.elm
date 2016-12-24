@@ -3,36 +3,29 @@ module SelectableList exposing (..)
 import Html exposing (..)
 import Html.Events exposing (onInput, onClick)
 import Utils exposing (..)
+import Widget
 
 
-type alias Selectable model msg base =
-    { base
-        | isSelected : model -> Bool
-        , selectMsg : msg
-        , unselectMsg : msg
+type alias ItemWidget datamodel model msg =
+    Widget.Selectable model msg (Widget datamodel model msg)
+
+
+type alias NewItemWidget datamodel model msg =
+    Widget.Decision msg (Widget datamodel model msg)
+
+
+type alias ListDataBinding dataModel itemModel =
+    { toList : dataModel -> List itemModel
+    , fromList : List itemModel -> dataModel
     }
-
-
-type alias Decision msg base =
-    { base
-        | confirmMsg : msg
-        , cancelMsg : msg
-    }
-
-
-type alias ItemWidget model msg =
-    Selectable model msg (Widget model msg)
-
-
-type alias NewItemWidget model msg =
-    Decision msg (Widget model msg)
 
 
 createListWidget :
-    NewItemWidget itemModel newItemMsg
-    -> ItemWidget itemModel itemMsg
-    -> Widget (Model itemModel) (Msg newItemMsg itemMsg)
-createListWidget newItemWidget itemWidget =
+    ListDataBinding dataModel itemModel
+    -> NewItemWidget dataModel itemModel newItemMsg
+    -> ItemWidget dataModel itemModel itemMsg
+    -> Widget dataModel (Model itemModel) (Msg newItemMsg itemMsg)
+createListWidget binding newItemWidget itemWidget =
     { init = init newItemWidget
     , update = update newItemWidget itemWidget
     , subscriptions = emptySubscription
