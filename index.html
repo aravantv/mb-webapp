@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Elm • TodoMVC</title>
-    <script type="text/javascript" src="elm.js"></script>
+    <script type="text/javascript" src="main.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -29,12 +29,13 @@
     }
 
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
-    var state = serializedState ? JSON.parse(serializedState) : null;
-    var mbwebapp = Elm.Todo.fullscreen(state);
-    mbwebapp.ports.setValue.subscribe(function (path, value) {
-        setValue(path, value, state)
-        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
+    var state = serializedState ? JSON.parse(serializedState) : "";
+    var mbwebapp = Elm.Main.fullscreen();
+    mbwebapp.ports.setValue.subscribe(function (newState) {
+        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(newState));
+        mbwebapp.ports.getValue.send(newState);
     });
+    mbwebapp.ports.getValue.send(state);
 </script>
 
 </html>
