@@ -4,7 +4,6 @@ import Html exposing (Html)
 import Html.Events exposing (on, keyCode)
 import Json.Decode exposing (fail, succeed, andThen)
 import Dict exposing (Dict)
-import Task
 
 
 onKeyUp : List ( Int, msg ) -> Html.Attribute msg
@@ -29,31 +28,3 @@ enterKey =
 escapeKey : number
 escapeKey =
     27
-
-
-type alias Widget model msg =
-    { init : ( model, Cmd msg )
-    , update : msg -> model -> ( model, Cmd msg )
-    , subscriptions : model -> Sub msg
-    , view : model -> Html msg
-    }
-
-
-wrapUpdateWithCmd : (msg -> model -> model) -> msg -> model -> ( model, Cmd msg )
-wrapUpdateWithCmd update =
-    \msg model -> update msg model ! []
-
-
-wrapModelWithCmd : model -> ( model, Cmd msg )
-wrapModelWithCmd model =
-    ( model, Cmd.none )
-
-
-cmdOfMsg : msg -> Cmd msg
-cmdOfMsg msg =
-    Task.perform identity (Task.succeed msg)
-
-
-emptySubscription : model -> Sub msg
-emptySubscription _ =
-    Sub.none
