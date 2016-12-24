@@ -4,18 +4,18 @@ import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick)
 import Utils exposing (..)
-import SelectableList
+import Widget exposing (wrapModelWithCmd, cmdOfMsg)
 
 
-widget : SelectableList.ItemWidget Model Msg
-widget =
+createWidget : Widget.Binding Msg String -> Widget.Selectable Model Msg
+createWidget binding =
     { init = wrapModelWithCmd model
-    , update = update
+    , update = update binding
     , view = view
-    , subscriptions = emptySubscription
+    , subscriptions = \_ -> Sub.map Change binding.get
     , isSelected = .editMode
     , selectMsg = Select
-    , unselectMsg = Unselect
+    , unselectMsg = Confirm
     }
 
 
@@ -41,22 +41,22 @@ model =
 
 type Msg
     = Change String
-    | Unselect
+    | Confirm
     | Cancel
     | Select
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : Widget.Binding Msg String -> Msg -> Model -> ( Model, Cmd Msg )
+update binding msg model =
     case msg of
         Change newContent ->
             ( { model | uiContent = newContent }, Cmd.none )
 
-        Unselect ->
-            ( { model | editMode = False, content = model.uiContent }, Cmd.none )
+        Confirm ->
+            ( { model | editMode = False, content = model.uiContent }, binding.set model.content )
 
         Cancel ->
-            ( { model | uiContent = model.content }, cmdOfMsg Unselect )
+            ( { model | uiContent = model.content }, cmdOfMsg Confirm )
 
         Select ->
             ( { model | editMode = True }, Cmd.none )
@@ -71,7 +71,7 @@ view model =
     if model.editMode then
         input
             [ onInput Change
-            , onKeyUp [ ( enterKey, Unselect ), ( escapeKey, Cancel ) ]
+            , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
             , value model.uiContent
             ]
             []
