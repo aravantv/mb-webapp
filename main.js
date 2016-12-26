@@ -8540,7 +8540,7 @@ var _aravantv$mb_webapp$SelectableText$update = F3(
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{editMode: false, content: model.uiContent}),
-					_1: binding.set(model.content)
+					_1: binding.set(model.uiContent)
 				};
 			case 'Cancel':
 				return {
