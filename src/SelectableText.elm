@@ -53,7 +53,7 @@ update binding msg model =
             ( { model | uiContent = newContent }, Cmd.none )
 
         Confirm ->
-            ( { model | editMode = False, content = model.uiContent }, binding.set model.content )
+            ( { model | editMode = False, content = model.uiContent }, binding.set model.uiContent )
 
         Cancel ->
             ( { model | uiContent = model.content }, cmdOfMsg Confirm )
