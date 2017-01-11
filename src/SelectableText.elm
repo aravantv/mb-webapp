@@ -7,7 +7,7 @@ import Utils exposing (..)
 import Widget exposing (wrapModelWithCmd, cmdOfMsg)
 
 
-createWidget : Widget.Binding Msg String -> Widget.Selectable Model Msg
+createWidget : Widget.Binding Msg String -> Widget.SelectableWidget Model Msg
 createWidget binding =
     { init = wrapModelWithCmd model
     , update = update binding

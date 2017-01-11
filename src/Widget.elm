@@ -61,7 +61,7 @@ type alias ISelectable model msg base =
     }
 
 
-type alias Selectable model msg =
+type alias SelectableWidget model msg =
     ISelectable model msg (Widget model msg)
 
 
