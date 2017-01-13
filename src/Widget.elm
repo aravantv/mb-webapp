@@ -87,6 +87,8 @@ type alias Index =
 
 
 type alias ListBinding msg ty =
-    { get : Sub msg
-    , setItem : Index -> ty -> Cmd msg
+    { itemAdded : Sub ( Index, ty )
+    , itemRemoved : Sub Index
+    , addItem : Index -> ty -> Cmd msg
+    , removeItem : Index -> Cmd msg
     }
