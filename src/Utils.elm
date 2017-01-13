@@ -28,3 +28,16 @@ enterKey =
 escapeKey : number
 escapeKey =
     27
+
+
+insert : List t -> t -> Int -> List t
+insert l x i =
+    case l of
+        [] ->
+            [ x ]
+
+        y :: ys ->
+            if i == 0 then
+                x :: l
+            else
+                y :: insert ys x (i - 1)
