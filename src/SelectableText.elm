@@ -1,4 +1,4 @@
-module UISelectableText exposing (..)
+module SelectableText exposing (..)
 
 import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
