@@ -1,4 +1,4 @@
-module SelectableText exposing (..)
+module UISelectableText exposing (..)
 
 import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
@@ -12,10 +12,10 @@ createWidget binding =
     { init = wrapModelWithCmd model
     , update = update binding
     , view = view
-    , subscriptions = \_ -> Sub.map Change binding.get
+    , subscriptions = \_ -> Sub.map ModelChange binding.get
     , isSelected = .editMode
-    , selectMsg = Select
-    , unselectMsg = Confirm
+    , selectMsg = UISelect
+    , unselectMsg = UIConfirm
     }
 
 
@@ -40,26 +40,30 @@ model =
 
 
 type Msg
-    = Change String
-    | Confirm
-    | Cancel
-    | Select
+    = UIChange String
+    | UIConfirm
+    | UICancel
+    | UISelect
+    | ModelChange String
 
 
 update : Widget.Binding Msg String -> Msg -> Model -> ( Model, Cmd Msg )
 update binding msg model =
     case msg of
-        Change newContent ->
+        UIChange newContent ->
             ( { model | uiContent = newContent }, Cmd.none )
 
-        Confirm ->
+        UIConfirm ->
             ( { model | editMode = False, content = model.uiContent }, binding.set model.uiContent )
 
-        Cancel ->
-            ( { model | uiContent = model.content }, cmdOfMsg Confirm )
+        UICancel ->
+            ( { model | uiContent = model.content }, cmdOfMsg UIConfirm )
 
-        Select ->
+        UISelect ->
             ( { model | editMode = True }, Cmd.none )
+
+        ModelChange newContent ->
+            ( { model | uiContent = newContent, content = newContent }, Cmd.none )
 
 
 
@@ -70,10 +74,10 @@ view : Model -> Html Msg
 view model =
     if model.editMode then
         input
-            [ onInput Change
-            , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
+            [ onInput UIChange
+            , onKeyUp [ ( enterKey, UIConfirm ), ( escapeKey, UICancel ) ]
             , value model.uiContent
             ]
             []
     else
-        label [ onDoubleClick Select ] [ text model.uiContent ]
+        label [ onDoubleClick UISelect ] [ text model.uiContent ]
