@@ -31,11 +31,19 @@
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
     var state = serializedState ? JSON.parse(serializedState) : "";
     var mbwebapp = Elm.Main.fullscreen();
-    mbwebapp.ports.setValue.subscribe(function (newState) {
-        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(newState));
-        mbwebapp.ports.getValue.send(newState);
+    mbwebapp.ports.addItem.subscribe(function (i, v) {
+        state.splice(i, 0, v);
+        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
+        mbwebapp.ports.itemAdded.send(i, v);
     });
-    mbwebapp.ports.getValue.send(state);
+    mbwebapp.ports.removeItem.subscribe(function (i) {
+        state.splice(i, 1);
+        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
+        mbwebapp.ports.itemRemoved.send(i);
+    });
+    for (i = 0; i < state.length; i++) {
+        mbwebapp.ports.itemAdded.send(i, state[i]);
+    }
 </script>
 
 </html>
