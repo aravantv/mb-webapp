@@ -43,10 +43,27 @@
         applyDeep(path, function (o, i) { o.splice(i, 1); }, obj);
     }
 
+    function sendAll(obj, currentPath) {
+        for (var property in obj) {
+            if (obj.hasOwnProperty(property)) {
+                var newPath = currentPath.slice();
+                newPath.push(property);
+                if (typeof obj[property] === 'string') {
+                    mbwebapp.ports.getStringSub.send([newPath, obj[property]]);
+                } else if (typeof obj[property] === 'object') {
+                    sendAll(obj[property], newPath);
+                    mbwebapp.ports.itemAddedSub.send([newPath, obj[property]]);
+                }
+            }
+        }
+    }
+
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
     var state = serializedState ? JSON.parse(serializedState) : "";
     var mbwebapp = Elm.Main.fullscreen();
 
+    sendAll(state.root, []);
+    
     mbwebapp.ports.setStringCmd.subscribe(function (args) {
         setValue(args[0], args[1], state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
