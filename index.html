@@ -12,13 +12,14 @@
 </body>
 
 <script type="text/javascript">
-    function setValue(path, val, obj) {
-        var fields = path.split('.');
+    // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object. 
+    function applyDeep(path, f, obj) {
+        path.splice(0, 0, "root");
         var result = obj;
-        for (var i = 0, n = fields.length; i < n && result !== undefined; i++) {
-            var field = fields[i];
+        for (var i = 0, n = path.length; i < n && result !== undefined; i++) {
+            var field = path[i];
             if (i === n - 1) {
-                result[field] = val;
+                f(result, field);
             } else {
                 if (typeof result[field] === 'undefined' || !_.isObject(result[field])) {
                     result[field] = {};
@@ -28,22 +29,43 @@
         }
     }
 
+    function setValue(path, val, obj) {
+        applyDeep(path, function (o, f) {
+                    console.log(o + "=" + f);
+             o[f] = val; }, obj);
+    }
+
+    // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
+    function insertValue(path, val, obj) {
+        applyDeep(path, function (o, i) { o.splice(i, 0, val); }, obj);
+    }
+
+    // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
+    function removeValue(path, obj) {
+        applyDeep(path, function (o, i) { o.splice(i, 1); }, obj);
+    }
+
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
     var state = serializedState ? JSON.parse(serializedState) : "";
     var mbwebapp = Elm.Main.fullscreen();
-    mbwebapp.ports.addItem.subscribe(function (i, v) {
-        state.splice(i, 0, v);
+
+    mbwebapp.ports.setStringCmd.subscribe(function (args) {
+        setValue(args[0], args[1], state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemAdded.send(i, v);
-    });
-    mbwebapp.ports.removeItem.subscribe(function (i) {
-        state.splice(i, 1);
+        mbwebapp.ports.getStringSub.send(args);
+    })
+
+    mbwebapp.ports.addItemCmd.subscribe(function (path, val) {
+        insertValue(args[0], args[1], state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemRemoved.send(i);
+        mbwebapp.ports.itemAddedSub.send(args);
     });
-    for (i = 0; i < state.length; i++) {
-        mbwebapp.ports.itemAdded.send(i, state[i]);
-    }
+
+    mbwebapp.ports.removeItemCmd.subscribe(function (path) {
+        removeValue(path, state);
+        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
+        mbwebapp.ports.itemRemovedSub.send(path);
+    });
 </script>
 
 </html>
