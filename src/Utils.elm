@@ -41,3 +41,24 @@ insert l x i =
                 x :: l
             else
                 y :: insert ys x (i - 1)
+
+
+{-| substract [x,y,z,t] [x,y] === [z,t]
+-}
+listSubstract : List t -> List t -> Maybe (List t)
+listSubstract l1 l2 =
+    case ( l1, l2 ) of
+        ( [], [] ) ->
+            Just []
+
+        ( [], _ :: _ ) ->
+            Nothing
+
+        ( x :: xs, [] ) ->
+            Just (x :: xs)
+
+        ( x :: xs, y :: ys ) ->
+            if (x == y) then
+                listSubstract xs ys
+            else
+                Nothing
