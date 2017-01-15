@@ -21,7 +21,7 @@
             if (i === n - 1) {
                 f(result, field);
             } else {
-                if (typeof result[field] === 'undefined' || !_.isObject(result[field])) {
+                if (typeof result[field] !== 'object') {
                     result[field] = {};
                 }
                 result = result[field];
@@ -30,9 +30,7 @@
     }
 
     function setValue(path, val, obj) {
-        applyDeep(path, function (o, f) {
-                    console.log(o + "=" + f);
-             o[f] = val; }, obj);
+        applyDeep(path, function (o, f) { o[f] = val; }, obj);
     }
 
     // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
