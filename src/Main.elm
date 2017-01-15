@@ -7,27 +7,27 @@ import Html
 
 import SelectableText
 import Widget exposing (toConcreteWidget, toConcreteWidgetWithFlags)
-import Storage exposing (..)
+import Storage
 
 
-textBinding : Int -> Widget.Binding msg String ()
-textBinding i =
+textBinding : Storage.Path -> Widget.Binding msg String ()
+textBinding p =
     { get =
         -- TODO for now I have to return a Maybe type. In the future, take inspiration from WebSockets instead
-        getStringSub
+        Storage.getStringSub
             (\( path, s ) ->
-                if path == [ fieldOfIndex i ] then
+                if path == p then
                     Result.Ok s
                 else
                     Result.Err ()
             )
-    , set = \s -> setStringCmd ( [ fieldOfIndex i ], s )
+    , set = \s -> Storage.setStringCmd ( p, s )
     }
 
 
 main : Program Never SelectableText.Model SelectableText.Msg
 main =
-    Html.program (toConcreteWidget <| SelectableText.createWidget (textBinding 0))
+    Html.program (toConcreteWidget <| SelectableText.createWidget (textBinding [ "0" ]))
 
 
 
