@@ -1,17 +1,32 @@
-port module Main exposing (..)
+module Main exposing (..)
 
 import Html
 
 
-{--import SelectableList
-import NewText--}
+-- import SelectableList
 
 import SelectableText
 import Widget exposing (toConcreteWidget, toConcreteWidgetWithFlags)
+import Storage exposing (..)
 
 
-type alias DataModel =
-    { tasks : List String }
+textBinding : Widget.Binding msg String ()
+textBinding =
+    { get =
+        getStringSub
+            (\( path, s ) ->
+                if path == [] then
+                    Result.Ok s
+                else
+                    Result.Err ()
+            )
+    , set = \s -> setStringCmd ( [], s )
+    }
+
+
+main : Program Never SelectableText.Model SelectableText.Msg
+main =
+    Html.program (toConcreteWidget <| SelectableText.createWidget textBinding)
 
 
 
@@ -19,21 +34,3 @@ type alias DataModel =
 main =
     Html.program (SelectableList.createListWidget NewText.widget SelectableText.widget)
         Html.program--}
-
-
-port getValue : (String -> msg) -> Sub msg
-
-
-port setValue : String -> Cmd msg
-
-
-textBinding : Widget.Binding msg String
-textBinding =
-    { get = getValue identity
-    , set = setValue
-    }
-
-
-main : Program Never SelectableText.Model SelectableText.Msg
-main =
-    Html.program (toConcreteWidget <| SelectableText.createWidget textBinding)
