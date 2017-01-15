@@ -62,3 +62,8 @@ listSubstract l1 l2 =
                 listSubstract xs ys
             else
                 Nothing
+
+
+resultFullMap : (o1 -> o2) -> (e1 -> e2) -> Result e1 o1 -> Result e2 o2
+resultFullMap fOk fErr =
+    Result.map fOk << Result.mapError fErr
