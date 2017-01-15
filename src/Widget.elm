@@ -76,8 +76,8 @@ type alias DecisionWidget model msg =
     IDecision msg (Widget model msg)
 
 
-type alias Binding msg ty =
-    { get : Sub ty
+type alias Binding msg ty err =
+    { get : Sub (Result err ty)
     , set : ty -> Cmd msg
     }
 
@@ -86,8 +86,8 @@ type alias Index =
     Int
 
 
-type alias ListBinding msg ty =
-    { itemAdded : Sub ( Index, ty )
+type alias ListBinding msg ty err =
+    { itemAdded : Sub (Result err ( Index, ty ))
     , itemRemoved : Sub Index
     , addItem : Index -> ty -> Cmd msg
     , removeItem : Index -> Cmd msg
