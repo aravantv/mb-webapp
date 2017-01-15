@@ -80,16 +80,7 @@ update binding msg model =
 
 subscriptions : Widget.Binding Msg String err -> Model -> Sub Msg
 subscriptions binding model =
-    let
-        f res =
-            case res of
-                Ok v ->
-                    ModelChange v
-
-                Err _ ->
-                    NoOp
-    in
-        Sub.map f binding.get
+    Sub.map (Result.withDefault NoOp << Result.map ModelChange) binding.get
 
 
 
