@@ -7,12 +7,12 @@ import Utils exposing (..)
 import Widget exposing (wrapModelWithCmd, cmdOfMsg)
 
 
-createWidget : Widget.Binding Msg String -> Widget.SelectableWidget Model Msg
+createWidget : Widget.Binding Msg String err -> Widget.SelectableWidget Model Msg
 createWidget binding =
     { init = wrapModelWithCmd model
     , update = update binding
     , view = view
-    , subscriptions = \_ -> Sub.map ModelChange binding.get
+    , subscriptions = subscriptions binding
     , isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
@@ -45,9 +45,14 @@ type Msg
     | UICancel
     | UISelect
     | ModelChange String
+    | NoOp
 
 
-update : Widget.Binding Msg String -> Msg -> Model -> ( Model, Cmd Msg )
+
+-- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
+
+
+update : Widget.Binding Msg String err -> Msg -> Model -> ( Model, Cmd Msg )
 update binding msg model =
     case msg of
         UIChange newContent ->
@@ -62,8 +67,29 @@ update binding msg model =
         UISelect ->
             ( { model | editMode = True }, Cmd.none )
 
+        NoOp ->
+            ( model, Cmd.none )
+
         ModelChange newContent ->
             ( { model | uiContent = newContent, content = newContent }, Cmd.none )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Widget.Binding Msg String err -> Model -> Sub Msg
+subscriptions binding model =
+    let
+        f res =
+            case res of
+                Ok v ->
+                    ModelChange v
+
+                Err _ ->
+                    NoOp
+    in
+        Sub.map f binding.get
 
 
 
