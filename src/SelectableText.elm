@@ -4,10 +4,12 @@ import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick)
 import Utils exposing (..)
-import Widget exposing (wrapModelWithCmd, cmdOfMsg)
+import Widget exposing (Binding, ISelectable, IBound, Widget, wrapModelWithCmd, cmdOfMsg)
 
 
-createWidget : Widget.Binding Msg String err -> Widget.SelectableWidget Model Msg
+createWidget :
+    Binding Msg String err
+    -> ISelectable Model Msg (IBound Msg String err (Widget Model Msg))
 createWidget binding =
     { init = wrapModelWithCmd model
     , update = update binding
@@ -16,6 +18,7 @@ createWidget binding =
     , isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
+    , binding = binding
     }
 
 
@@ -52,7 +55,7 @@ type Msg
 -- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
 
 
-update : Widget.Binding Msg String err -> Msg -> Model -> ( Model, Cmd Msg )
+update : Binding Msg String err -> Msg -> Model -> ( Model, Cmd Msg )
 update binding msg model =
     case msg of
         UIChange newContent ->
@@ -78,7 +81,7 @@ update binding msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Widget.Binding Msg String err -> Model -> Sub Msg
+subscriptions : Binding Msg String err -> Model -> Sub Msg
 subscriptions binding model =
     Sub.map (Result.withDefault NoOp << Result.map ModelChange) binding.get
 
