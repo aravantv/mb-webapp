@@ -1,10 +1,8 @@
 module Main exposing (..)
 
 import Html
-import Json.Encode
-import SelectableText exposing (subscriptions)
+import SelectableText
 import Storage
-import Utils exposing (..)
 import Widget
 
 
@@ -36,9 +34,11 @@ textBinding p =
 
 
 {--
-listBinding : Storage.Path -> Widget.ListBinding msg String ()
-listBinding p =
-    { itemAdded =
+
+listBinding : List(Widget.Binding itemMsg itemSerializedType itemErr) -> Storage.Path -> Widget.ListBinding msg itemSerializedType err
+listBinding itemBindings p =
+    { get =
+      , itemAdded =
         Storage.itemAddedSub
             (\( path, v ) ->
                 case listSubstract path p of
@@ -61,7 +61,6 @@ listBinding p =
     , addItem = \i v -> Storage.addItemCmd ( p ++ [ toString i ], (Json.Encode.string v) )
     , removeItem = \i -> Storage.removeItemCmd (p ++ [ toString i ])
     }
-
 --}
 
 
@@ -69,7 +68,7 @@ main : Program Never SelectableText.Model SelectableText.Msg
 main =
     let
         widget =
-            SelectableText.createWidget (textBinding [ "0" ])
+            SelectableText.createWidget (textBinding [])
     in
         Html.program
             { init = widget.init
