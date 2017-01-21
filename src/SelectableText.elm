@@ -4,12 +4,12 @@ import Html exposing (Html, input, text, label)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onDoubleClick)
 import Utils exposing (..)
-import Widget exposing (Binding, ISelectable, IBound, Widget, wrapModelWithCmd, cmdOfMsg)
+import Widget exposing (Binding, ISelectable, Widget, wrapModelWithCmd, cmdOfMsg)
 
 
 createWidget :
     Binding Msg String err
-    -> ISelectable Model Msg (IBound Msg String err (Widget Model Msg))
+    -> ISelectable Model Msg (Widget Model Msg)
 createWidget binding =
     { init = wrapModelWithCmd model
     , update = update binding
@@ -18,7 +18,6 @@ createWidget binding =
     , isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
-    , binding = binding
     }
 
 
