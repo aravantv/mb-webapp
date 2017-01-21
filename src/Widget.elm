@@ -23,10 +23,6 @@ type alias Binding msg serializedType err =
     }
 
 
-type alias IBound msg serializedType err base =
-    { base | binding : Binding msg serializedType err }
-
-
 type alias ISelectable model msg base =
     { base
         | isSelected : model -> Bool
@@ -43,21 +39,17 @@ type alias Index =
     Int
 
 
-type alias IListBinding msg ty err base =
+type alias IListBinding msg itemSerializedType err base =
     { base
-        | itemAdded : Sub (Result err ( Index, ty ))
+        | itemAdded : Sub (Result err ( Index, itemSerializedType ))
         , itemRemoved : Sub (Result err Index)
-        , addItem : Index -> ty -> Cmd msg
+        , addItem : Index -> itemSerializedType -> Cmd msg
         , removeItem : Index -> Cmd msg
     }
 
 
-type alias ListBinding msg ty err =
-    IListBinding msg ty err (Binding msg (List ty) err)
-
-
-type alias IListBound msg serializedType err base =
-    { base | binding : ListBinding msg serializedType err }
+type alias ListBinding msg itemSerializedType err =
+    IListBinding msg itemSerializedType err (Binding msg (List itemSerializedType) err)
 
 
 type alias Factory fromTy toTy =
