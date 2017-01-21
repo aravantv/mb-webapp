@@ -12,7 +12,7 @@
 </body>
 
 <script type="text/javascript">
-    // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object. 
+    // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object.
     function applyDeep(path, f, obj) {
         path.splice(0, 0, "root");
         var result = obj;
@@ -49,9 +49,11 @@
                 var newPath = currentPath.slice();
                 newPath.push(property);
                 if (typeof obj[property] === 'string') {
+                    newPath.splice(0, 1);
                     mbwebapp.ports.getStringSub.send([newPath, obj[property]]);
                 } else if (typeof obj[property] === 'object') {
                     sendAll(obj[property], newPath);
+                    newPath.splice(0, 1);
                     mbwebapp.ports.itemAddedSub.send([newPath, obj[property]]);
                 }
             }
@@ -62,8 +64,8 @@
     var state = serializedState ? JSON.parse(serializedState) : "";
     var mbwebapp = Elm.Main.fullscreen();
 
-    sendAll(state.root, []);
-    
+    sendAll(state, []);
+
     mbwebapp.ports.setStringCmd.subscribe(function (args) {
         setValue(args[0], args[1], state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
