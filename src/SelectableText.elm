@@ -7,8 +7,8 @@ import Utils exposing (..)
 import Widget exposing (Binding, ISelectable, FixedPathBinding, Widget, cmdOfMsg, wrapModelWithCmd)
 
 
-createWidget : Widget.Path -> Binding Msg String err -> ISelectable Model Msg (Widget Model Msg)
-createWidget p binding =
+createWidget : Binding Msg String err -> Widget.Path -> ISelectable Model Msg (Widget Model Msg)
+createWidget binding p =
     let
         concreteBinding =
             binding p
