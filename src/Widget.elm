@@ -94,9 +94,9 @@ wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
 
 
-wrapModelWithCmd : model -> ( model, Cmd msg )
-wrapModelWithCmd model =
-    ( model, Cmd.none )
+wrapWithNoCmd : a -> ( a, b -> Cmd msg )
+wrapWithNoCmd x =
+    ( x, always Cmd.none )
 
 
 cmdOfMsg : msg -> Cmd msg
