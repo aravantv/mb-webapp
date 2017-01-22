@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html
 import SelectableText
 import Storage
+import Utils exposing (listSubstract)
 import Widget
 
 
@@ -32,8 +33,7 @@ textBinding p =
     }
 
 
-
-{--listBinding : Storage.Path -> Widget.ListBinding msg ()
+listBinding : Widget.ListBinding msg ()
 listBinding p =
     { itemAdded =
         Storage.itemAddedSub
@@ -65,7 +65,7 @@ main : Program Never SelectableText.Model SelectableText.Msg
 main =
     let
         widget =
-            SelectableText.createWidget [] textBinding
+            SelectableText.createWidget textBinding []
     in
         Html.program
             { init = widget.init
@@ -76,7 +76,7 @@ main =
 
 
 
---  SelectableList.createListWidget (listBinding []) NewText.widget (SelectableText.createWidget (textBinding [ "0" ]))
+--  SelectableList.createListWidget listBinding [] NewText.widget (SelectableText.createWidget textBinding))
 {--main : Program Never (SelectableList.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg)
 main =
     Html.program (SelectableList.createListWidget NewText.widget SelectableText.widget)
