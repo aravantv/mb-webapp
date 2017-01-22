@@ -3,8 +3,7 @@ module Main exposing (..)
 import Html
 import SelectableText
 import Storage
-import Utils exposing (listSubstract)
-import Widget
+import Widget exposing (makeTopWidget)
 
 
 --import SelectableList
@@ -19,20 +18,21 @@ import Storage
 
 
 textBinding : Widget.Binding msg String ()
-textBinding p =
+textBinding =
     { get =
-        -- TODO for now I have to return a Result type. In the future, take inspiration from WebSockets instead
         Storage.getStringSub
             (\( path, s ) ->
-                if path == p then
-                    Result.Ok s
-                else
-                    Result.Err ()
+                \p ->
+                    if path == p then
+                        Result.Ok s
+                    else
+                        Result.Err ()
             )
-    , set = \s -> Storage.setStringCmd ( p, s )
+    , set = \s p -> Storage.setStringCmd ( p, s )
     }
 
 
+{-|
 listBinding : Widget.ListBinding msg ()
 listBinding p =
     { itemAdded =
@@ -58,21 +58,21 @@ listBinding p =
     , addItem = \i -> Storage.addItemCmd (p ++ [ toString i ])
     , removeItem = \i -> Storage.removeItemCmd (p ++ [ toString i ])
     }
---}
-
-
+-
+-}
 main : Program Never SelectableText.Model SelectableText.Msg
 main =
     let
         widget =
-            SelectableText.createWidget textBinding []
+            SelectableText.createWidget textBinding
     in
-        Html.program
-            { init = widget.init
-            , update = widget.update
-            , view = widget.view
-            , subscriptions = widget.subscriptions
-            }
+        Html.program <|
+            makeTopWidget
+                { init = widget.init
+                , update = widget.update
+                , view = widget.view
+                , subscriptions = widget.subscriptions
+                }
 
 
 
