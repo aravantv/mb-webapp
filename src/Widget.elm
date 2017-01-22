@@ -13,12 +13,46 @@ type alias Path =
     List String
 
 
+{-| note: all effects are functions taking a path as parameter, but the in the top-widget,
+the one given to Html.program, these are not present anymore
+-}
 type alias Widget model msg =
+    { init : ( model, Path -> Cmd msg )
+    , update : msg -> model -> ( model, Path -> Cmd msg )
+    , subscriptions : model -> Sub (Path -> msg)
+    , view : model -> Html msg
+    }
+
+
+type alias TopWidget model msg =
     { init : ( model, Cmd msg )
     , update : msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
     , view : model -> Html msg
     }
+
+
+makeTopWidget : Widget model msg -> TopWidget model msg
+makeTopWidget widget =
+    let
+        ( model, cmdBuilder ) =
+            widget.init
+
+        update msg model =
+            let
+                ( updatedModel, postUpdateCmdBuilder ) =
+                    widget.update msg model
+            in
+                ( updatedModel, postUpdateCmdBuilder [] )
+
+        subscriptions model =
+            Sub.map (\msgBuilder -> msgBuilder []) (widget.subscriptions model)
+    in
+        { init = ( model, cmdBuilder [] )
+        , update = update
+        , subscriptions = subscriptions
+        , view = widget.view
+        }
 
 
 type alias ISelectable model msg base =
@@ -37,26 +71,18 @@ type alias Index =
     Int
 
 
-type alias FixedPathBinding msg serializedType err =
-    { get : Sub (Result err serializedType)
-    , set : serializedType -> Cmd msg
-    }
-
-
 type alias Binding msg serializedType err =
-    Path -> FixedPathBinding msg serializedType err
-
-
-type alias FixedPathListBinding msg err =
-    { itemAdded : Sub (Result err Index)
-    , itemRemoved : Sub (Result err Index)
-    , addItem : Index -> Cmd msg
-    , removeItem : Index -> Cmd msg
+    { get : Sub (Path -> Result err serializedType)
+    , set : serializedType -> Path -> Cmd msg
     }
 
 
 type alias ListBinding msg err =
-    Path -> FixedPathListBinding msg err
+    { itemAdded : Sub (Path -> Result err Index)
+    , itemRemoved : Sub (Path -> Result err Index)
+    , addItem : Index -> Path -> Cmd msg
+    , removeItem : Index -> Path -> Cmd msg
+    }
 
 
 type alias Factory fromTy toTy =
