@@ -1,22 +1,26 @@
 module SelectableText exposing (..)
 
-import Html exposing (Html, input, text, label)
+import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onDoubleClick)
+import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (Binding, ISelectable, Widget, wrapModelWithCmd, cmdOfMsg)
+import Widget exposing (Binding, ISelectable, FixedPathBinding, Widget, cmdOfMsg, wrapModelWithCmd)
 
 
-createWidget : Binding Msg String err -> ISelectable Model Msg (Widget Model Msg)
-createWidget binding =
-    { init = wrapModelWithCmd model
-    , update = update binding
-    , view = view
-    , subscriptions = subscriptions binding
-    , isSelected = .editMode
-    , selectMsg = UISelect
-    , unselectMsg = UIConfirm
-    }
+createWidget : Widget.Path -> Binding Msg String err -> ISelectable Model Msg (Widget Model Msg)
+createWidget p binding =
+    let
+        concreteBinding =
+            binding p
+    in
+        { init = wrapModelWithCmd model
+        , update = update concreteBinding
+        , view = view
+        , subscriptions = subscriptions concreteBinding
+        , isSelected = .editMode
+        , selectMsg = UISelect
+        , unselectMsg = UIConfirm
+        }
 
 
 
@@ -52,7 +56,7 @@ type Msg
 -- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
 
 
-update : Binding Msg String err -> Msg -> Model -> ( Model, Cmd Msg )
+update : FixedPathBinding Msg String err -> Msg -> Model -> ( Model, Cmd Msg )
 update binding msg model =
     case msg of
         UIChange newContent ->
@@ -78,7 +82,7 @@ update binding msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String err -> Model -> Sub Msg
+subscriptions : FixedPathBinding Msg String err -> Model -> Sub Msg
 subscriptions binding model =
     Sub.map (Result.withDefault NoOp << Result.map ModelChange) binding.get
 
