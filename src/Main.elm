@@ -17,7 +17,7 @@ import Widget
 import Storage
 
 
-textBinding : Storage.Path -> Widget.Binding msg String ()
+textBinding : Widget.Binding msg String ()
 textBinding p =
     { get =
         -- TODO for now I have to return a Result type. In the future, take inspiration from WebSockets instead
@@ -33,17 +33,14 @@ textBinding p =
 
 
 
-{--
-
-listBinding : List(Widget.Binding itemMsg itemSerializedType itemErr) -> Storage.Path -> Widget.ListBinding msg itemSerializedType err
-listBinding itemBindings p =
-    { get =
-      , itemAdded =
+{--listBinding : Storage.Path -> Widget.ListBinding msg ()
+listBinding p =
+    { itemAdded =
         Storage.itemAddedSub
-            (\( path, v ) ->
+            (\path ->
                 case listSubstract path p of
                     Just [ i ] ->
-                        resultFullMap (\n -> ( n, v )) (always ()) (String.toInt i)
+                        Result.mapError (always ()) (String.toInt i)
 
                     _ ->
                         Result.Err ()
@@ -58,7 +55,7 @@ listBinding itemBindings p =
                     _ ->
                         Result.Err ()
             )
-    , addItem = \i v -> Storage.addItemCmd ( p ++ [ toString i ], (Json.Encode.string v) )
+    , addItem = \i -> Storage.addItemCmd (p ++ [ toString i ])
     , removeItem = \i -> Storage.removeItemCmd (p ++ [ toString i ])
     }
 --}
@@ -68,7 +65,7 @@ main : Program Never SelectableText.Model SelectableText.Msg
 main =
     let
         widget =
-            SelectableText.createWidget (textBinding [])
+            SelectableText.createWidget [] textBinding
     in
         Html.program
             { init = widget.init
