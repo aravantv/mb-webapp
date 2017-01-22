@@ -9,17 +9,15 @@ import Task
 -- just use wrappers if you do not have the precise concrete type
 
 
+type alias Path =
+    List String
+
+
 type alias Widget model msg =
     { init : ( model, Cmd msg )
     , update : msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
     , view : model -> Html msg
-    }
-
-
-type alias Binding msg serializedType err =
-    { get : Sub (Result err serializedType)
-    , set : serializedType -> Cmd msg
     }
 
 
@@ -39,17 +37,26 @@ type alias Index =
     Int
 
 
-type alias IListBinding msg itemSerializedType err base =
-    { base
-        | itemAdded : Sub (Result err ( Index, itemSerializedType ))
-        , itemRemoved : Sub (Result err Index)
-        , addItem : Index -> itemSerializedType -> Cmd msg
-        , removeItem : Index -> Cmd msg
+type alias FixedPathBinding msg serializedType err =
+    { get : Sub (Result err serializedType)
+    , set : serializedType -> Cmd msg
     }
 
 
-type alias ListBinding msg itemSerializedType err =
-    IListBinding msg itemSerializedType err (Binding msg (List itemSerializedType) err)
+type alias Binding msg serializedType err =
+    Path -> FixedPathBinding msg serializedType err
+
+
+type alias FixedPathListBinding msg err =
+    { itemAdded : Sub (Result err Index)
+    , itemRemoved : Sub (Result err Index)
+    , addItem : Index -> Cmd msg
+    , removeItem : Index -> Cmd msg
+    }
+
+
+type alias ListBinding msg err =
+    Path -> FixedPathListBinding msg err
 
 
 type alias Factory fromTy toTy =
