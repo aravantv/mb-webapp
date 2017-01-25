@@ -17,9 +17,9 @@ type alias Path =
 the one given to Html.program, these are not present anymore
 -}
 type alias Widget model msg =
-    { init : ( model, Path -> Cmd msg )
-    , update : msg -> model -> ( model, Path -> Cmd msg )
-    , subscriptions : model -> Sub (Path -> msg)
+    { init : Path -> ( model, Cmd msg )
+    , update : Path -> msg -> model -> ( model, Cmd msg )
+    , subscriptions : Path -> model -> Sub msg
     , view : model -> Html msg
     }
 
@@ -34,25 +34,11 @@ type alias TopWidget model msg =
 
 makeTopWidget : Widget model msg -> TopWidget model msg
 makeTopWidget widget =
-    let
-        ( model, cmdBuilder ) =
-            widget.init
-
-        update msg model =
-            let
-                ( updatedModel, postUpdateCmdBuilder ) =
-                    widget.update msg model
-            in
-                ( updatedModel, postUpdateCmdBuilder [] )
-
-        subscriptions model =
-            Sub.map (\msgBuilder -> msgBuilder []) (widget.subscriptions model)
-    in
-        { init = ( model, cmdBuilder [] )
-        , update = update
-        , subscriptions = subscriptions
-        , view = widget.view
-        }
+    { init = widget.init []
+    , update = widget.update []
+    , subscriptions = widget.subscriptions []
+    , view = widget.view
+    }
 
 
 type alias ISelectable model msg base =
@@ -72,16 +58,16 @@ type alias Index =
 
 
 type alias Binding msg serializedType err =
-    { get : Sub (Path -> Result err serializedType)
-    , set : serializedType -> Path -> Cmd msg
+    { get : Path -> Sub (Result err serializedType)
+    , set : Path -> serializedType -> Cmd msg
     }
 
 
 type alias ListBinding msg err =
-    { itemAdded : Sub (Path -> Result err Index)
-    , itemRemoved : Sub (Path -> Result err Index)
-    , addItem : Index -> Path -> Cmd msg
-    , removeItem : Index -> Path -> Cmd msg
+    { itemAdded : Path -> Sub (Result err Index)
+    , itemRemoved : Path -> Sub (Result err Index)
+    , addItem : Path -> Index -> Cmd msg
+    , removeItem : Path -> Index -> Cmd msg
     }
 
 
@@ -94,9 +80,9 @@ wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
 
 
-wrapWithNoCmd : a -> ( a, b -> Cmd msg )
+wrapWithNoCmd : a -> ( a, Cmd msg )
 wrapWithNoCmd x =
-    ( x, always Cmd.none )
+    ( x, Cmd.none )
 
 
 cmdOfMsg : msg -> Cmd msg
