@@ -18,8 +18,8 @@ the one given to Html.program, these are not present anymore
 -}
 type alias Widget model msg =
     { init : Path -> ( model, Cmd msg )
-    , update : Path -> msg -> model -> ( model, Cmd msg )
-    , subscriptions : Path -> model -> Sub msg
+    , update : msg -> model -> Path -> ( model, Cmd msg )
+    , subscriptions : model -> Path -> Sub msg
     , view : model -> Html msg
     }
 
@@ -35,8 +35,8 @@ type alias TopWidget model msg =
 makeTopWidget : Widget model msg -> TopWidget model msg
 makeTopWidget widget =
     { init = widget.init []
-    , update = widget.update []
-    , subscriptions = widget.subscriptions []
+    , update = \ms m -> widget.update ms m []
+    , subscriptions = \m -> widget.subscriptions m []
     , view = widget.view
     }
 
