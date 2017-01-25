@@ -9,7 +9,7 @@ import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, wrapWithNo
 
 createWidget : Binding Msg String err -> ISelectable Model Msg (Widget Model Msg)
 createWidget binding =
-    { init = wrapWithNoCmd model
+    { init = \p -> wrapWithNoCmd model
     , update = update binding
     , view = view
     , subscriptions = subscriptions binding
@@ -52,17 +52,17 @@ type Msg
 -- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
 
 
-update : Binding Msg String err -> Msg -> Model -> ( Model, Path -> Cmd Msg )
-update binding msg model =
+update : Binding Msg String err -> Path -> Msg -> Model -> ( Model, Cmd Msg )
+update binding p msg model =
     case msg of
         UIChange newContent ->
             wrapWithNoCmd { model | uiContent = newContent }
 
         UIConfirm ->
-            ( { model | editMode = False, content = model.uiContent }, binding.set model.uiContent )
+            ( { model | editMode = False, content = model.uiContent }, binding.set p model.uiContent )
 
         UICancel ->
-            ( { model | uiContent = model.content }, always (cmdOfMsg UIConfirm) )
+            ( { model | uiContent = model.content }, cmdOfMsg UIConfirm )
 
         UISelect ->
             wrapWithNoCmd { model | editMode = True }
@@ -78,9 +78,9 @@ update binding msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String err -> Model -> Sub (Path -> Msg)
-subscriptions binding model =
-    Sub.map (\getter -> Result.withDefault NoOp << Result.map ModelChange << getter) binding.get
+subscriptions : Binding Msg String err -> Path -> Model -> Sub Msg
+subscriptions binding p m =
+    Sub.map (Result.withDefault NoOp << Result.map ModelChange) (binding.get p)
 
 
 
