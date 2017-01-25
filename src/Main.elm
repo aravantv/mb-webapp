@@ -20,15 +20,15 @@ import Storage
 textBinding : Widget.Binding msg String ()
 textBinding =
     { get =
-        Storage.getStringSub
-            (\( path, s ) ->
-                \p ->
+        \p ->
+            Storage.getStringSub
+                (\( path, s ) ->
                     if path == p then
                         Result.Ok s
                     else
                         Result.Err ()
-            )
-    , set = \s p -> Storage.setStringCmd ( p, s )
+                )
+    , set = \p s -> Storage.setStringCmd ( p, s )
     }
 
 
