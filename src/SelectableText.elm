@@ -52,8 +52,8 @@ type Msg
 -- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
 
 
-update : Binding Msg String err -> Path -> Msg -> Model -> ( Model, Cmd Msg )
-update binding p msg model =
+update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
+update binding msg model p =
     case msg of
         UIChange newContent ->
             wrapWithNoCmd { model | uiContent = newContent }
@@ -78,8 +78,8 @@ update binding p msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String err -> Path -> Model -> Sub Msg
-subscriptions binding p m =
+subscriptions : Binding Msg String err -> Model -> Path -> Sub Msg
+subscriptions binding m p =
     Sub.map (Result.withDefault NoOp << Result.map ModelChange) (binding.get p)
 
 
