@@ -13,7 +13,7 @@
 
 <script type="text/javascript">
     // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object.
-    function applyDeep(path, f, obj) {
+    function applyDeep(path, f, obj, deepObjectShouldBeArray) {
         path.splice(0, 0, "root");
         var result = obj;
         for (var i = 0, n = path.length; i < n && result !== undefined; i++) {
@@ -22,7 +22,11 @@
                 f(result, field);
             } else {
                 if (typeof result[field] !== 'object') {
+                  if (i === n - 2 && deepObjectShouldBeArray) {
+                    result[field] = [];
+                  } else {
                     result[field] = {};
+                  }
                 }
                 result = result[field];
             }
@@ -30,17 +34,24 @@
     }
 
     function setValue(path, val, obj) {
-        applyDeep(path, function (o, f) { o[f] = val; }, obj);
+        applyDeep(path, function (o, f) { o[f] = val; }, obj, false);
     }
 
     // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
     function insertValue(path, val, obj) {
-        applyDeep(path, function (o, i) { o.splice(i, 0, val); }, obj);
+        applyDeep(path, function (o, i) {
+          // In case the object is empty, we need to initialize to ensure it is an array
+          if (JSON.stringify(o) === JSON.stringify({})) {
+            o[i] = val;
+          } else {
+            o.splice(i, 0, val);
+          }
+        }, obj, true);
     }
 
     // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
     function removeValue(path, obj) {
-        applyDeep(path, function (o, i) { o.splice(i, 1); }, obj);
+        applyDeep(path, function (o, i) { o.splice(i, 1); }, obj, true);
     }
 
     function sendAll(obj, currentPath) {
@@ -54,14 +65,16 @@
                 } else if (typeof obj[property] === 'object') {
                     sendAll(obj[property], newPath);
                     newPath.splice(0, 1);
-                    mbwebapp.ports.itemAddedSub.send([newPath, obj[property]]);
+                    mbwebapp.ports.itemAddedSub.send([newPath]);
                 }
             }
         }
     }
 
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
-    var state = serializedState ? JSON.parse(serializedState) : "";
+    var state = serializedState ? JSON.parse(serializedState) : {};
+    // TODO remove this when everything works
+    state = {}
     var mbwebapp = Elm.Main.fullscreen();
 
     sendAll(state, []);
@@ -72,14 +85,14 @@
         mbwebapp.ports.getStringSub.send(args);
     })
 
-    mbwebapp.ports.addItemCmd.subscribe(function (path, val) {
-        insertValue(args[0], args[1], state);
+    mbwebapp.ports.addItemCmd.subscribe(function (args) {
+        insertValue(args, null, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
         mbwebapp.ports.itemAddedSub.send(args);
     });
 
-    mbwebapp.ports.removeItemCmd.subscribe(function (path) {
-        removeValue(path, state);
+    mbwebapp.ports.removeItemCmd.subscribe(function (args) {
+        removeValue(args, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
         mbwebapp.ports.itemRemovedSub.send(path);
     });
