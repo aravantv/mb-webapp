@@ -6,7 +6,7 @@ import SelectableList
 import SelectableText exposing (modelFromString)
 import Storage
 import Utils exposing (..)
-import Widget exposing (makeTopWidget)
+import Widget exposing (Index, makeTopWidget)
 
 
 textBinding : Widget.Binding msg String ()
@@ -31,8 +31,8 @@ listBinding =
             Storage.itemAddedSub
                 (\path ->
                     case listSubstract path p of
-                        Just [ i ] ->
-                            Result.mapError (always ()) (String.toInt i)
+                        Just [ Widget.Index i ] ->
+                            Result.Ok i
 
                         _ ->
                             Result.Err ()
@@ -42,14 +42,14 @@ listBinding =
             Storage.itemRemovedSub
                 (\path ->
                     case listSubstract path p of
-                        Just [ i ] ->
-                            Result.mapError (always ()) (String.toInt i)
+                        Just [ Widget.Index i ] ->
+                            Result.Ok i
 
                         _ ->
                             Result.Err ()
                 )
-    , addItem = \p i -> Storage.addItemCmd (toString i :: p)
-    , removeItem = \p i -> Storage.removeItemCmd (toString i :: p)
+    , addItem = \p i -> Storage.addItemCmd (Index i :: p)
+    , removeItem = \p i -> Storage.removeItemCmd (Index i :: p)
     }
 
 
