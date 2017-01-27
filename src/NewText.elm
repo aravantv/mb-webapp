@@ -1,20 +1,19 @@
 module NewText exposing (..)
 
-import Html exposing (Html, input, text, label)
+import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onDoubleClick)
+import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import SelectableList
+import Widget exposing (IDecision, TopWidget)
 
 
-widget : SelectableList.NewItemWidget Model Msg
+widget : IDecision Msg (TopWidget Model Msg)
 widget =
-    { init = wrapModelWithCmd model
+    { init = Widget.wrapWithNoCmd model
     , update = update
     , view = view
-    , subscriptions = emptySubscription
+    , subscriptions = Widget.emptySubscription
     , confirmMsg = Confirm
-    , cancelMsg = Cancel
     }
 
 
@@ -23,12 +22,12 @@ widget =
 
 
 type alias Model =
-    { content : String }
+    String
 
 
 model : Model
 model =
-    Model ""
+    ""
 
 
 
@@ -45,13 +44,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Change newContent ->
-            ( { content = newContent }, Cmd.none )
+            ( newContent, Cmd.none )
 
         Confirm ->
             ( model, Cmd.none )
 
         Cancel ->
-            ( model, Cmd.none )
+            ( "", Cmd.none )
 
 
 
@@ -63,6 +62,6 @@ view model =
     input
         [ onInput Change
         , onKeyUp [ ( enterKey, Confirm ), ( escapeKey, Cancel ) ]
-        , value model.content
+        , value model
         ]
         []
