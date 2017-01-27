@@ -13,14 +13,14 @@ textBinding : Widget.Binding msg String ()
 textBinding =
     { get =
         \p ->
-            Storage.getStringSub
+            LocalStorage.getStringSub
                 (\( path, s ) ->
                     if path == p then
                         Result.Ok s
                     else
                         Result.Err ()
                 )
-    , set = \p s -> Storage.setStringCmd ( p, s )
+    , set = \p s -> LocalStorage.setStringCmd ( p, s )
     }
 
 
@@ -28,7 +28,7 @@ listBinding : Widget.ListBinding msg ()
 listBinding =
     { itemAdded =
         \p ->
-            Storage.itemAddedSub
+            LocalStorage.itemAddedSub
                 (\path ->
                     case listSubstract path p of
                         Just [ Widget.Index i ] ->
@@ -39,7 +39,7 @@ listBinding =
                 )
     , itemRemoved =
         \p ->
-            Storage.itemRemovedSub
+            LocalStorage.itemRemovedSub
                 (\path ->
                     case listSubstract path p of
                         Just [ Widget.Index i ] ->
@@ -48,8 +48,8 @@ listBinding =
                         _ ->
                             Result.Err ()
                 )
-    , addItem = \p i -> Storage.addItemCmd (Index i :: p)
-    , removeItem = \p i -> Storage.removeItemCmd (Index i :: p)
+    , addItem = \p i -> LocalStorage.addItemCmd (Index i :: p)
+    , removeItem = \p i -> LocalStorage.removeItemCmd (Index i :: p)
     }
 
 
