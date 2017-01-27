@@ -1,20 +1,12 @@
 module Main exposing (..)
 
 import Html
-import SelectableText
+import NewText
+import SelectableList
+import SelectableText exposing (modelFromString)
 import Storage
+import Utils exposing (..)
 import Widget exposing (makeTopWidget)
-
-
---import SelectableList
-
-import SelectableText
-
-
---import NewText
-
-import Widget
-import Storage
 
 
 textBinding : Widget.Binding msg String ()
@@ -32,39 +24,41 @@ textBinding =
     }
 
 
-{-|
 listBinding : Widget.ListBinding msg ()
-listBinding p =
+listBinding =
     { itemAdded =
-        Storage.itemAddedSub
-            (\path ->
-                case listSubstract path p of
-                    Just [ i ] ->
-                        Result.mapError (always ()) (String.toInt i)
+        \p ->
+            Storage.itemAddedSub
+                (\path ->
+                    case listSubstract path p of
+                        Just [ i ] ->
+                            Result.mapError (always ()) (String.toInt i)
 
-                    _ ->
-                        Result.Err ()
-            )
+                        _ ->
+                            Result.Err ()
+                )
     , itemRemoved =
-        Storage.itemRemovedSub
-            (\path ->
-                case listSubstract path p of
-                    Just [ i ] ->
-                        Result.mapError (always ()) (String.toInt i)
+        \p ->
+            Storage.itemRemovedSub
+                (\path ->
+                    case listSubstract path p of
+                        Just [ i ] ->
+                            Result.mapError (always ()) (String.toInt i)
 
-                    _ ->
-                        Result.Err ()
-            )
-    , addItem = \i -> Storage.addItemCmd (p ++ [ toString i ])
-    , removeItem = \i -> Storage.removeItemCmd (p ++ [ toString i ])
+                        _ ->
+                            Result.Err ()
+                )
+    , addItem = \p i -> Storage.addItemCmd (toString i :: p)
+    , removeItem = \p i -> Storage.removeItemCmd (toString i :: p)
     }
--
--}
-main : Program Never SelectableText.Model SelectableText.Msg
+
+
+main : Program Never (SelectableList.Model NewText.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg SelectableText.Model)
 main =
     let
         widget =
-            SelectableText.createWidget textBinding
+            --SelectableText.createWidget textBinding
+            SelectableList.createListWidget listBinding NewText.widget (SelectableText.createWidget textBinding) modelFromString
     in
         Html.program <|
             makeTopWidget
@@ -76,8 +70,7 @@ main =
 
 
 
---  SelectableList.createListWidget listBinding [] NewText.widget (SelectableText.createWidget textBinding))
-{--main : Program Never (SelectableList.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg)
+{--main : Program Never (SelectableList.Model NewText.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg)
 main =
     Html.program (SelectableList.createListWidget NewText.widget SelectableText.widget)
         Html.program--}
