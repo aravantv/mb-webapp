@@ -156,7 +156,7 @@ propagateMsgToWidget widget model i msg p =
             let
                 unselectPreviouslySelected j itemModel =
                     if widget.isSelected itemModel && j /= i then
-                        widget.update widget.unselectMsg itemModel (toString j :: p)
+                        widget.update widget.unselectMsg itemModel (Index j :: p)
                     else
                         wrapWithNoCmd itemModel
 
@@ -177,7 +177,7 @@ modelWithRemovedItem i model =
 updateWidget : ItemWidget itemModel itemMsg -> Index -> itemMsg -> Widget.Path -> Index -> itemModel -> ( itemModel, Cmd itemMsg )
 updateWidget widget refIndex msg p candidateIndex model =
     if candidateIndex == refIndex then
-        widget.update msg model (toString candidateIndex :: p)
+        widget.update msg model (Index candidateIndex :: p)
     else
         wrapWithNoCmd model
 
@@ -198,7 +198,7 @@ subscriptions binding widget model p =
             Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
 
         itemSub i itemModel =
-            Sub.map (ItemMsg i) <| widget.subscriptions itemModel (toString i :: p)
+            Sub.map (ItemMsg i) <| widget.subscriptions itemModel (Index i :: p)
     in
         Sub.batch
             ([ bindingToMsg ModelAddedItem (binding.itemAdded p)
