@@ -9,6 +9,8 @@ import Task
 -- just use wrappers if you do not have the precise concrete type
 
 
+{-| Paths are provided as a list of string: the root is the *last* element.
+-}
 type alias Path =
     List String
 
@@ -71,8 +73,10 @@ type alias ListBinding msg err =
     }
 
 
-type alias Factory fromTy toTy =
-    fromTy -> toTy
+{-| A factory generates a message based on an originating type.
+-}
+type alias Factory fromModel toModel toMsg =
+    fromModel -> ( toModel, Cmd toMsg )
 
 
 wrapUpdateWithCmd : (msg -> model -> model) -> msg -> model -> ( model, Cmd msg )
