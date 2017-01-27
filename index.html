@@ -55,29 +55,23 @@
     }
 
     function sendAll(obj, currentPath) {
-        for (var property in obj) {
-            if (obj.hasOwnProperty(property)) {
-                var newPath = currentPath.slice();
-                newPath.push(property);
-                if (typeof obj[property] === 'string') {
-                    newPath.splice(0, 1);
-                    mbwebapp.ports.getStringSub.send([newPath, obj[property]]);
-                } else if (typeof obj[property] === 'object') {
-                    sendAll(obj[property], newPath);
-                    newPath.splice(0, 1);
-                    mbwebapp.ports.itemAddedSub.send([newPath]);
-                }
-            }
-        }
+      if (typeof obj === 'string') {
+        mbwebapp.ports.getStringSubPort.send([currentPath, obj]);
+      } else if (Array.isArray(obj)) {
+        obj.forEach(function(elt, i) {
+          var newPath = currentPath.slice();
+          newPath.splice(0, 0, i.toString());
+          mbwebapp.ports.itemAddedSubPort.send(newPath);
+          sendAll(obj[i], newPath);
+        })
+      }
     }
 
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
     var state = serializedState ? JSON.parse(serializedState) : {};
-    // TODO remove this when everything works
-    state = {}
     var mbwebapp = Elm.Main.fullscreen();
 
-    sendAll(state, []);
+    sendAll(state.root, []);
 
     mbwebapp.ports.setStringCmdPort.subscribe(function (args) {
         setValue(args[0], args[1], state);
