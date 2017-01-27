@@ -79,22 +79,22 @@
 
     sendAll(state, []);
 
-    mbwebapp.ports.setStringCmd.subscribe(function (args) {
+    mbwebapp.ports.setStringCmdPort.subscribe(function (args) {
         setValue(args[0], args[1], state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.getStringSub.send(args);
+        mbwebapp.ports.getStringSubPort.send(args);
     })
 
-    mbwebapp.ports.addItemCmd.subscribe(function (args) {
+    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
         insertValue(args, null, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemAddedSub.send(args);
+        mbwebapp.ports.itemAddedSubPort.send(args);
     });
 
-    mbwebapp.ports.removeItemCmd.subscribe(function (args) {
+    mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
         removeValue(args, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemRemovedSub.send(path);
+        mbwebapp.ports.itemRemovedSubPort.send(path);
     });
 </script>
 
