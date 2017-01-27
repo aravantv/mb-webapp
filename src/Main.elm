@@ -7,6 +7,7 @@ import SelectableText exposing (modelFromString)
 import LocalStorage
 import Utils exposing (..)
 import Widget exposing (Index, makeTopWidget)
+import TimeTravel.Html as TimeTravel
 
 
 textBinding : Widget.Binding msg String ()
@@ -53,14 +54,13 @@ listBinding =
     }
 
 
-main : Program Never (SelectableList.Model NewText.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg SelectableText.Model)
 main =
     let
         widget =
             --SelectableText.createWidget textBinding
             SelectableList.createListWidget listBinding NewText.widget (SelectableText.createWidget textBinding) modelFromString
     in
-        Html.program <|
+        TimeTravel.program <|
             makeTopWidget
                 { init = widget.init
                 , update = widget.update
