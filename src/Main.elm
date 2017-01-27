@@ -4,7 +4,7 @@ import Html
 import NewText
 import SelectableList
 import SelectableText exposing (modelFromString)
-import Storage
+import LocalStorage
 import Utils exposing (..)
 import Widget exposing (Index, makeTopWidget)
 
