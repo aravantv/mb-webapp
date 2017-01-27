@@ -1,28 +1,29 @@
 module SelectableList exposing (..)
 
 import Html exposing (..)
-import Html.Events exposing (onInput, onClick)
+import Html.Events exposing (onClick, onInput)
 import Utils exposing (..)
-import Widget exposing (SelectableWidget, DecisionWidget, ListBinding, Widget)
+import Widget exposing (Factory, IDecision, ISelectable, Index, ListBinding, TopWidget, Widget, wrapWithNoCmd)
 
 
 type alias ItemWidget model msg =
-    Widget.SelectableWidget model msg
+    ISelectable model msg (Widget model msg)
 
 
 type alias NewItemWidget model msg =
-    Widget.DecisionWidget model msg
+    IDecision msg (TopWidget model msg)
 
 
 createListWidget :
-    ListBinding (Msg newItemMsg itemMsg itemModel) itemModel
-    -> NewItemWidget itemModel newItemMsg
+    ListBinding (Msg newItemMsg itemMsg itemModel) err
+    -> NewItemWidget newItemModel newItemMsg
     -> ItemWidget itemModel itemMsg
-    -> Widget (Model itemModel) (Msg newItemMsg itemMsg itemModel)
-createListWidget binding newItemWidget itemWidget =
+    -> Factory newItemModel itemModel itemMsg
+    -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel)
+createListWidget binding newItemWidget itemWidget factory =
     { init = init newItemWidget
-    , update = update binding newItemWidget itemWidget
-    , subscriptions = subscriptions binding
+    , update = update binding factory newItemWidget itemWidget
+    , subscriptions = subscriptions binding itemWidget
     , view = view newItemWidget itemWidget
     }
 
@@ -31,12 +32,15 @@ createListWidget binding newItemWidget itemWidget =
 -- MODEL
 
 
-type alias Model itemModel =
-    { itemToAdd : itemModel, contents : List itemModel }
+type alias Model newItemModel itemModel =
+    { itemToAdd : newItemModel, contents : List itemModel }
 
 
-init : NewItemWidget itemModel newItemMsg -> ( Model itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-init newItemWidget =
+init :
+    NewItemWidget newItemModel newItemMsg
+    -> Widget.Path
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+init newItemWidget p =
     let
         ( itemToAdd, cmdInit ) =
             newItemWidget.init
@@ -48,30 +52,29 @@ init newItemWidget =
 -- UPDATE
 
 
-type alias WidgetIndex =
-    Int
-
-
 type Msg newItemMsg itemMsg itemModel
     = UINewItemMsg newItemMsg
-    | UIItemMsg WidgetIndex itemMsg
-    | UIRemove WidgetIndex
-    | ModelAddedItem WidgetIndex itemModel
-    | ModelRemovedItem WidgetIndex
+    | ItemMsg Index itemMsg
+    | UIRemove Index
+    | ModelAddedItem Index
+    | ModelRemovedItem Index
+    | NoOp
 
 
 update :
-    ListBinding (Msg newItemMsg itemMsg itemModel) itemModel
-    -> NewItemWidget itemModel newItemMsg
+    ListBinding (Msg newItemMsg itemMsg itemModel) err
+    -> Factory newItemModel itemModel itemMsg
+    -> NewItemWidget newItemModel newItemMsg
     -> ItemWidget itemModel itemMsg
     -> Msg newItemMsg itemMsg itemModel
-    -> Model itemModel
-    -> ( Model itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-update binding newItemWidget itemWidget msg model =
+    -> Model newItemModel itemModel
+    -> Widget.Path
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+update binding factory newItemWidget itemWidget msg model p =
     case msg of
         UINewItemMsg subMsg ->
             if subMsg == newItemWidget.confirmMsg then
-                addItem binding newItemWidget model
+                addItem binding factory newItemWidget itemWidget model p
             else
                 let
                     ( updatedItemToAdd, cmd ) =
@@ -79,83 +82,104 @@ update binding newItemWidget itemWidget msg model =
                 in
                     ( { model | itemToAdd = updatedItemToAdd }, Cmd.map UINewItemMsg cmd )
 
-        UIItemMsg i subMsg ->
-            propagateMsgToWidget itemWidget model i subMsg
+        ItemMsg i subMsg ->
+            propagateMsgToWidget itemWidget model i subMsg p
 
         UIRemove i ->
-            ( modelWithRemovedItem i model, binding.removeItem i )
+            ( modelWithRemovedItem i model, binding.removeItem p i )
 
-        ModelAddedItem i m ->
-            ( { model | contents = insert model.contents m i }, Cmd.none )
+        ModelAddedItem i ->
+            let
+                {--| here: have an empty model? --}
+                ( m, _ ) =
+                    itemWidget.init p
+            in
+                wrapWithNoCmd { model | contents = insert model.contents m i }
 
         ModelRemovedItem i ->
-            ( modelWithRemovedItem i model, Cmd.none )
+            wrapWithNoCmd (modelWithRemovedItem i model)
+
+        NoOp ->
+            wrapWithNoCmd model
 
 
 addItem :
-    ListBinding (Msg newItemMsg itemMsg itemModel) itemModel
-    -> NewItemWidget itemModel newItemMsg
-    -> Model itemModel
-    -> ( Model itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-addItem binding newItemWidget model =
+    ListBinding (Msg newItemMsg itemMsg itemModel) err
+    -> Factory newItemModel itemModel itemMsg
+    -> NewItemWidget newItemModel newItemMsg
+    -> ItemWidget itemModel itemMsg
+    -> Model newItemModel itemModel
+    -> Widget.Path
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+addItem binding factory newItemWidget itemWidget model p =
     let
-        ( newItemToAdd, newItemWidgetCmd ) =
+        ( newItem, newItemCmd ) =
+            factory model.itemToAdd
+
+        ( newNewItemToAdd, newNewItemWidgetCmd ) =
             newItemWidget.init
 
-        modelWithItemAdded =
-            { itemToAdd = newItemToAdd, contents = model.itemToAdd :: model.contents }
-
         cmd =
-            Cmd.batch [ binding.addItem 0 model.itemToAdd, Cmd.map UINewItemMsg newItemWidgetCmd ]
+            Cmd.batch
+                [ binding.addItem p 0
+                , Cmd.map UINewItemMsg newNewItemWidgetCmd
+                , Cmd.map (ItemMsg 0) newItemCmd
+                ]
+
+        modelWithItemAdded =
+            { itemToAdd = newNewItemToAdd, contents = newItem :: model.contents }
     in
         ( modelWithItemAdded, cmd )
 
 
-propagateMsgToWidget : ItemWidget itemModel itemMsg -> Model itemModel -> WidgetIndex -> itemMsg -> ( Model itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-propagateMsgToWidget widget model i msg =
+propagateMsgToWidget :
+    ItemWidget itemModel itemMsg
+    -> Model newItemModel itemModel
+    -> Index
+    -> itemMsg
+    -> Widget.Path
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+propagateMsgToWidget widget model i msg p =
     let
         updatedWidgetList =
-            List.indexedMap (updateWidget widget i msg) model.contents
+            List.indexedMap (updateWidget widget i msg p) model.contents
 
-        ( contentsWithWidgetUpdated, cmds ) =
+        ( contentsWithWidgetUpdated, updateCmds ) =
             List.unzip updatedWidgetList
+
+        updateCmd =
+            Cmd.batch <| List.map (Cmd.map (ItemMsg i)) updateCmds
     in
         if msg /= widget.selectMsg then
-            ( { model | contents = contentsWithWidgetUpdated }, Cmd.map (UIItemMsg i) <| Cmd.batch cmds )
+            ( { model | contents = contentsWithWidgetUpdated }, updateCmd )
         else
             let
-                confirmWidget j m =
-                    if j == i || not (widget.isSelected m) then
-                        ( m, Cmd.none )
+                unselectPreviouslySelected j itemModel =
+                    if widget.isSelected itemModel && j /= i then
+                        widget.update widget.unselectMsg itemModel (toString j :: p)
                     else
-                        widget.update widget.unselectMsg m
+                        wrapWithNoCmd itemModel
 
-                ( contents, widgetCmds ) =
-                    List.unzip <| List.indexedMap confirmWidget contentsWithWidgetUpdated
+                ( contents, unselectCmds ) =
+                    List.unzip <| List.indexedMap unselectPreviouslySelected contentsWithWidgetUpdated
 
-                cmds =
-                    List.indexedMap (Cmd.map << UIItemMsg) widgetCmds
+                finalCmd =
+                    Cmd.batch <| updateCmd :: List.indexedMap (\i -> Cmd.map (ItemMsg i)) unselectCmds
             in
-                ( { model | contents = contents }, Cmd.batch cmds )
+                ( { model | contents = contents }, finalCmd )
 
 
-modelWithRemovedItem : WidgetIndex -> Model itemModel -> Model itemModel
+modelWithRemovedItem : Index -> Model newItemModel itemModel -> Model newItemModel itemModel
 modelWithRemovedItem i model =
     { model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents }
 
 
-updateWidget :
-    ItemWidget itemModel itemMsg
-    -> WidgetIndex
-    -> itemMsg
-    -> WidgetIndex
-    -> itemModel
-    -> ( itemModel, Cmd itemMsg )
-updateWidget widget refIndex msg candidateIndex model =
+updateWidget : ItemWidget itemModel itemMsg -> Index -> itemMsg -> Widget.Path -> Index -> itemModel -> ( itemModel, Cmd itemMsg )
+updateWidget widget refIndex msg p candidateIndex model =
     if candidateIndex == refIndex then
-        widget.update msg model
+        widget.update msg model (toString candidateIndex :: p)
     else
-        ( model, Cmd.none )
+        wrapWithNoCmd model
 
 
 
@@ -163,14 +187,25 @@ updateWidget widget refIndex msg candidateIndex model =
 
 
 subscriptions :
-    ListBinding (Msg newItemMsg itemMsg itemModel) itemModel
-    -> Model itemModel
+    ListBinding (Msg newItemMsg itemMsg itemModel) err
+    -> ItemWidget itemModel itemMsg
+    -> Model newItemModel itemModel
+    -> Widget.Path
     -> Sub (Msg newItemMsg itemMsg itemModel)
-subscriptions binding _ =
-    Sub.batch
-        [ Sub.map (\( i, v ) -> ModelAddedItem i v) binding.itemAdded
-        , Sub.map ModelRemovedItem binding.itemRemoved
-        ]
+subscriptions binding widget model p =
+    let
+        bindingToMsg msgBuilder =
+            Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
+
+        itemSub i itemModel =
+            Sub.map (ItemMsg i) <| widget.subscriptions itemModel (toString i :: p)
+    in
+        Sub.batch
+            ([ bindingToMsg ModelAddedItem (binding.itemAdded p)
+             , bindingToMsg ModelRemovedItem (binding.itemRemoved p)
+             ]
+                ++ List.indexedMap itemSub model.contents
+            )
 
 
 
@@ -178,9 +213,9 @@ subscriptions binding _ =
 
 
 view :
-    NewItemWidget itemModel newItemMsg
+    NewItemWidget newItemModel newItemMsg
     -> ItemWidget itemModel itemMsg
-    -> Model itemModel
+    -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel)
 view newItemWidget widget model =
     ul [] <|
@@ -188,11 +223,15 @@ view newItemWidget widget model =
             :: List.indexedMap (viewWidget widget) model.contents
 
 
-viewWidget : ItemWidget itemModel itemMsg -> WidgetIndex -> itemModel -> Html (Msg newItemMsg itemMsg itemModel)
+viewWidget :
+    ItemWidget itemModel itemMsg
+    -> Index
+    -> itemModel
+    -> Html (Msg newItemMsg itemMsg itemModel)
 viewWidget widget i m =
     li []
         [ span []
-            [ Html.map (UIItemMsg i) <| widget.view m
+            [ Html.map (ItemMsg i) <| widget.view m
             , button [ onClick <| UIRemove i ] [ text "-" ]
             ]
         ]
