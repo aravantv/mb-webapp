@@ -1,4 +1,4 @@
-port module Storage exposing (getStringSub, setStringCmd, itemAddedSub, itemRemovedSub, addItemCmd, removeItemCmd)
+port module LocalStorage exposing (getStringSub, setStringCmd, itemAddedSub, itemRemovedSub, addItemCmd, removeItemCmd)
 
 import Platform.Sub
 import Widget exposing (genericFieldOfString, stringOfGenericField)
