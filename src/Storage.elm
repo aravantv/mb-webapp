@@ -1,9 +1,10 @@
 port module Storage exposing (..)
 
 import Platform.Sub
-import Json.Encode
 
 
+{-| Paths are provided as a list of string: the root is the *last* element.
+-}
 type alias Path =
     List String
 
@@ -23,13 +24,15 @@ port getStringSub : (( Path, JsonString ) -> msg) -> Sub msg
 port setStringCmd : ( Path, String ) -> Cmd msg
 
 
-port itemAddedSub : (( Path, JsonString ) -> msg) -> Sub msg
+port itemAddedSub : (Path -> msg) -> Sub msg
 
 
 port itemRemovedSub : (Path -> msg) -> Sub msg
 
 
-port addItemCmd : ( Path, Json.Encode.Value ) -> Cmd msg
+{-| addItemCmd literally adds an item: it inserts an element at the given path but does not fill it in with any value!
+-}
+port addItemCmd : Path -> Cmd msg
 
 
 port removeItemCmd : Path -> Cmd msg
