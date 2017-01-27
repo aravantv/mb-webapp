@@ -35,6 +35,11 @@ model =
     Model "" "" True
 
 
+modelFromString : String -> ( Model, Cmd Msg )
+modelFromString s =
+    ( model, Cmd.batch [ cmdOfMsg UIConfirm, cmdOfMsg (ModelChange s) ] )
+
+
 
 -- UPDATE
 
