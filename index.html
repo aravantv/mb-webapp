@@ -56,7 +56,7 @@
 
     function sendAll(obj, currentPath) {
       if (typeof obj === 'string') {
-        mbwebapp.ports.getStringSubPort.send([currentPath, obj]);
+        setTimeout(function() { mbwebapp.ports.getStringSubPort.send([currentPath, obj]) }, 0);
       } else if (Array.isArray(obj)) {
         obj.forEach(function(elt, i) {
           var newPath = currentPath.slice();
