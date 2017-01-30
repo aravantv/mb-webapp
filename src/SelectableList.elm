@@ -94,7 +94,7 @@ update binding factory newItemWidget itemWidget msg model p =
                 ( m, _ ) =
                     itemWidget.init p
             in
-                ( { model | contents = insert model.contents m i }, binding.getItemContent p i )
+                ( { model | contents = insert model.contents m i }, binding.askItemContent p i )
 
         ModelRemovedItem i ->
             wrapWithNoCmd (modelWithRemovedItem i model)

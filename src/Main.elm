@@ -50,7 +50,7 @@ listBinding =
                 )
     , addItem = \p i -> LocalStorage.addItemCmd (Index i :: p)
     , removeItem = \p i -> LocalStorage.removeItemCmd (Index i :: p)
-    , getItemContent = \p i -> LocalStorage.getItemContentCmd (Index i :: p)
+    , askItemContent = \p i -> LocalStorage.askItemContentCmd (Index i :: p)
     }
 
 

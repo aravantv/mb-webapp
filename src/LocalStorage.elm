@@ -1,4 +1,13 @@
-port module LocalStorage exposing (getStringSub, setStringCmd, itemAddedSub, itemRemovedSub, addItemCmd, removeItemCmd, getItemContentCmd)
+port module LocalStorage
+    exposing
+        ( getStringSub
+        , setStringCmd
+        , itemAddedSub
+        , itemRemovedSub
+        , addItemCmd
+        , removeItemCmd
+        , askItemContentCmd
+        )
 
 import Platform.Sub
 import Widget exposing (genericFieldOfString, stringOfGenericField)
@@ -56,12 +65,12 @@ itemAddedSub msgBuilder =
     itemAddedSubPort (msgBuilder << widgetPathOfStoragePath)
 
 
-port getItemContentCmdPort : StoragePath -> Cmd msg
+port askItemContentCmdPort : StoragePath -> Cmd msg
 
 
-getItemContentCmd : Widget.Path -> Cmd msg
-getItemContentCmd p =
-    getItemContentCmdPort (storagePathOfWidgetPath p)
+askItemContentCmd : Widget.Path -> Cmd msg
+askItemContentCmd p =
+    askItemContentCmdPort (storagePathOfWidgetPath p)
 
 
 port itemRemovedSubPort : (StoragePath -> msg) -> Sub msg

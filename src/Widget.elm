@@ -96,7 +96,7 @@ type alias ListBinding msg err =
     , itemRemoved : Path -> Sub (Result err Index)
     , addItem : Path -> Index -> Cmd msg
     , removeItem : Path -> Index -> Cmd msg
-    , getItemContent : Path -> Index -> Cmd msg
+    , askItemContent : Path -> Index -> Cmd msg
     }
 
 
