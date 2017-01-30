@@ -13,11 +13,12 @@
 
 <script type="text/javascript">
     // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object.
-    function applyDeep(path, f, obj, deepObjectShouldBeArray) {
-        path.splice(0, 0, "root");
+    function applyDeep(path, obj, deepObjectShouldBeArray, f) {
+        var sanitizedPath = path.slice();
+        sanitizedPath.splice(0, 0, "root");
         var result = obj;
-        for (var i = 0, n = path.length; i < n && result !== undefined; i++) {
-            var field = path[i];
+        for (var i = 0, n = sanitizedPath.length; i < n && result !== undefined; i++) {
+            var field = sanitizedPath[i];
             if (i === n - 1) {
                 f(result, field);
             } else {
@@ -34,59 +35,67 @@
     }
 
     function setValue(path, val, obj) {
-        applyDeep(path, function (o, f) { o[f] = val; }, obj, false);
+        applyDeep(path, obj, false, function (o, f) { o[f] = val; });
     }
 
     // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
     function insertValue(path, val, obj) {
-        applyDeep(path, function (o, i) {
+        applyDeep(path, obj, true, function (o, i) {
           // In case the object is empty, we need to initialize to ensure it is an array
           if (JSON.stringify(o) === JSON.stringify({})) {
             o[i] = val;
           } else {
             o.splice(i, 0, val);
           }
-        }, obj, true);
+        });
     }
 
     // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
     function removeValue(path, obj) {
-        applyDeep(path, function (o, i) { o.splice(i, 1); }, obj, true);
+        applyDeep(path, obj, true, function (o, i) { o.splice(i, 1); });
     }
 
-    function sendAll(obj, currentPath) {
-      if (typeof obj === 'string') {
-        setTimeout(function() { mbwebapp.ports.getStringSubPort.send([currentPath, obj]) }, 0);
-      } else if (Array.isArray(obj)) {
-        obj.forEach(function(elt, i) {
-          var newPath = currentPath.slice();
-          newPath.splice(0, 0, i.toString());
-          mbwebapp.ports.itemAddedSubPort.send(newPath);
-          sendAll(obj[i], newPath);
-        })
-      }
+    function sendValueAtPath(obj, path) {
+      applyDeep(path, obj, false,
+        function (o,f) {
+          if (typeof o[f] === 'string') {
+            mbwebapp.ports.getStringSubPort.send([path, o[f]]);
+          } else if (Array.isArray(o[f])) {
+            o[f].forEach(function(elt, i) {
+              var sanitizedPath = path.slice();
+              sanitizedPath.splice(0, 0, i.toString());
+              mbwebapp.ports.itemAddedSubPort.send(sanitizedPath);
+            });
+          }
+        });
     }
 
     var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
     var state = serializedState ? JSON.parse(serializedState) : {};
     var mbwebapp = Elm.Main.fullscreen();
 
-    sendAll(state.root, []);
+    sendValueAtPath(state, []);
+
+    mbwebapp.ports.getItemContentCmdPort.subscribe(function (args) {
+        sendValueAtPath(state, args);
+    })
 
     mbwebapp.ports.setStringCmdPort.subscribe(function (args) {
-        setValue(args[0], args[1], state);
+        var path = args[0]
+        var value = args[1]
+        setValue(path, value, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
         mbwebapp.ports.getStringSubPort.send(args);
     })
 
-    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
-        insertValue(args, null, state);
+    mbwebapp.ports.addItemCmdPort.subscribe(function (path) {
+        insertValue(path, null, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemAddedSubPort.send(args);
+        mbwebapp.ports.itemAddedSubPort.send(path);
     });
 
-    mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
-        removeValue(args, state);
+    mbwebapp.ports.removeItemCmdPort.subscribe(function (path) {
+        removeValue(path, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
         mbwebapp.ports.itemRemovedSubPort.send(path);
     });
