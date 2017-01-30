@@ -1,6 +1,5 @@
 module Main exposing (..)
 
-import Html
 import NewText
 import SelectableList
 import SelectableText exposing (modelFromString)
@@ -51,6 +50,7 @@ listBinding =
                 )
     , addItem = \p i -> LocalStorage.addItemCmd (Index i :: p)
     , removeItem = \p i -> LocalStorage.removeItemCmd (Index i :: p)
+    , getItemContent = \p i -> LocalStorage.getItemContentCmd (Index i :: p)
     }
 
 
