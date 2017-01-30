@@ -1,5 +1,14 @@
 {
-    "elm-lang/virtual-dom": "2.0.2",
+    "elm-community/elm-material-icons": "2.0.1",
+    "elm-lang/navigation": "2.1.0",
+    "elm-lang/virtual-dom": "2.0.4",
+    "elm-lang/lazy": "2.0.0",
+    "jinjor/elm-time-travel": "2.0.0",
+    "elm-lang/dom": "1.1.1",
     "elm-lang/html": "2.0.0",
-    "elm-lang/core": "5.0.0"
+    "elm-lang/svg": "2.0.0",
+    "Bogdanp/elm-combine": "3.1.1",
+    "jinjor/elm-inline-hover": "1.0.2",
+    "jinjor/elm-diff": "1.0.3",
+    "elm-lang/core": "5.1.1"
 }

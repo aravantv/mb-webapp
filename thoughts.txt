@@ -1,0 +1,17 @@
+path is abstract
+
+Root(path,
+  SelectableListWidget(
+    .sel.sel,
+    s -> Cmd.Set()
+    TextWidget,
+    SelectableTextWidget(
+      ctx -> ctx.sel2.sel2,
+      (ctxPath,x) -> Cmd.Set(ctxPath.sel2.sel2, x))))
+
+
+Remarques sur l'evolution d'une architecture :
+la question "où donner l'information de chemin?" a trouvé plusieurs solutions successives :
+- passé en tant qu'argument au binding
+- passé en tant qu'argument au widget directement avec le binding devenant une fonction qui prend ce chemin en argument
+- passé en tant qu'argument à la continuation de la souscription
