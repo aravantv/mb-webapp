@@ -6,7 +6,7 @@ port module LocalStorage
         , itemRemovedSub
         , addItemCmd
         , removeItemCmd
-        , askItemContentCmd
+        , askContentCmd
         )
 
 import Platform.Sub
@@ -65,12 +65,12 @@ itemAddedSub msgBuilder =
     itemAddedSubPort (msgBuilder << widgetPathOfStoragePath)
 
 
-port askItemContentCmdPort : StoragePath -> Cmd msg
+port askContentCmdPort : StoragePath -> Cmd msg
 
 
-askItemContentCmd : Widget.Path -> Cmd msg
-askItemContentCmd p =
-    askItemContentCmdPort (storagePathOfWidgetPath p)
+askContentCmd : Widget.Path -> Cmd msg
+askContentCmd p =
+    askContentCmdPort (storagePathOfWidgetPath p)
 
 
 port itemRemovedSubPort : (StoragePath -> msg) -> Sub msg
