@@ -76,7 +76,7 @@
 
     sendValueAtPath(state, []);
 
-    mbwebapp.ports.askItemContentCmdPort.subscribe(function (args) {
+    mbwebapp.ports.askContentCmdPort.subscribe(function (args) {
         sendValueAtPath(state, args);
     })
 
