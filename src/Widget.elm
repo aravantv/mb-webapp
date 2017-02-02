@@ -44,8 +44,9 @@ type alias Path =
 {-| note: all effects are functions taking a path as parameter, but the in the top-widget,
 the one given to Html.program, these are not present anymore
 -}
-type alias Widget model msg =
-    { init : Path -> ( model, Cmd msg )
+type alias Widget model msg factoryInput =
+    { initModel : model
+    , initMsg : factoryInput -> msg
     , update : msg -> model -> Path -> ( model, Cmd msg )
     , subscriptions : model -> Path -> Sub msg
     , view : model -> Html msg
@@ -60,11 +61,30 @@ type alias TopWidget model msg =
     }
 
 
-makeTopWidget : Widget model msg -> TopWidget model msg
+makeTopWidget : Widget model msg factoryInput -> TopWidget model msg
 makeTopWidget widget =
-    { init = widget.init []
+    { init = doNothing widget.initModel
     , update = \ms m -> widget.update ms m []
     , subscriptions = \m -> widget.subscriptions m []
+    , view = widget.view
+    }
+
+
+type alias UnboundWidget model msg factoryInput =
+    { initModel : model
+    , initMsg : factoryInput -> msg
+    , update : msg -> model -> ( model, Cmd msg )
+    , subscriptions : model -> Sub msg
+    , view : model -> Html msg
+    }
+
+
+makeBoundWidget : UnboundWidget model msg factoryInput -> Widget model msg factoryInput
+makeBoundWidget widget =
+    { initModel = widget.initModel
+    , initMsg = widget.initMsg
+    , update = \msg model p -> widget.update msg model
+    , subscriptions = \model p -> widget.subscriptions model
     , view = widget.view
     }
 
@@ -100,19 +120,13 @@ type alias ListBinding msg err =
     }
 
 
-{-| A factory generates a message based on an originating type.
--}
-type alias Factory fromModel toModel toMsg =
-    fromModel -> ( toModel, Cmd toMsg )
-
-
 wrapUpdateWithCmd : (msg -> model -> model) -> msg -> model -> ( model, Cmd msg )
 wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
 
 
-wrapWithNoCmd : a -> ( a, Cmd msg )
-wrapWithNoCmd x =
+doNothing : a -> ( a, Cmd msg )
+doNothing x =
     ( x, Cmd.none )
 
 

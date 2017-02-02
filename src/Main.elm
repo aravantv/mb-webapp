@@ -1,12 +1,12 @@
 module Main exposing (..)
 
+import LocalStorage
 import NewText
 import SelectableList
-import SelectableText exposing (modelFromString)
-import LocalStorage
+import SelectableText
+import TimeTravel.Html as TimeTravel
 import Utils exposing (..)
 import Widget exposing (Index, makeTopWidget)
-import TimeTravel.Html as TimeTravel
 
 
 textBinding : Widget.Binding msg String ()
@@ -58,11 +58,12 @@ main =
     let
         widget =
             --SelectableText.createWidget textBinding
-            SelectableList.createListWidget listBinding NewText.widget (SelectableText.createWidget textBinding) modelFromString
+            SelectableList.createListWidget listBinding NewText.widget (SelectableText.createWidget textBinding) identity
     in
         TimeTravel.program <|
             makeTopWidget
-                { init = widget.init
+                { initModel = widget.initModel
+                , initMsg = widget.initMsg
                 , update = widget.update
                 , view = widget.view
                 , subscriptions = widget.subscriptions

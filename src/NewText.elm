@@ -4,12 +4,13 @@ import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (IDecision, TopWidget)
+import Widget exposing (IDecision, TopWidget, UnboundWidget, doNothing)
 
 
-widget : IDecision Msg (TopWidget Model Msg)
+widget : IDecision Msg (UnboundWidget Model Msg String)
 widget =
-    { init = Widget.wrapWithNoCmd model
+    { initModel = emptyModel
+    , initMsg = Init
     , update = update
     , view = view
     , subscriptions = Widget.emptySubscription
@@ -25,8 +26,8 @@ type alias Model =
     String
 
 
-model : Model
-model =
+emptyModel : Model
+emptyModel =
     ""
 
 
@@ -38,19 +39,28 @@ type Msg
     = Change String
     | Confirm
     | Cancel
+    | Init String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    doNothing <| transform msg model
+
+
+transform : Msg -> Model -> Model
+transform msg model =
     case msg of
         Change newContent ->
-            ( newContent, Cmd.none )
+            newContent
 
         Confirm ->
-            ( model, Cmd.none )
+            model
 
         Cancel ->
-            ( "", Cmd.none )
+            ""
+
+        Init s ->
+            s
 
 
 

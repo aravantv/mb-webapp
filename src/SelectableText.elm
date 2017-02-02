@@ -4,12 +4,13 @@ import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, wrapWithNoCmd)
+import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Msg String err -> ISelectable Model Msg (Widget Model Msg)
+createWidget : Binding Msg String err -> ISelectable Model Msg (Widget Model Msg String)
 createWidget binding =
-    { init = \p -> wrapWithNoCmd model
+    { initMsg = Init
+    , initModel = emptyModel
     , update = update binding
     , view = view
     , subscriptions = subscriptions binding
@@ -30,14 +31,9 @@ type alias Model =
     }
 
 
-model : Model
-model =
-    Model "" "" True
-
-
-modelFromString : String -> ( Model, Cmd Msg )
-modelFromString s =
-    ( model, Cmd.batch [ cmdOfMsg UIConfirm, cmdOfMsg (ModelChange s) ] )
+emptyModel : Model
+emptyModel =
+    { content = "", uiContent = "", editMode = False }
 
 
 
@@ -50,33 +46,38 @@ type Msg
     | UICancel
     | UISelect
     | ModelChange String
+    | Init String
     | NoOp
-
-
-
--- in the long run, the parameter of ModelChange should not be a Maybe String but just a String
 
 
 update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
 update binding msg model p =
     case msg of
+        Init s ->
+            ( emptyModel, binding.set p s )
+
         UIChange newContent ->
-            wrapWithNoCmd { model | uiContent = newContent }
+            { model | uiContent = newContent } |> doNothing
 
         UIConfirm ->
-            ( { model | editMode = False, content = model.uiContent }, binding.set p model.uiContent )
+            ( { model | editMode = False, content = model.uiContent }, binding.set p model.content )
 
         UICancel ->
-            ( { model | uiContent = model.content }, cmdOfMsg UIConfirm )
+            { model | uiContent = model.content, editMode = False } |> doNothing
 
         UISelect ->
-            wrapWithNoCmd { model | editMode = True }
-
-        NoOp ->
-            wrapWithNoCmd model
+            { model | editMode = True } |> doNothing
 
         ModelChange newContent ->
-            wrapWithNoCmd { model | uiContent = newContent, content = newContent }
+            { model | uiContent = newContent, content = newContent } |> doNothing
+
+        NoOp ->
+            doNothing model
+
+
+applyUIChange : String -> Model -> Model
+applyUIChange newContent m =
+    { m | uiContent = newContent }
 
 
 
