@@ -75,11 +75,6 @@ update binding msg model p =
             doNothing model
 
 
-applyUIChange : String -> Model -> Model
-applyUIChange newContent m =
-    { m | uiContent = newContent }
-
-
 
 -- SUBSCRIPTIONS
 
