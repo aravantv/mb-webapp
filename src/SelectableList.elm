@@ -52,7 +52,7 @@ emptyModel ( binding, newItemWidget, itemWidget, converter ) =
 
 
 type Msg newItemMsg itemMsg itemModel factoryInput
-    = UINewItemMsg newItemMsg
+    = NewItemMsg newItemMsg
     | ItemMsg Index itemMsg
     | UIRemove Index
     | ModelAddedItem Index
@@ -73,7 +73,7 @@ update params msg model p =
             params
     in
         case msg of
-            UINewItemMsg subMsg ->
+            NewItemMsg subMsg ->
                 if subMsg == newItemWidget.confirmMsg then
                     addItem params model p
                 else
@@ -81,10 +81,21 @@ update params msg model p =
                         ( updatedItemToAdd, cmd ) =
                             newItemWidget.update subMsg model.itemToAdd
                     in
-                        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map UINewItemMsg cmd )
+                        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map NewItemMsg cmd )
 
             ItemMsg i subMsg ->
-                propagateMsgToWidget itemWidget model i subMsg p
+                let
+                    ( updatedItems, updateCmd ) =
+                        updateSpecificItemOnly itemWidget model.contents p i subMsg
+                in
+                    if subMsg == itemWidget.selectMsg then
+                        let
+                            ( unselectedContents, unselectCmds ) =
+                                unselectPreviouslySelectedItems itemWidget updatedItems i subMsg p
+                        in
+                            ( { model | contents = unselectedContents }, Cmd.batch [ updateCmd, unselectCmds ] )
+                    else
+                        ( { model | contents = updatedItems }, updateCmd )
 
             UIRemove i ->
                 ( model, binding.removeItem p i )
@@ -93,7 +104,7 @@ update params msg model p =
                 ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent p i )
 
             ModelRemovedItem i ->
-                doNothing (modelWithRemovedItem i model)
+                doNothing ({ model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents })
 
             Init l ->
                 let
@@ -125,61 +136,53 @@ addItem ( binding, newItemWidget, itemWidget, converter ) model p =
         ( modelWithItemAdded, cmd )
 
 
-propagateMsgToWidget :
+unselectPreviouslySelectedItems :
     ItemWidget itemModel itemMsg factoryInput
-    -> Model newItemModel itemModel
+    -> List itemModel
     -> Index
     -> itemMsg
     -> Widget.Path
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-propagateMsgToWidget widget model i msg p =
+    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+unselectPreviouslySelectedItems itemWidget items i msg path =
     let
-        updatedWidgetList =
-            List.indexedMap (updateWidget widget i msg p) model.contents
+        unselectIfPreviouslySelected j itemModel =
+            if itemWidget.isSelected itemModel && j /= i then
+                itemWidget.update itemWidget.unselectMsg itemModel (Index j :: path)
+            else
+                doNothing itemModel
 
-        ( contentsWithWidgetUpdated, updateCmds ) =
-            List.unzip updatedWidgetList
+        ( unselectedItems, unselectCmds ) =
+            List.unzip (List.indexedMap unselectIfPreviouslySelected items)
 
-        updateCmd =
-            Cmd.batch <| List.map (Cmd.map (ItemMsg i)) updateCmds
+        finalCmd =
+            Cmd.batch <| List.indexedMap (\i -> Cmd.map (ItemMsg i)) unselectCmds
     in
-        if msg /= widget.selectMsg then
-            ( { model | contents = contentsWithWidgetUpdated }, updateCmd )
-        else
-            let
-                unselectPreviouslySelected j itemModel =
-                    if widget.isSelected itemModel && j /= i then
-                        widget.update widget.unselectMsg itemModel (Index j :: p)
-                    else
-                        doNothing itemModel
-
-                ( contents, unselectCmds ) =
-                    List.unzip <| List.indexedMap unselectPreviouslySelected contentsWithWidgetUpdated
-
-                finalCmd =
-                    Cmd.batch <| updateCmd :: List.indexedMap (\i -> Cmd.map (ItemMsg i)) unselectCmds
-            in
-                ( { model | contents = contents }, finalCmd )
+        ( unselectedItems, finalCmd )
 
 
-modelWithRemovedItem : Index -> Model newItemModel itemModel -> Model newItemModel itemModel
-modelWithRemovedItem i model =
-    { model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents }
-
-
-updateWidget :
+updateSpecificItemOnly :
     ItemWidget itemModel itemMsg factoryInput
-    -> Index
-    -> itemMsg
+    -> List itemModel
     -> Widget.Path
     -> Index
-    -> itemModel
-    -> ( itemModel, Cmd itemMsg )
-updateWidget widget refIndex msg p candidateIndex model =
-    if candidateIndex == refIndex then
-        widget.update msg model (Index candidateIndex :: p)
-    else
-        doNothing model
+    -> itemMsg
+    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+updateSpecificItemOnly itemWidget contents path itemIndex itemMsg =
+    let
+        subUpdate subModel =
+            itemWidget.update itemMsg subModel (Index itemIndex :: path)
+
+        maybeItemUpdated =
+            Maybe.map subUpdate (get contents itemIndex)
+    in
+        case maybeItemUpdated of
+            Nothing ->
+                doNothing contents
+
+            Just ( subModel, cmd ) ->
+                ( List.take itemIndex contents ++ [ subModel ] ++ List.drop (itemIndex + 1) contents
+                , Cmd.map (ItemMsg itemIndex) cmd
+                )
 
 
 
@@ -222,21 +225,15 @@ view params model =
     let
         ( binding, newItemWidget, itemWidget, converter ) =
             params
+
+        viewWidget widget i m =
+            li []
+                [ span []
+                    [ Html.map (ItemMsg i) <| widget.view m
+                    , button [ onClick <| UIRemove i ] [ text "-" ]
+                    ]
+                ]
     in
         ul [] <|
-            li [] [ Html.map UINewItemMsg <| newItemWidget.view model.itemToAdd ]
+            li [] [ Html.map NewItemMsg <| newItemWidget.view model.itemToAdd ]
                 :: List.indexedMap (viewWidget itemWidget) model.contents
-
-
-viewWidget :
-    ItemWidget itemModel itemMsg factoryInput
-    -> Index
-    -> itemModel
-    -> Html (Msg newItemMsg itemMsg itemModel factoryInput)
-viewWidget widget i m =
-    li []
-        [ span []
-            [ Html.map (ItemMsg i) <| widget.view m
-            , button [ onClick <| UIRemove i ] [ text "-" ]
-            ]
-        ]
