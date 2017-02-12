@@ -64,6 +64,11 @@ listSubstract l1 l2 =
                 Nothing
 
 
+get : List t -> Int -> Maybe t
+get l i =
+    List.head (List.drop i l)
+
+
 resultFullMap : (o1 -> o2) -> (e1 -> e2) -> Result e1 o1 -> Result e2 o2
 resultFullMap fOk fErr =
     Result.map fOk << Result.mapError fErr
