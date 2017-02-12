@@ -54,9 +54,9 @@ emptyModel ( binding, newItemWidget, itemWidget, converter ) =
 type Msg newItemMsg itemMsg itemModel factoryInput
     = DelegateToNewItemMsg newItemMsg
     | DelegateToItemMsg Index itemMsg
-    | UIRemove Index
-    | ModelAddedItem Index
-    | ModelRemovedItem Index
+    | Remove Index
+    | BackendAddedItem Index
+    | BackendRemovedItem Index
     | NoOp
     | Init (List factoryInput)
 
@@ -94,13 +94,13 @@ update params msg model path =
                 in
                     ( { model | contents = unselectedUpdatedItems }, Cmd.batch [ updateCmd, unselectCmds ] )
 
-            UIRemove i ->
+            Remove i ->
                 ( model, binding.removeItem path i )
 
-            ModelAddedItem i ->
+            BackendAddedItem i ->
                 ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent path i )
 
-            ModelRemovedItem i ->
+            BackendRemovedItem i ->
                 doNothing ({ model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents })
 
             Init l ->
@@ -204,8 +204,8 @@ subscriptions ( binding, _, itemWidget, _ ) model path =
             Sub.map (DelegateToItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: path)
     in
         Sub.batch
-            ([ bindingToMsg ModelAddedItem (binding.itemAdded path)
-             , bindingToMsg ModelRemovedItem (binding.itemRemoved path)
+            ([ bindingToMsg BackendAddedItem (binding.itemAdded path)
+             , bindingToMsg BackendRemovedItem (binding.itemRemoved path)
              ]
                 ++ List.indexedMap itemSub model.contents
             )
@@ -225,7 +225,7 @@ view ( _, newItemWidget, itemWidget, _ ) model =
             li []
                 [ span []
                     [ Html.map (DelegateToItemMsg i) <| itemWidget.view m
-                    , button [ onClick <| UIRemove i ] [ text "-" ]
+                    , button [ onClick <| Remove i ] [ text "-" ]
                     ]
                 ]
     in
