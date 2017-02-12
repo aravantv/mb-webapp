@@ -60,7 +60,7 @@ update binding msg model p =
             { model | uiContent = newContent } |> doNothing
 
         UIConfirm ->
-            ( { model | editMode = False, content = model.uiContent }, binding.set p model.content )
+            ( { model | editMode = False, content = model.uiContent }, binding.set p model.uiContent )
 
         UICancel ->
             { model | uiContent = model.content, editMode = False } |> doNothing
