@@ -18,18 +18,19 @@ type alias Converter fromModel toModelFactoryInput =
     fromModel -> toModelFactoryInput
 
 
+type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err =
+    ( ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err, NewItemWidget newItemModel newItemMsg factoryInput, ItemWidget itemModel itemMsg factoryInput, Converter newItemModel factoryInput )
+
+
 createListWidget :
-    ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err
-    -> NewItemWidget newItemModel newItemMsg factoryInput
-    -> ItemWidget itemModel itemMsg factoryInput
-    -> Converter newItemModel factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel factoryInput) (List factoryInput)
-createListWidget binding newItemWidget itemWidget converter =
-    { initModel = emptyModel newItemWidget
+createListWidget params =
+    { initModel = emptyModel params
     , initMsg = Init
-    , update = update binding converter newItemWidget itemWidget
-    , subscriptions = subscriptions binding itemWidget
-    , view = view newItemWidget itemWidget
+    , update = update params
+    , subscriptions = subscriptions params
+    , view = view params
     }
 
 
@@ -41,8 +42,8 @@ type alias Model newItemModel itemModel =
     { itemToAdd : newItemModel, contents : List itemModel }
 
 
-emptyModel : NewItemWidget newItemModel newItemMsg factoryInput -> Model newItemModel itemModel
-emptyModel newItemWidget =
+emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err -> Model newItemModel itemModel
+emptyModel ( binding, newItemWidget, itemWidget, converter ) =
     { itemToAdd = newItemWidget.initModel, contents = [] }
 
 
@@ -61,58 +62,56 @@ type Msg newItemMsg itemMsg itemModel factoryInput
 
 
 update :
-    ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err
-    -> Converter newItemModel factoryInput
-    -> NewItemWidget newItemModel newItemMsg factoryInput
-    -> ItemWidget itemModel itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Msg newItemMsg itemMsg itemModel factoryInput
     -> Model newItemModel itemModel
     -> Path
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-update binding converter newItemWidget itemWidget msg model p =
-    case msg of
-        UINewItemMsg subMsg ->
-            if subMsg == newItemWidget.confirmMsg then
-                addItem binding converter newItemWidget itemWidget model p
-            else
+update params msg model p =
+    let
+        ( binding, newItemWidget, itemWidget, converter ) =
+            params
+    in
+        case msg of
+            UINewItemMsg subMsg ->
+                if subMsg == newItemWidget.confirmMsg then
+                    addItem params model p
+                else
+                    let
+                        ( updatedItemToAdd, cmd ) =
+                            newItemWidget.update subMsg model.itemToAdd
+                    in
+                        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map UINewItemMsg cmd )
+
+            ItemMsg i subMsg ->
+                propagateMsgToWidget itemWidget model i subMsg p
+
+            UIRemove i ->
+                ( model, binding.removeItem p i )
+
+            ModelAddedItem i ->
+                ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent p i )
+
+            ModelRemovedItem i ->
+                doNothing (modelWithRemovedItem i model)
+
+            Init l ->
                 let
-                    ( updatedItemToAdd, cmd ) =
-                        newItemWidget.update subMsg model.itemToAdd
+                    addItemCmd i fi =
+                        Cmd.batch [ binding.addItem p i, cmdOfMsg (ItemMsg i (itemWidget.initMsg fi)) ]
                 in
-                    ( { model | itemToAdd = updatedItemToAdd }, Cmd.map UINewItemMsg cmd )
+                    ( emptyModel params, Cmd.batch (List.indexedMap addItemCmd l) )
 
-        ItemMsg i subMsg ->
-            propagateMsgToWidget itemWidget model i subMsg p
-
-        UIRemove i ->
-            ( model, binding.removeItem p i )
-
-        ModelAddedItem i ->
-            ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent p i )
-
-        ModelRemovedItem i ->
-            doNothing (modelWithRemovedItem i model)
-
-        Init l ->
-            let
-                addItemCmd i fi =
-                    Cmd.batch [ binding.addItem p i, cmdOfMsg (ItemMsg i (itemWidget.initMsg fi)) ]
-            in
-                ( emptyModel newItemWidget, Cmd.batch (List.indexedMap addItemCmd l) )
-
-        NoOp ->
-            doNothing model
+            NoOp ->
+                doNothing model
 
 
 addItem :
-    ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err
-    -> Converter newItemModel factoryInput
-    -> NewItemWidget newItemModel newItemMsg factoryInput
-    -> ItemWidget itemModel itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
     -> Path
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-addItem binding converter newItemWidget itemWidget model p =
+addItem ( binding, newItemWidget, itemWidget, converter ) model p =
     let
         cmd =
             Cmd.batch
@@ -188,18 +187,20 @@ updateWidget widget refIndex msg p candidateIndex model =
 
 
 subscriptions :
-    ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err
-    -> ItemWidget itemModel itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
     -> Widget.Path
     -> Sub (Msg newItemMsg itemMsg itemModel factoryInput)
-subscriptions binding widget model p =
+subscriptions params model p =
     let
+        ( binding, _, itemWidget, _ ) =
+            params
+
         bindingToMsg msgBuilder =
             Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
 
         itemSub i itemModel =
-            Sub.map (ItemMsg i) <| widget.subscriptions itemModel (Index i :: p)
+            Sub.map (ItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: p)
     in
         Sub.batch
             ([ bindingToMsg ModelAddedItem (binding.itemAdded p)
@@ -214,14 +215,17 @@ subscriptions binding widget model p =
 
 
 view :
-    NewItemWidget newItemModel newItemMsg factoryInput
-    -> ItemWidget itemModel itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel factoryInput)
-view newItemWidget widget model =
-    ul [] <|
-        li [] [ Html.map UINewItemMsg <| newItemWidget.view model.itemToAdd ]
-            :: List.indexedMap (viewWidget widget) model.contents
+view params model =
+    let
+        ( binding, newItemWidget, itemWidget, converter ) =
+            params
+    in
+        ul [] <|
+            li [] [ Html.map UINewItemMsg <| newItemWidget.view model.itemToAdd ]
+                :: List.indexedMap (viewWidget itemWidget) model.contents
 
 
 viewWidget :
