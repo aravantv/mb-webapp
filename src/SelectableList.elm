@@ -52,8 +52,8 @@ emptyModel ( binding, newItemWidget, itemWidget, converter ) =
 
 
 type Msg newItemMsg itemMsg itemModel factoryInput
-    = NewItemMsg newItemMsg
-    | ItemMsg Index itemMsg
+    = DelegateToNewItemMsg newItemMsg
+    | DelegateToItemMsg Index itemMsg
     | UIRemove Index
     | ModelAddedItem Index
     | ModelRemovedItem Index
@@ -73,7 +73,7 @@ update params msg model path =
             params
     in
         case msg of
-            NewItemMsg subMsg ->
+            DelegateToNewItemMsg subMsg ->
                 if subMsg == newItemWidget.confirmMsg then
                     ( { model | itemToAdd = newItemWidget.initModel }
                     , addItemCmd params path 0 (converter model.itemToAdd)
@@ -81,7 +81,7 @@ update params msg model path =
                 else
                     delegateUpdateToItemToAdd params model subMsg
 
-            ItemMsg i subMsg ->
+            DelegateToItemMsg i subMsg ->
                 let
                     ( updatedItems, updateCmd ) =
                         delegateUpdateToItem params path model.contents i subMsg
@@ -120,7 +120,7 @@ delegateUpdateToItemToAdd ( _, newItemWidget, _, _ ) model subMsg =
         ( updatedItemToAdd, cmd ) =
             newItemWidget.update subMsg model.itemToAdd
     in
-        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map NewItemMsg cmd )
+        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map DelegateToNewItemMsg cmd )
 
 
 addItemCmd :
@@ -135,7 +135,7 @@ addItemCmd ( binding, _, itemWidget, _ ) path indexToAdd itemToAdd =
             binding.addItem path indexToAdd
 
         initItemWithItemToAddCmd =
-            cmdOfMsg (ItemMsg indexToAdd (itemWidget.initMsg itemToAdd))
+            cmdOfMsg (DelegateToItemMsg indexToAdd (itemWidget.initMsg itemToAdd))
     in
         Cmd.batch [ addItemToListCmd, initItemWithItemToAddCmd ]
 
@@ -159,7 +159,7 @@ unselectPreviouslySelectedItems ( _, _, itemWidget, _ ) path items exceptIndex m
             List.unzip (List.indexedMap unselectIfPreviouslySelected items)
 
         finalCmd =
-            Cmd.batch <| List.indexedMap (\i -> Cmd.map (ItemMsg i)) unselectCmds
+            Cmd.batch <| List.indexedMap (\i -> Cmd.map (DelegateToItemMsg i)) unselectCmds
     in
         ( unselectedItems, finalCmd )
 
@@ -182,7 +182,7 @@ delegateUpdateToItem ( _, _, itemWidget, _ ) path contents itemIndex itemMsg =
                     itemWidget.update itemMsg subModel (Index itemIndex :: path)
             in
                 ( List.take itemIndex contents ++ [ updatedSubModel ] ++ List.drop (itemIndex + 1) contents
-                , Cmd.map (ItemMsg itemIndex) cmd
+                , Cmd.map (DelegateToItemMsg itemIndex) cmd
                 )
 
 
@@ -201,7 +201,7 @@ subscriptions ( binding, _, itemWidget, _ ) model path =
             Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
 
         itemSub i itemModel =
-            Sub.map (ItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: path)
+            Sub.map (DelegateToItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: path)
     in
         Sub.batch
             ([ bindingToMsg ModelAddedItem (binding.itemAdded path)
@@ -224,11 +224,11 @@ view ( _, newItemWidget, itemWidget, _ ) model =
         delegateViewToItem i m =
             li []
                 [ span []
-                    [ Html.map (ItemMsg i) <| itemWidget.view m
+                    [ Html.map (DelegateToItemMsg i) <| itemWidget.view m
                     , button [ onClick <| UIRemove i ] [ text "-" ]
                     ]
                 ]
     in
         ul [] <|
-            li [] [ Html.map NewItemMsg <| newItemWidget.view model.itemToAdd ]
+            li [] [ Html.map DelegateToNewItemMsg <| newItemWidget.view model.itemToAdd ]
                 :: List.indexedMap delegateViewToItem model.contents
