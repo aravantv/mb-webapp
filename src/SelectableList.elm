@@ -67,7 +67,7 @@ update :
     -> Model newItemModel itemModel
     -> Path
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-update params msg model p =
+update params msg model path =
     let
         ( binding, newItemWidget, itemWidget, converter ) =
             params
@@ -75,77 +75,82 @@ update params msg model p =
         case msg of
             NewItemMsg subMsg ->
                 if subMsg == newItemWidget.confirmMsg then
-                    ( { itemToAdd = newItemWidget.initModel, contents = model.contents }
-                    , addItemCmd params model p
+                    ( { model | itemToAdd = newItemWidget.initModel }
+                    , addItemCmd params path 0 (converter model.itemToAdd)
                     )
                 else
-                    let
-                        ( updatedItemToAdd, cmd ) =
-                            newItemWidget.update subMsg model.itemToAdd
-                    in
-                        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map NewItemMsg cmd )
+                    delegateUpdateToItemToAdd params model subMsg
 
             ItemMsg i subMsg ->
                 let
                     ( updatedItems, updateCmd ) =
-                        updateSpecificItemOnly itemWidget model.contents p i subMsg
+                        delegateUpdateToItem params path model.contents i subMsg
+
+                    ( unselectedUpdatedItems, unselectCmds ) =
+                        if subMsg == itemWidget.selectMsg then
+                            unselectPreviouslySelectedItems params path updatedItems i subMsg
+                        else
+                            ( updatedItems, Cmd.none )
                 in
-                    if subMsg == itemWidget.selectMsg then
-                        let
-                            ( unselectedContents, unselectCmds ) =
-                                unselectPreviouslySelectedItems itemWidget updatedItems i subMsg p
-                        in
-                            ( { model | contents = unselectedContents }, Cmd.batch [ updateCmd, unselectCmds ] )
-                    else
-                        ( { model | contents = updatedItems }, updateCmd )
+                    ( { model | contents = unselectedUpdatedItems }, Cmd.batch [ updateCmd, unselectCmds ] )
 
             UIRemove i ->
-                ( model, binding.removeItem p i )
+                ( model, binding.removeItem path i )
 
             ModelAddedItem i ->
-                ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent p i )
+                ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent path i )
 
             ModelRemovedItem i ->
                 doNothing ({ model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents })
 
             Init l ->
-                let
-                    addItemCmd i fi =
-                        Cmd.batch [ binding.addItem p i, cmdOfMsg (ItemMsg i (itemWidget.initMsg fi)) ]
-                in
-                    ( emptyModel params, Cmd.batch (List.indexedMap addItemCmd l) )
+                ( emptyModel params, Cmd.batch (List.indexedMap (\i fi -> addItemCmd params path i fi) l) )
 
             NoOp ->
                 doNothing model
 
 
-addItemCmd :
+delegateUpdateToItemToAdd :
     Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
+    -> newItemMsg
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+delegateUpdateToItemToAdd ( _, newItemWidget, _, _ ) model subMsg =
+    let
+        ( updatedItemToAdd, cmd ) =
+            newItemWidget.update subMsg model.itemToAdd
+    in
+        ( { model | itemToAdd = updatedItemToAdd }, Cmd.map NewItemMsg cmd )
+
+
+addItemCmd :
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Path
+    -> Index
+    -> factoryInput
     -> Cmd (Msg newItemMsg itemMsg itemModel factoryInput)
-addItemCmd ( binding, newItemWidget, itemWidget, converter ) model p =
+addItemCmd ( binding, _, itemWidget, _ ) path indexToAdd itemToAdd =
     let
         addItemToListCmd =
-            binding.addItem p 0
+            binding.addItem path indexToAdd
 
         initItemWithItemToAddCmd =
-            cmdOfMsg <| ItemMsg 0 <| itemWidget.initMsg <| converter model.itemToAdd
+            cmdOfMsg (ItemMsg indexToAdd (itemWidget.initMsg itemToAdd))
     in
         Cmd.batch [ addItemToListCmd, initItemWithItemToAddCmd ]
 
 
 unselectPreviouslySelectedItems :
-    ItemWidget itemModel itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    -> Path
     -> List itemModel
     -> Index
     -> itemMsg
-    -> Widget.Path
     -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-unselectPreviouslySelectedItems itemWidget items i msg path =
+unselectPreviouslySelectedItems ( _, _, itemWidget, _ ) path items exceptIndex msg =
     let
         unselectIfPreviouslySelected j itemModel =
-            if itemWidget.isSelected itemModel && j /= i then
+            if itemWidget.isSelected itemModel && j /= exceptIndex then
                 itemWidget.update itemWidget.unselectMsg itemModel (Index j :: path)
             else
                 doNothing itemModel
@@ -159,27 +164,24 @@ unselectPreviouslySelectedItems itemWidget items i msg path =
         ( unselectedItems, finalCmd )
 
 
-updateSpecificItemOnly :
-    ItemWidget itemModel itemMsg factoryInput
+delegateUpdateToItem :
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    -> Path
     -> List itemModel
-    -> Widget.Path
     -> Index
     -> itemMsg
     -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-updateSpecificItemOnly itemWidget contents path itemIndex itemMsg =
-    let
-        subUpdate subModel =
-            itemWidget.update itemMsg subModel (Index itemIndex :: path)
+delegateUpdateToItem ( _, _, itemWidget, _ ) path contents itemIndex itemMsg =
+    case get contents itemIndex of
+        Nothing ->
+            doNothing contents
 
-        maybeItemUpdated =
-            Maybe.map subUpdate (get contents itemIndex)
-    in
-        case maybeItemUpdated of
-            Nothing ->
-                doNothing contents
-
-            Just ( subModel, cmd ) ->
-                ( List.take itemIndex contents ++ [ subModel ] ++ List.drop (itemIndex + 1) contents
+        Just subModel ->
+            let
+                ( updatedSubModel, cmd ) =
+                    itemWidget.update itemMsg subModel (Index itemIndex :: path)
+            in
+                ( List.take itemIndex contents ++ [ updatedSubModel ] ++ List.drop (itemIndex + 1) contents
                 , Cmd.map (ItemMsg itemIndex) cmd
                 )
 
@@ -191,22 +193,19 @@ updateSpecificItemOnly itemWidget contents path itemIndex itemMsg =
 subscriptions :
     Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
-    -> Widget.Path
+    -> Path
     -> Sub (Msg newItemMsg itemMsg itemModel factoryInput)
-subscriptions params model p =
+subscriptions ( binding, _, itemWidget, _ ) model path =
     let
-        ( binding, _, itemWidget, _ ) =
-            params
-
         bindingToMsg msgBuilder =
             Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
 
         itemSub i itemModel =
-            Sub.map (ItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: p)
+            Sub.map (ItemMsg i) <| itemWidget.subscriptions itemModel (Index i :: path)
     in
         Sub.batch
-            ([ bindingToMsg ModelAddedItem (binding.itemAdded p)
-             , bindingToMsg ModelRemovedItem (binding.itemRemoved p)
+            ([ bindingToMsg ModelAddedItem (binding.itemAdded path)
+             , bindingToMsg ModelRemovedItem (binding.itemRemoved path)
              ]
                 ++ List.indexedMap itemSub model.contents
             )
@@ -220,19 +219,16 @@ view :
     Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel factoryInput)
-view params model =
+view ( _, newItemWidget, itemWidget, _ ) model =
     let
-        ( binding, newItemWidget, itemWidget, converter ) =
-            params
-
-        viewWidget widget i m =
+        delegateViewToItem i m =
             li []
                 [ span []
-                    [ Html.map (ItemMsg i) <| widget.view m
+                    [ Html.map (ItemMsg i) <| itemWidget.view m
                     , button [ onClick <| UIRemove i ] [ text "-" ]
                     ]
                 ]
     in
         ul [] <|
             li [] [ Html.map NewItemMsg <| newItemWidget.view model.itemToAdd ]
-                :: List.indexedMap (viewWidget itemWidget) model.contents
+                :: List.indexedMap delegateViewToItem model.contents
