@@ -57,8 +57,7 @@ listBinding =
 main =
     let
         widget =
-            --SelectableText.createWidget textBinding
-            SelectableList.createListWidget listBinding NewText.widget (SelectableText.createWidget textBinding) identity
+            SelectableList.createListWidget ( listBinding, NewText.widget, (SelectableText.createWidget textBinding), identity )
     in
         TimeTravel.program <|
             makeTopWidget
