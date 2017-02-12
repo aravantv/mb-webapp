@@ -75,7 +75,9 @@ update params msg model p =
         case msg of
             NewItemMsg subMsg ->
                 if subMsg == newItemWidget.confirmMsg then
-                    addItem params model p
+                    ( { itemToAdd = newItemWidget.initModel, contents = model.contents }
+                    , addItemCmd params model p
+                    )
                 else
                     let
                         ( updatedItemToAdd, cmd ) =
@@ -117,23 +119,20 @@ update params msg model p =
                 doNothing model
 
 
-addItem :
+addItemCmd :
     Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Model newItemModel itemModel
     -> Path
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
-addItem ( binding, newItemWidget, itemWidget, converter ) model p =
+    -> Cmd (Msg newItemMsg itemMsg itemModel factoryInput)
+addItemCmd ( binding, newItemWidget, itemWidget, converter ) model p =
     let
-        cmd =
-            Cmd.batch
-                [ binding.addItem p 0
-                , cmdOfMsg <| ItemMsg 0 <| itemWidget.initMsg <| converter model.itemToAdd
-                ]
+        addItemToListCmd =
+            binding.addItem p 0
 
-        modelWithItemAdded =
-            { itemToAdd = newItemWidget.initModel, contents = model.contents }
+        initItemWithItemToAddCmd =
+            cmdOfMsg <| ItemMsg 0 <| itemWidget.initMsg <| converter model.itemToAdd
     in
-        ( modelWithItemAdded, cmd )
+        Cmd.batch [ addItemToListCmd, initItemWithItemToAddCmd ]
 
 
 unselectPreviouslySelectedItems :
