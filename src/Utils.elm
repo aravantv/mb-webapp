@@ -43,25 +43,20 @@ insert l x i =
                 y :: insert ys x (i - 1)
 
 
-{-| substract [x,y,z,t] [x,y] === [z,t]
+{-| substract [x,y,z,t] [z,t] === [x,y]
 -}
 listSubstract : List t -> List t -> Maybe (List t)
 listSubstract l1 l2 =
-    case ( l1, l2 ) of
-        ( [], [] ) ->
-            Just []
-
-        ( [], _ :: _ ) ->
+    let
+        diff_length =
+            List.length l1 - List.length l2
+    in
+        if diff_length < 0 then
             Nothing
-
-        ( x :: xs, [] ) ->
-            Just (x :: xs)
-
-        ( x :: xs, y :: ys ) ->
-            if (x == y) then
-                listSubstract xs ys
-            else
-                Nothing
+        else if List.drop diff_length l1 == l2 then
+            Just (List.take diff_length l1)
+        else
+            Nothing
 
 
 get : List t -> Int -> Maybe t
