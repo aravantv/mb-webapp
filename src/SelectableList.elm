@@ -98,7 +98,12 @@ update params msg model path =
                 ( model, binding.removeItem path i )
 
             BackendAddedItem i ->
-                ( { model | contents = insert model.contents itemWidget.initModel i }, binding.askItemContent path i )
+                case insert model.contents itemWidget.initModel i of
+                    Just newContents ->
+                        ( { model | contents = newContents }, binding.askItemContent path i )
+
+                    Nothing ->
+                        doNothing model
 
             BackendRemovedItem i ->
                 doNothing ({ model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents })
