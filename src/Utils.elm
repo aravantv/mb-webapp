@@ -30,17 +30,17 @@ escapeKey =
     27
 
 
-insert : List t -> t -> Int -> List t
+insert : List t -> t -> Int -> Maybe (List t)
 insert l x i =
-    case l of
-        [] ->
-            [ x ]
+    if i == 0 then
+        Just (x :: l)
+    else
+        case l of
+            [] ->
+                Nothing
 
-        y :: ys ->
-            if i == 0 then
-                x :: l
-            else
-                y :: insert ys x (i - 1)
+            y :: ys ->
+                Maybe.map (\l -> y :: l) <| insert ys x (i - 1)
 
 
 {-| substract [x,y,z,t] [z,t] === [x,y]
