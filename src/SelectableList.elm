@@ -106,7 +106,7 @@ update params msg model path =
                         doNothing model
 
             BackendRemovedItem i ->
-                doNothing ({ model | contents = listRemove model.contents i })
+                doNothing ({ model | contents = remove model.contents i })
 
             Init l ->
                 ( emptyModel params, Cmd.batch (List.indexedMap (\i fi -> addItemCmd params path i fi) l) )

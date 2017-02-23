@@ -32,7 +32,7 @@ listBinding =
         \p ->
             LocalStorage.itemAddedSub
                 (\path ->
-                    case listSubstract path p of
+                    case substract path p of
                         Just [ Widget.Index i ] ->
                             Result.Ok i
 
@@ -43,7 +43,7 @@ listBinding =
         \p ->
             LocalStorage.itemRemovedSub
                 (\path ->
-                    case listSubstract path p of
+                    case substract path p of
                         Just [ Widget.Index i ] ->
                             Result.Ok i
 

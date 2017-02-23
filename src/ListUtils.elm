@@ -16,8 +16,8 @@ insert l x i =
 
 {-| substract [x,y,z,t] [z,t] === [x,y]
 -}
-listSubstract : List t -> List t -> Maybe (List t)
-listSubstract l1 l2 =
+substract : List t -> List t -> Maybe (List t)
+substract l1 l2 =
     let
         diff_length =
             List.length l1 - List.length l2
@@ -30,8 +30,8 @@ listSubstract l1 l2 =
             Nothing
 
 
-listRemove : List t -> Int -> List t
-listRemove l i =
+remove : List t -> Int -> List t
+remove l i =
     List.take i l ++ List.drop (i + 1) l
 
 
