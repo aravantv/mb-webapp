@@ -2,7 +2,7 @@ module SelectableList exposing (..)
 
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Utils exposing (..)
+import ListUtils exposing (..)
 import Widget exposing (Path, IDecision, ISelectable, Index, ListBinding, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
@@ -106,7 +106,7 @@ update params msg model path =
                         doNothing model
 
             BackendRemovedItem i ->
-                doNothing ({ model | contents = List.take i model.contents ++ List.drop (i + 1) model.contents })
+                doNothing ({ model | contents = listRemove model.contents i })
 
             Init l ->
                 ( emptyModel params, Cmd.batch (List.indexedMap (\i fi -> addItemCmd params path i fi) l) )
