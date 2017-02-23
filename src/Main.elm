@@ -1,12 +1,14 @@
 module Main exposing (..)
 
+import GroupWidget
 import LocalStorage
 import NewText
 import SelectableList
 import SelectableText
 import TimeTravel.Html as TimeTravel
-import Utils exposing (..)
-import Widget exposing (Index, makeTopWidget)
+import ListUtils exposing (..)
+import Widget exposing (ISelectable, Index, makeTopWidget)
+import Label
 
 
 textBinding : Widget.Binding msg String ()
@@ -56,8 +58,11 @@ listBinding =
 
 main =
     let
+        widget2 =
+            SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
+
         widget =
-            SelectableList.createListWidget ( listBinding, NewText.widget, (SelectableText.createWidget textBinding), identity )
+            GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity )
     in
         TimeTravel.program <|
             makeTopWidget
@@ -67,6 +72,10 @@ main =
                 , view = widget.view
                 , subscriptions = widget.subscriptions
                 }
+
+
+type SelfReferentialSelectableList newItemModel
+    = Self (SelectableList.Model newItemModel (SelfReferentialSelectableList newItemModel))
 
 
 
