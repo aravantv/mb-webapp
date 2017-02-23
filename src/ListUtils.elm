@@ -30,9 +30,12 @@ substract l1 l2 =
             Nothing
 
 
-remove : List t -> Int -> List t
+remove : List t -> Int -> Maybe (List t)
 remove l i =
-    List.take i l ++ List.drop (i + 1) l
+    if (i < List.length l) then
+        Just <| List.take i l ++ List.drop (i + 1) l
+    else
+        Nothing
 
 
 get : List t -> Int -> Maybe t
