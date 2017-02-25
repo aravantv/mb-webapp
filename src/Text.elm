@@ -45,6 +45,16 @@ type Msg
     | NoOp
 
 
+isInit : Msg -> Bool
+isInit msg =
+    case msg of
+        Init _ ->
+            True
+
+        _ ->
+            False
+
+
 update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
 update binding msg model p =
     case msg of
