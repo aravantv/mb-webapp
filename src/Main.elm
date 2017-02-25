@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import GroupWidget exposing (Div)
+import GroupWidget exposing (..)
 import Label
 import ListUtils exposing (..)
 import LocalStorage
@@ -61,7 +61,13 @@ listExampleWidget =
         widget2 =
             SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
     in
-        GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity, Div )
+        GroupWidget.createGroupWidget
+            { wrappedWidget1 = Label.createWidget "List of stuff:"
+            , pathAdapter1 = identity
+            , wrappedWidget2 = widget2
+            , pathAdapter2 = identity
+            , divOrSpan = Div
+            }
 
 
 
