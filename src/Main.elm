@@ -57,22 +57,19 @@ listBinding =
 
 
 listExampleWidget =
-    let
-        widget2 =
+    GroupWidget.createGroupWidget
+        { divOrSpan = Div
+        , wrappedWidget1 = Label.createWidget "List of stuff:"
+        , pathAdapter1 = identity
+        , wrappedWidget2 =
             SelectableList.createListWidget
                 { binding = listBinding
                 , newItemWidget = NewText.widget
                 , itemWidget = SelectableText.createWidget textBinding
                 , converter = identity
                 }
-    in
-        GroupWidget.createGroupWidget
-            { wrappedWidget1 = Label.createWidget "List of stuff:"
-            , pathAdapter1 = identity
-            , wrappedWidget2 = widget2
-            , pathAdapter2 = identity
-            , divOrSpan = Div
-            }
+        , pathAdapter2 = identity
+        }
 
 
 
