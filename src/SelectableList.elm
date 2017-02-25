@@ -3,7 +3,7 @@ module SelectableList exposing (..)
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import ListUtils exposing (..)
-import Utils exposing (enterKey, onKeyUp, tabKey)
+import Utils exposing (enterKey, onKeyDown, onKeyUp, shiftCode, tabKey)
 import Widget exposing (IDecision, ISelectable, Index, ListBinding, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
@@ -57,6 +57,7 @@ type Msg newItemMsg itemMsg itemModel factoryInput
     | DelegateToItemMsg Index itemMsg
     | Remove Index
     | SelectNext Index
+    | SelectPrevious Index
     | BackendAddedItem Index
     | BackendRemovedItem Index
     | NoOp
@@ -101,6 +102,9 @@ update params msg model path =
 
             SelectNext i ->
                 update params (DelegateToItemMsg (i + 1) itemWidget.selectMsg) model path
+
+            SelectPrevious i ->
+                update params (DelegateToItemMsg (i - 1) itemWidget.selectMsg) model path
 
             BackendAddedItem i ->
                 case insert model.contents itemWidget.initModel i of
@@ -239,7 +243,9 @@ view ( _, newItemWidget, itemWidget, _ ) model =
     let
         delegateViewToItem i m =
             li []
-                [ span [ onKeyUp [ ( tabKey, SelectNext i ) ] ]
+                [ span
+                    {--We need to use key down here because browsers have their own interpretation of this key combination. --}
+                    [ onKeyDown [ ( tabKey, SelectNext i ), ( shiftCode tabKey, SelectPrevious i ) ] ]
                     [ Html.map (DelegateToItemMsg i) <| itemWidget.view m
                     , button [ onClick <| Remove i ] [ text "-" ]
                     ]
