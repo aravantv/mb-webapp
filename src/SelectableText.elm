@@ -1,23 +1,26 @@
 module SelectableText exposing (..)
 
 import Html exposing (Html, input, label, text)
-import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
-import Utils exposing (..)
+import Text
 import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Msg String err -> ISelectable Model Msg (Widget Model Msg String)
+createWidget : Binding Text.Msg String err -> ISelectable Model Msg (Widget Model Msg String)
 createWidget binding =
-    { initMsg = Init
-    , initModel = emptyModel
-    , update = update binding
-    , view = view
-    , subscriptions = subscriptions binding
-    , isSelected = .editMode
-    , selectMsg = UISelect
-    , unselectMsg = UIConfirm
-    }
+    let
+        textWidget =
+            Text.createWidget binding
+    in
+        { initMsg = DelegateToTextMsg << Text.Init
+        , initModel = initModel textWidget
+        , update = update textWidget
+        , view = view textWidget
+        , subscriptions = subscriptions textWidget
+        , isSelected = .editMode
+        , selectMsg = UISelect
+        , unselectMsg = DelegateToTextMsg Text.UIConfirm
+        }
 
 
 
@@ -25,15 +28,14 @@ createWidget binding =
 
 
 type alias Model =
-    { content : String
-    , uiContent : String
+    { textModel : Text.Model
     , editMode : Bool
     }
 
 
-emptyModel : Model
-emptyModel =
-    { content = "", uiContent = "", editMode = False }
+initModel : Widget Text.Model Text.Msg String -> Model
+initModel textWidget =
+    { textModel = textWidget.initModel, editMode = False }
 
 
 
@@ -41,61 +43,49 @@ emptyModel =
 
 
 type Msg
-    = UIChange String
-    | UIConfirm
-    | UICancel
+    = DelegateToTextMsg Text.Msg
     | UISelect
-    | ModelChange String
-    | Init String
-    | NoOp
 
 
-update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
-update binding msg model p =
+update : Widget Text.Model Text.Msg String -> Msg -> Model -> Path -> ( Model, Cmd Msg )
+update textWidget msg model p =
     case msg of
-        Init s ->
-            ( emptyModel, binding.set p s )
+        DelegateToTextMsg textMsg ->
+            let
+                ( textModel, textCmd ) =
+                    textWidget.update textMsg model.textModel p
 
-        UIChange newContent ->
-            { model | uiContent = newContent } |> doNothing
+                cmd =
+                    Cmd.map DelegateToTextMsg textCmd
 
-        UIConfirm ->
-            ( { model | editMode = False, content = model.uiContent }, binding.set p model.uiContent )
-
-        UICancel ->
-            { model | uiContent = model.content, editMode = False } |> doNothing
+                textUpdatedModel =
+                    { model | textModel = textModel }
+            in
+                if textMsg == Text.UIConfirm || textMsg == Text.UICancel || Text.isInit textMsg then
+                    ( { textUpdatedModel | editMode = False }, cmd )
+                else
+                    ( textUpdatedModel, cmd )
 
         UISelect ->
             { model | editMode = True } |> doNothing
-
-        ModelChange newContent ->
-            { model | uiContent = newContent, content = newContent } |> doNothing
-
-        NoOp ->
-            doNothing model
 
 
 
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String err -> Model -> Path -> Sub Msg
-subscriptions binding m p =
-    Sub.map (Result.withDefault NoOp << Result.map ModelChange) (binding.get p)
+subscriptions : Widget Text.Model Text.Msg String -> Model -> Path -> Sub Msg
+subscriptions textWidget m p =
+    Sub.map DelegateToTextMsg <| textWidget.subscriptions m.textModel p
 
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+view : Widget Text.Model Text.Msg String -> Model -> Html Msg
+view textWidget model =
     if model.editMode then
-        input
-            [ onInput UIChange
-            , onKeyUp [ ( enterKey, UIConfirm ), ( escapeKey, UICancel ) ]
-            , value model.uiContent
-            ]
-            []
+        Html.map DelegateToTextMsg <| textWidget.view model.textModel
     else
-        label [ onDoubleClick UISelect ] [ text model.uiContent ]
+        label [ onDoubleClick UISelect ] [ text model.textModel.uiContent ]
