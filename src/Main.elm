@@ -1,14 +1,14 @@
 module Main exposing (..)
 
-import GroupWidget
+import GroupWidget exposing (Div)
+import Label
+import ListUtils exposing (..)
 import LocalStorage
 import NewText
 import SelectableList
 import SelectableText
 import TimeTravel.Html as TimeTravel
-import ListUtils exposing (..)
 import Widget exposing (ISelectable, Index, makeTopWidget)
-import Label
 
 
 textBinding : Widget.Binding msg String ()
@@ -61,7 +61,12 @@ listExampleWidget =
         widget2 =
             SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
     in
-        GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity )
+        GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity, Div )
+
+
+
+{--formExampleWidget =
+    GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity )--}
 
 
 main =
