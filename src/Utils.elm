@@ -20,6 +20,11 @@ onKeyUp l =
         on "keyup" (andThen keyUpDecoder keyCode)
 
 
+tabKey : number
+tabKey =
+    9
+
+
 enterKey : number
 enterKey =
     13
