@@ -56,13 +56,18 @@ listBinding =
     }
 
 
-listExampleMain =
+listExampleWidget =
     let
         widget2 =
             SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
+    in
+        GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity )
 
+
+main =
+    let
         widget =
-            GroupWidget.createGroupWidget ( Label.createWidget "List of stuff:", identity, widget2, identity )
+            listExampleWidget
     in
         TimeTravel.program <|
             makeTopWidget
@@ -72,7 +77,3 @@ listExampleMain =
                 , view = widget.view
                 , subscriptions = widget.subscriptions
                 }
-
-
-main =
-    listExampleMain
