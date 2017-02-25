@@ -1,40 +1,77 @@
 module Utils exposing (..)
 
+import Char exposing (KeyCode)
 import Html exposing (Html)
-import Html.Events exposing (on, keyCode)
-import Json.Decode exposing (fail, succeed, andThen)
-import Dict exposing (Dict)
+import Html.Events exposing (keyCode, on)
+import Json.Decode exposing (andThen, map2, fail, succeed)
 
 
-onKeyUp : List ( Int, msg ) -> Html.Attribute msg
-onKeyUp l =
+shiftKey : Json.Decode.Decoder Bool
+shiftKey =
+    Json.Decode.field "shiftKey" Json.Decode.bool
+
+
+type alias FullKeyCode =
+    { keyCode : KeyCode, isShift : Bool }
+
+
+standardKeyCode : KeyCode -> FullKeyCode
+standardKeyCode n =
+    { keyCode = n, isShift = False }
+
+
+shiftCode : FullKeyCode -> FullKeyCode
+shiftCode kc =
+    { kc | isShift = True }
+
+
+onKey : String -> List ( FullKeyCode, msg ) -> Html.Attribute msg
+onKey s l =
     let
-        keyUpDecoder n =
-            case Dict.get n <| Dict.fromList l of
-                Just msg ->
-                    succeed msg
-
-                Nothing ->
+        keyUpDecoder refKc =
+            case List.filterMap (\( kc, msg ) -> maybeIf (kc == refKc) msg) l of
+                [] ->
                     fail "Key not handled"
+
+                msg :: _ ->
+                    succeed msg
     in
-        on "keyup" (andThen keyUpDecoder keyCode)
+        on s (andThen keyUpDecoder (map2 FullKeyCode keyCode shiftKey))
 
 
-tabKey : number
+onKeyUp : List ( FullKeyCode, msg ) -> Html.Attribute msg
+onKeyUp =
+    onKey "keyup"
+
+
+onKeyDown : List ( FullKeyCode, msg ) -> Html.Attribute msg
+onKeyDown =
+    onKey "keydown"
+
+
+tabKey : FullKeyCode
 tabKey =
-    9
+    standardKeyCode 9
 
 
-enterKey : number
+enterKey : FullKeyCode
 enterKey =
-    13
+    standardKeyCode 13
 
 
-escapeKey : number
+escapeKey : FullKeyCode
 escapeKey =
-    27
+    standardKeyCode 27
 
 
 resultFullMap : (o1 -> o2) -> (e1 -> e2) -> Result e1 o1 -> Result e2 o2
 resultFullMap fOk fErr =
     Result.map fOk << Result.mapError fErr
+
+
+maybeIf : Bool -> a -> Maybe a
+maybeIf b v =
+    if b then
+        Just v
+    else
+        Nothing
