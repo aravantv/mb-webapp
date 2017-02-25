@@ -74,10 +74,6 @@ main =
                 }
 
 
-type SelfReferentialSelectableList newItemModel
-    = Self (SelectableList.Model newItemModel (SelfReferentialSelectableList newItemModel))
-
-
 
 {--main : Program Never (SelectableList.Model NewText.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg)
 main =
