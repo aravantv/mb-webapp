@@ -56,7 +56,7 @@ listBinding =
     }
 
 
-main =
+listExampleMain =
     let
         widget2 =
             SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
@@ -74,8 +74,5 @@ main =
                 }
 
 
-
-{--main : Program Never (SelectableList.Model NewText.Model SelectableText.Model) (SelectableList.Msg NewText.Msg SelectableText.Msg)
 main =
-    Html.program (SelectableList.createListWidget NewText.widget SelectableText.widget)
-        Html.program--}
+    listExampleMain
