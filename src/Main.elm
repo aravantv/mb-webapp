@@ -59,7 +59,12 @@ listBinding =
 listExampleWidget =
     let
         widget2 =
-            SelectableList.createListWidget ( listBinding, NewText.widget, SelectableText.createWidget textBinding, identity )
+            SelectableList.createListWidget
+                { binding = listBinding
+                , newItemWidget = NewText.widget
+                , itemWidget = SelectableText.createWidget textBinding
+                , converter = identity
+                }
     in
         GroupWidget.createGroupWidget
             { wrappedWidget1 = Label.createWidget "List of stuff:"
