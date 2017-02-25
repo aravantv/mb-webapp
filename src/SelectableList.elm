@@ -3,7 +3,8 @@ module SelectableList exposing (..)
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import ListUtils exposing (..)
-import Widget exposing (Path, IDecision, ISelectable, Index, ListBinding, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Utils exposing (enterKey, onKeyUp, tabKey)
+import Widget exposing (IDecision, ISelectable, Index, ListBinding, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type alias ItemWidget model msg factoryInput =
@@ -55,6 +56,7 @@ type Msg newItemMsg itemMsg itemModel factoryInput
     = DelegateToNewItemMsg newItemMsg
     | DelegateToItemMsg Index itemMsg
     | Remove Index
+    | SelectNext Index
     | BackendAddedItem Index
     | BackendRemovedItem Index
     | NoOp
@@ -96,6 +98,9 @@ update params msg model path =
 
             Remove i ->
                 ( model, binding.removeItem path i )
+
+            SelectNext i ->
+                update params (DelegateToItemMsg (i + 1) itemWidget.selectMsg) model path
 
             BackendAddedItem i ->
                 case insert model.contents itemWidget.initModel i of
@@ -234,7 +239,7 @@ view ( _, newItemWidget, itemWidget, _ ) model =
     let
         delegateViewToItem i m =
             li []
-                [ span []
+                [ span [ onKeyUp [ ( tabKey, SelectNext i ) ] ]
                     [ Html.map (DelegateToItemMsg i) <| itemWidget.view m
                     , button [ onClick <| Remove i ] [ text "-" ]
                     ]
