@@ -40,4 +40,7 @@ remove l i =
 
 get : List t -> Int -> Maybe t
 get l i =
-    List.head (List.drop i l)
+    if (i >= 0) then
+        List.head (List.drop i l)
+    else
+        Nothing
