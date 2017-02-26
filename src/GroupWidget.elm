@@ -1,7 +1,7 @@
 module GroupWidget exposing (..)
 
 import Html exposing (..)
-import Widget exposing (Path, IDecision, ISelectable, Index, ListBinding, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Widget exposing (Path, IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type alias PathTransformer =
