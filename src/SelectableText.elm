@@ -1,10 +1,11 @@
 module SelectableText exposing (..)
 
+import Binding exposing (Binding)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, doNothing)
+import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
 createWidget : Binding Text.Msg String err -> ISelectable Model Msg (Widget Model Msg String)
