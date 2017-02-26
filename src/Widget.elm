@@ -105,21 +105,6 @@ type alias Index =
     Int
 
 
-type alias Binding msg serializedType err =
-    { get : Path -> Sub (Result err serializedType)
-    , set : Path -> serializedType -> Cmd msg
-    }
-
-
-type alias ListBinding msg err =
-    { itemAdded : Path -> Sub (Result err Index)
-    , itemRemoved : Path -> Sub (Result err Index)
-    , addItem : Path -> Index -> Cmd msg
-    , removeItem : Path -> Index -> Cmd msg
-    , askItemContent : Path -> Index -> Cmd msg
-    }
-
-
 wrapUpdateWithCmd : (msg -> model -> model) -> msg -> model -> ( model, Cmd msg )
 wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
