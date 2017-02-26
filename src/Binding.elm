@@ -2,12 +2,22 @@ module Binding exposing (..)
 
 import ListUtils exposing (..)
 import LocalStorage
-import Widget exposing (Path, ISelectable, Index, makeTopWidget)
+import Widget exposing (ISelectable, Index, Path, makeTopWidget)
 
 
-type alias Binding msg serializedType err =
-    { get : Path -> Sub (Result err serializedType)
-    , set : Path -> serializedType -> Result err (Cmd msg)
+type alias BindingErr =
+    { description : String }
+
+
+type BindingResult res
+    = Ok res
+    | Err BindingErr
+    | Irrelevant
+
+
+type alias Binding msg serializedType =
+    { get : Path -> Sub (BindingResult serializedType)
+    , set : Path -> serializedType -> BindingResult (Cmd msg)
     }
 
 
@@ -24,42 +34,42 @@ type alias ListBinding msg err =
     CollectionBinding msg err Index
 
 
-textBinding : Binding msg String String
+textBinding : Binding msg String
 textBinding =
     { get =
         \p ->
             LocalStorage.getStringSub
                 (\( path, s ) ->
                     if path == p then
-                        Result.Ok s
+                        Ok s
                     else
-                        Result.Err "Value received irrelevant for this binding."
+                        Irrelevant
                 )
-    , set = \p s -> Result.Ok <| LocalStorage.setStringCmd ( p, s )
+    , set = \p s -> Ok <| LocalStorage.setStringCmd ( p, s )
     }
 
 
-stringToIntBinding : Binding msg String String -> Binding msg Int String
+stringToIntBinding : Binding msg String -> Binding msg Int
 stringToIntBinding binding =
-    { get = \p -> Sub.map (Result.andThen String.toInt) (binding.get p)
+    { get = \p -> Sub.map (andThen (ofResult << String.toInt)) (binding.get p)
     , set = \p v -> binding.set p (toString v)
     }
 
 
-intToStringBinding : Binding msg Int String -> Binding msg String String
+intToStringBinding : Binding msg Int -> Binding msg String
 intToStringBinding binding =
-    { get = \p -> Sub.map (\r -> Result.map (\s -> toString s) r) (binding.get p)
-    , set = \p v -> Result.andThen (\n -> binding.set p n) (String.toInt v)
+    { get = \p -> Sub.map (\r -> map (\s -> toString s) r) (binding.get p)
+    , set = \p v -> andThen (\n -> binding.set p n) (ofResult <| String.toInt v)
     }
 
 
-plus2Binding : Binding msg Int String
+plus2Binding : Binding msg Int
 plus2Binding =
     let
         intBinding =
             stringToIntBinding textBinding
     in
-        { get = \p -> Sub.map (\r -> Result.map (\n -> n + 2) r) (intBinding.get p)
+        { get = \p -> Sub.map (\r -> map (\n -> n + 2) r) (intBinding.get p)
         , set = \p v -> intBinding.set p (v - 2)
         }
 
@@ -92,3 +102,39 @@ listBinding =
     , removeItem = \p i -> LocalStorage.removeItemCmd (Index i :: p)
     , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
     }
+
+
+ofResult : Result String res -> BindingResult res
+ofResult res =
+    case res of
+        Result.Ok v ->
+            Ok v
+
+        Result.Err err ->
+            Err { description = err }
+
+
+map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
+map f res =
+    case res of
+        Ok v ->
+            Ok (f v)
+
+        Err e ->
+            Err e
+
+        Irrelevant ->
+            Irrelevant
+
+
+andThen : (res1 -> BindingResult res2) -> BindingResult res1 -> BindingResult res2
+andThen f res =
+    case res of
+        Ok v ->
+            f v
+
+        Err e ->
+            Err e
+
+        Irrelevant ->
+            Irrelevant
