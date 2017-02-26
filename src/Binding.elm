@@ -7,7 +7,7 @@ import Widget exposing (Path, ISelectable, Index, makeTopWidget)
 
 type alias Binding msg serializedType err =
     { get : Path -> Sub (Result err serializedType)
-    , set : Path -> serializedType -> Cmd msg
+    , set : Path -> serializedType -> Result err (Cmd msg)
     }
 
 
@@ -35,7 +35,7 @@ textBinding =
                     else
                         Result.Err "Value received irrelevant for this binding."
                 )
-    , set = \p s -> LocalStorage.setStringCmd ( p, s )
+    , set = \p s -> Result.Ok <| LocalStorage.setStringCmd ( p, s )
     }
 
 
@@ -49,14 +49,7 @@ stringToIntBinding binding =
 intToStringBinding : Binding msg Int String -> Binding msg String String
 intToStringBinding binding =
     { get = \p -> Sub.map (\r -> Result.map (\s -> toString s) r) (binding.get p)
-    , set =
-        \p v ->
-            case String.toInt v of
-                Err _ ->
-                    Cmd.none
-
-                Ok n ->
-                    binding.set p n
+    , set = \p v -> Result.andThen (\n -> binding.set p n) (String.toInt v)
     }
 
 
