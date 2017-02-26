@@ -22,14 +22,19 @@ createWidget binding =
 
 
 type alias Model =
-    { content : String
-    , uiContent : String
+    { initialContent : Maybe String
+    , content : String
     }
 
 
 emptyModel : Model
 emptyModel =
-    { content = "", uiContent = "" }
+    { initialContent = Nothing, content = "" }
+
+
+getContent : Model -> String
+getContent =
+    .content
 
 
 
@@ -38,21 +43,11 @@ emptyModel =
 
 type Msg
     = UIChange String
-    | UIConfirm
     | UICancel
+    | ConfirmModel
     | ModelChange String
     | Init String
     | NoOp
-
-
-isInit : Msg -> Bool
-isInit msg =
-    case msg of
-        Init _ ->
-            True
-
-        _ ->
-            False
 
 
 update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
@@ -62,16 +57,25 @@ update binding msg model p =
             ( emptyModel, binding.set p s )
 
         UIChange newContent ->
-            doNothing { model | uiContent = newContent }
+            update binding ConfirmModel { model | content = newContent } p
 
-        UIConfirm ->
-            ( { model | content = model.uiContent }, binding.set p model.uiContent )
+        ConfirmModel ->
+            ( model, binding.set p model.content )
 
         UICancel ->
-            doNothing { model | uiContent = model.content }
+            case model.initialContent of
+                Nothing ->
+                    doNothing model
+
+                Just initialContent ->
+                    update binding ConfirmModel { model | content = initialContent } p
 
         ModelChange newContent ->
-            doNothing { model | uiContent = newContent, content = newContent }
+            let
+                newInitialContent =
+                    Just <| Maybe.withDefault newContent model.initialContent
+            in
+                doNothing { model | content = newContent, initialContent = newInitialContent }
 
         NoOp ->
             doNothing model
@@ -94,7 +98,7 @@ view : Model -> Html Msg
 view model =
     input
         [ onInput UIChange
-        , onKeyUp [ ( enterKey, UIConfirm ), ( escapeKey, UICancel ) ]
-        , value model.uiContent
+        , onKeyUp [ ( escapeKey, UICancel ) ]
+        , value model.content
         ]
         []
