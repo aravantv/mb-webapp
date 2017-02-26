@@ -1,6 +1,6 @@
 module Text exposing (..)
 
-import Binding exposing (Binding)
+import Binding exposing (..)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
@@ -8,7 +8,7 @@ import Utils exposing (..)
 import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Msg String err -> Widget Model Msg String
+createWidget : Binding Msg String -> Widget Model Msg String
 createWidget binding =
     { initMsg = Init
     , initModel = emptyModel
@@ -25,12 +25,13 @@ createWidget binding =
 type alias Model =
     { initialContent : Maybe String
     , content : String
+    , error : Bool
     }
 
 
 emptyModel : Model
 emptyModel =
-    { initialContent = Nothing, content = "" }
+    { initialContent = Nothing, content = "", error = False }
 
 
 getContent : Model -> String
@@ -46,33 +47,30 @@ type Msg
     = UIChange String
     | UICancel
     | ConfirmModel
-    | ModelChange String
+    | ModelChange (Result BindingErr String)
     | Init String
     | NoOp
 
 
-update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
+update : Binding Msg String -> Msg -> Model -> Path -> ( Model, Cmd Msg )
 update binding msg model p =
     case msg of
         Init s ->
-            case binding.set p s of
-                Result.Ok cmd ->
-                    ( emptyModel, cmd )
-
-                Result.Err _ ->
-                    {--TODO handle the error --}
-                    ( emptyModel, Cmd.none )
+            update binding (UIChange s) emptyModel p
 
         UIChange newContent ->
-            update binding ConfirmModel { model | content = newContent } p
+            update binding ConfirmModel { model | content = newContent, error = False } p
 
         ConfirmModel ->
             case binding.set p model.content of
-                Result.Ok cmd ->
+                Binding.Ok cmd ->
                     ( model, cmd )
 
-                Result.Err _ ->
-                    ( model, Cmd.none )
+                Binding.Err _ ->
+                    ( { model | error = True }, Cmd.none )
+
+                Binding.Irrelevant ->
+                    ( { model | error = False }, Cmd.none )
 
         UICancel ->
             case model.initialContent of
@@ -80,14 +78,19 @@ update binding msg model p =
                     doNothing model
 
                 Just initialContent ->
-                    update binding ConfirmModel { model | content = initialContent } p
+                    update binding (UIChange initialContent) model p
 
-        ModelChange newContent ->
-            let
-                newInitialContent =
-                    Just <| Maybe.withDefault newContent model.initialContent
-            in
-                doNothing { model | content = newContent, initialContent = newInitialContent }
+        ModelChange chgRes ->
+            case chgRes of
+                Result.Ok newContent ->
+                    let
+                        newInitialContent =
+                            Just <| Maybe.withDefault newContent model.initialContent
+                    in
+                        doNothing { model | content = newContent, initialContent = newInitialContent, error = False }
+
+                Result.Err err ->
+                    doNothing { model | content = "error:" ++ err.description, error = True }
 
         NoOp ->
             doNothing model
@@ -97,9 +100,21 @@ update binding msg model p =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String err -> Model -> Path -> Sub Msg
+subscriptions : Binding Msg String -> Model -> Path -> Sub Msg
 subscriptions binding m p =
-    Sub.map (Result.withDefault NoOp << Result.map ModelChange) (binding.get p)
+    let
+        f bindingRes =
+            case bindingRes of
+                Binding.Ok v ->
+                    ModelChange (Result.Ok v)
+
+                Binding.Err err ->
+                    ModelChange (Result.Err err)
+
+                Binding.Irrelevant ->
+                    NoOp
+    in
+        Sub.map f (binding.get p)
 
 
 
@@ -108,9 +123,18 @@ subscriptions binding m p =
 
 view : Model -> Html Msg
 view model =
-    input
-        [ onInput UIChange
-        , onKeyUp [ ( escapeKey, UICancel ) ]
-        , value model.content
-        ]
-        []
+    let
+        styleAttr =
+            if model.error then
+                [ style [ ( "backgroundColor", "red" ) ] ]
+            else
+                []
+    in
+        input
+            ([ onInput UIChange
+             , onKeyUp [ ( escapeKey, UICancel ) ]
+             , value model.content
+             ]
+                ++ styleAttr
+            )
+            []
