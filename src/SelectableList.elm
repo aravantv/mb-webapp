@@ -1,10 +1,11 @@
 module SelectableList exposing (..)
 
+import Binding exposing (ListBinding)
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import ListUtils exposing (..)
 import Utils exposing (enterKey, onKeyDown, onKeyUp, shiftCode, tabKey)
-import Widget exposing (IDecision, ISelectable, Index, ListBinding, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type alias ItemWidget model msg factoryInput =
