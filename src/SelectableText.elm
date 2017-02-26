@@ -1,8 +1,9 @@
 module SelectableText exposing (..)
 
-import Html exposing (Html, input, label, text)
+import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
+import Utils exposing (enterKey, onKeyUp)
 import Widget exposing (Binding, ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
@@ -19,7 +20,7 @@ createWidget binding =
         , subscriptions = subscriptions textWidget
         , isSelected = .editMode
         , selectMsg = UISelect
-        , unselectMsg = DelegateToTextMsg Text.UIConfirm
+        , unselectMsg = UIConfirm
         }
 
 
@@ -45,6 +46,7 @@ initModel textWidget =
 type Msg
     = DelegateToTextMsg Text.Msg
     | UISelect
+    | UIConfirm
 
 
 update : Widget Text.Model Text.Msg String -> Msg -> Model -> Path -> ( Model, Cmd Msg )
@@ -61,13 +63,29 @@ update textWidget msg model p =
                 textUpdatedModel =
                     { model | textModel = textModel }
             in
-                if textMsg == Text.UIConfirm || textMsg == Text.UICancel || Text.isInit textMsg then
-                    ( { textUpdatedModel | editMode = False }, cmd )
-                else
-                    ( textUpdatedModel, cmd )
+                case textMsg of
+                    Text.UICancel ->
+                        ( { textUpdatedModel | editMode = False }, cmd )
+
+                    Text.Init _ ->
+                        ( { textUpdatedModel | editMode = False }, cmd )
+
+                    Text.UIChange _ ->
+                        {--We prevent Text to serialize the change: for a selectable text, this should only be done when confirmed. --}
+                        doNothing textUpdatedModel
+
+                    _ ->
+                        ( textUpdatedModel, cmd )
 
         UISelect ->
             { model | editMode = True } |> doNothing
+
+        UIConfirm ->
+            let
+                ( textModel, textCmd ) =
+                    textWidget.update Text.ConfirmModel model.textModel p
+            in
+                ( { model | textModel = textModel, editMode = False }, Cmd.map DelegateToTextMsg textCmd )
 
 
 
@@ -86,6 +104,7 @@ subscriptions textWidget m p =
 view : Widget Text.Model Text.Msg String -> Model -> Html Msg
 view textWidget model =
     if model.editMode then
-        Html.map DelegateToTextMsg <| textWidget.view model.textModel
+        span [ onKeyUp [ ( enterKey, UIConfirm ) ] ]
+            [ Html.map DelegateToTextMsg <| textWidget.view model.textModel ]
     else
-        label [ onDoubleClick UISelect ] [ text model.textModel.uiContent ]
+        label [ onDoubleClick UISelect ] [ text <| Text.getContent model.textModel ]
