@@ -55,13 +55,24 @@ update : Binding Msg String err -> Msg -> Model -> Path -> ( Model, Cmd Msg )
 update binding msg model p =
     case msg of
         Init s ->
-            ( emptyModel, binding.set p s )
+            case binding.set p s of
+                Result.Ok cmd ->
+                    ( emptyModel, cmd )
+
+                Result.Err _ ->
+                    {--TODO handle the error --}
+                    ( emptyModel, Cmd.none )
 
         UIChange newContent ->
             update binding ConfirmModel { model | content = newContent } p
 
         ConfirmModel ->
-            ( model, binding.set p model.content )
+            case binding.set p model.content of
+                Result.Ok cmd ->
+                    ( model, cmd )
+
+                Result.Err _ ->
+                    ( model, Cmd.none )
 
         UICancel ->
             case model.initialContent of
