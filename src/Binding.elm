@@ -41,7 +41,7 @@ textBinding =
 
 stringToIntBinding : Binding msg String String -> Binding msg Int String
 stringToIntBinding binding =
-    { get = \p -> Sub.map (\r -> Result.andThen (\s -> String.toInt s) r) (binding.get p)
+    { get = \p -> Sub.map (Result.andThen String.toInt) (binding.get p)
     , set = \p v -> binding.set p (toString v)
     }
 
