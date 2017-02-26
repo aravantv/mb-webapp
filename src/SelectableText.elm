@@ -8,7 +8,7 @@ import Utils exposing (enterKey, onKeyUp)
 import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Text.Msg String err -> ISelectable Model Msg (Widget Model Msg String)
+createWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg String)
 createWidget binding =
     let
         textWidget =
