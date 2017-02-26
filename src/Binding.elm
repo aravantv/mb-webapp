@@ -21,6 +21,10 @@ type alias Binding msg serializedType =
     }
 
 
+type alias BindingTransformer msg ty1 ty2 =
+    Binding msg ty1 -> Binding msg ty2
+
+
 andThenGet : (t1 -> BindingResult t2) -> (Path -> Sub (BindingResult t1)) -> (Path -> Sub (BindingResult t2))
 andThenGet f get p =
     Sub.map (andThen f) (get p)
@@ -66,19 +70,24 @@ textBinding =
     }
 
 
-stringToIntBinding : Binding msg String -> Binding msg Int
+stringToIntBinding : BindingTransformer msg String Int
 stringToIntBinding =
     mapBinding (ofResult << String.toInt) (alwaysOk toString)
 
 
-intToStringBinding : Binding msg Int -> Binding msg String
+intToStringBinding : BindingTransformer msg Int String
 intToStringBinding =
     mapBinding (alwaysOk toString) (ofResult << String.toInt)
 
 
-plus2Binding : Binding msg Int
+intToStringTransformer : BindingTransformer msg Int Int -> BindingTransformer msg String String
+intToStringTransformer binding b =
+    intToStringBinding (binding (stringToIntBinding b))
+
+
+plus2Binding : BindingTransformer msg Int Int
 plus2Binding =
-    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2)) (stringToIntBinding textBinding)
+    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
 
 
 listBinding : ListBinding msg ()
