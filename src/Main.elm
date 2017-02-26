@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Binding
+import Binding exposing (textBinding)
 import GroupWidget exposing (..)
 import Label
 import NewText
@@ -44,7 +44,7 @@ formExampleWidget =
                 { divOrSpan = Span
                 , wrappedWidget1 = Label.createWidget "Number+2:"
                 , pathAdapter1 = identity
-                , wrappedWidget2 = Text.createWidget (Binding.intToStringBinding Binding.plus2Binding)
+                , wrappedWidget2 = Text.createWidget (Binding.intToStringTransformer Binding.plus2Binding textBinding)
                 , pathAdapter2 = identity
                 }
         , pathAdapter2 = identity
