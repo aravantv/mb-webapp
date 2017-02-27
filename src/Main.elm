@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Binding exposing (textBinding)
 import GroupWidget exposing (..)
+import CircleWidget
 import Label
 import NewText
 import SelectableList
@@ -33,7 +34,9 @@ formExampleWidget =
         , wrappedWidget1 =
             GroupWidget.createGroupWidget
                 { divOrSpan = Span
-                , wrappedWidget1 = Label.createWidget "Number:"
+                , wrappedWidget1 =
+                    CircleWidget.createCircleWidget
+                        { wrappedWidget = Text.createWidget Binding.textBinding, pathAdapter = identity }
                 , pathAdapter1 = identity
                 , wrappedWidget2 = Text.createWidget Binding.textBinding
                 , pathAdapter2 = identity
