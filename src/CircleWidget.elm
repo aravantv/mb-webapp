@@ -19,10 +19,10 @@ type alias Parameters subModel subMsg factoryInput =
     }
 
 
-createCircleWidget :
+createWidget :
     Parameters subModel subMsg factoryInput
     -> Widget (Model subModel) (Msg subMsg factoryInput) factoryInput
-createCircleWidget params =
+createWidget params =
     { initModel = emptyModel params
     , initMsg = Init
     , update = update params
