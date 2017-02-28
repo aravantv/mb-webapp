@@ -18,7 +18,7 @@ listExampleWidget =
         , wrappedWidget1 = Label.createWidget "List of stuff:"
         , pathAdapter1 = identity
         , wrappedWidget2 =
-            SelectableList.createListWidget
+            SelectableList.createWidget
                 { binding = Binding.listBinding
                 , newItemWidget = NewText.widget
                 , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
