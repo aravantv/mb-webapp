@@ -4,8 +4,9 @@ import Html exposing (..)
 import Mouse
 import Svg exposing (clipPath, svg)
 import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeWidth, transform, width)
-import Svg.Events exposing (onMouseDown)
+import Svg.Events
 import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Json.Decode
 
 
 type alias PathTransformer =
@@ -39,13 +40,13 @@ type alias Model subModel =
     , cx : Int
     , cy : Int
     , r : Int
-    , dragging : Bool
+    , dragStartPosition : Maybe Mouse.Position
     }
 
 
 emptyModel : Parameters subModel subMsg factoryInput -> Model subModel
 emptyModel params =
-    { wrappedModel = params.wrappedWidget.initModel, cx = 100, cy = 100, r = 50, dragging = False }
+    { wrappedModel = params.wrappedWidget.initModel, cx = 100, cy = 100, r = 50, dragStartPosition = Nothing }
 
 
 
@@ -55,8 +56,8 @@ emptyModel params =
 type Msg subMsg factoryInput
     = DelegateToWidget subMsg
     | Init factoryInput
-    | StartDragging
-    | Dragging Mouse.Position
+    | StartDragging Mouse.Position
+    | Dragging ( Mouse.Position, Mouse.Position )
     | EndDragging
 
 
@@ -82,34 +83,37 @@ update params msg model path =
             in
                 ( emptyModel params, initCmd )
 
-        StartDragging ->
-            doNothing { model | dragging = True }
+        StartDragging p ->
+            doNothing { model | dragStartPosition = Just p }
 
-        Dragging p ->
-            doNothing { model | cx = p.x, cy = p.y }
+        Dragging ( previousPos, newPos ) ->
+            doNothing
+                { model
+                    | dragStartPosition = Just newPos
+                    , cx = model.cx + newPos.x - previousPos.x
+                    , cy = model.cy + newPos.y - previousPos.y
+                }
 
         EndDragging ->
-            doNothing { model | dragging = False }
+            doNothing { model | dragStartPosition = Nothing }
 
 
 
 -- SUBSCRIPTIONS
 
 
-subscriptions :
-    Parameters subModel subMsg factoryInput
-    -> Model subModel
-    -> Path
-    -> Sub (Msg subMsg factoryInput)
+subscriptions : Parameters subModel subMsg factoryInput -> Model subModel -> Path -> Sub (Msg subMsg factoryInput)
 subscriptions params model path =
     let
         subSub =
             Sub.map DelegateToWidget <| params.wrappedWidget.subscriptions model.wrappedModel (params.pathAdapter path)
     in
-        if model.dragging then
-            Sub.batch <| subSub :: [ Mouse.moves Dragging, Mouse.ups (always EndDragging) ]
-        else
-            subSub
+        case model.dragStartPosition of
+            Just startPos ->
+                Sub.batch <| [ subSub, Mouse.moves (\p -> Dragging ( startPos, p )), Mouse.ups (always EndDragging) ]
+
+            Nothing ->
+                subSub
 
 
 
@@ -121,6 +125,9 @@ view params model =
     let
         rect attrs =
             Svg.rect ([ rx "5", ry "5", height (toString model.r) ] ++ attrs) []
+
+        onMouseDown msgBuilder =
+            Svg.Events.on "mousedown" (Json.Decode.map msgBuilder Mouse.position)
     in
         svg []
             [ Svg.g [ transform <| "translate(" ++ toString model.cx ++ "," ++ toString model.cy ++ ")" ]
