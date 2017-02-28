@@ -8,7 +8,7 @@ import NewText
 import SelectableList
 import SelectableText
 import Text
-import TimeTravel.Html as TimeTravel
+import Html
 import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
@@ -59,7 +59,7 @@ main =
         widget =
             formExampleWidget
     in
-        TimeTravel.program <|
+        Html.program <|
             makeTopWidget
                 { initModel = widget.initModel
                 , initMsg = widget.initMsg
