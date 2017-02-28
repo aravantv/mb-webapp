@@ -35,7 +35,7 @@ formExampleWidget =
             GroupWidget.createWidget
                 { divOrSpan = Span
                 , wrappedWidget1 =
-                    CircleWidget.createCircleWidget
+                    CircleWidget.createWidget
                         { wrappedWidget = SelectableText.createWidget Binding.textBinding, pathAdapter = identity }
                 , pathAdapter1 = identity
                 , wrappedWidget2 = Text.createWidget Binding.textBinding
