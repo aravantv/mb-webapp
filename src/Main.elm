@@ -13,7 +13,7 @@ import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
 listExampleWidget =
-    GroupWidget.createGroupWidget
+    GroupWidget.createWidget
         { divOrSpan = Div
         , wrappedWidget1 = Label.createWidget "List of stuff:"
         , pathAdapter1 = identity
@@ -29,10 +29,10 @@ listExampleWidget =
 
 
 formExampleWidget =
-    GroupWidget.createGroupWidget
+    GroupWidget.createWidget
         { divOrSpan = Div
         , wrappedWidget1 =
-            GroupWidget.createGroupWidget
+            GroupWidget.createWidget
                 { divOrSpan = Span
                 , wrappedWidget1 =
                     CircleWidget.createCircleWidget
@@ -43,7 +43,7 @@ formExampleWidget =
                 }
         , pathAdapter1 = identity
         , wrappedWidget2 =
-            GroupWidget.createGroupWidget
+            GroupWidget.createWidget
                 { divOrSpan = Span
                 , wrappedWidget1 = Label.createWidget "Number+2:"
                 , pathAdapter1 = identity
