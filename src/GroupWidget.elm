@@ -22,10 +22,10 @@ type alias Parameters subModel1 msg1 factoryInput1 subModel2 msg2 factoryInput2 
     }
 
 
-createGroupWidget :
+createWidget :
     Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
     -> Widget (Model subModel1 subModel2) (Msg subMsg1 subMsg2 factoryInput1 factoryInput2) ( factoryInput1, factoryInput2 )
-createGroupWidget params =
+createWidget params =
     { initModel = emptyModel params
     , initMsg = Init
     , update = update params
