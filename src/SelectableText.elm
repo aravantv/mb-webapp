@@ -8,8 +8,8 @@ import Utils exposing (enterKey, onKeyUp)
 import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg String)
-createWidget binding =
+createSelectableWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg String)
+createSelectableWidget binding =
     let
         textWidget =
             Text.createWidget binding
@@ -22,6 +22,20 @@ createWidget binding =
         , isSelected = .editMode
         , selectMsg = UISelect
         , unselectMsg = UIConfirm
+        }
+
+
+createWidget : Binding Text.Msg String -> Widget Model Msg String
+createWidget binding =
+    let
+        textWidget =
+            Text.createWidget binding
+    in
+        { initMsg = DelegateToTextMsg << Text.Init
+        , initModel = initModel textWidget
+        , update = update textWidget
+        , view = view textWidget
+        , subscriptions = subscriptions textWidget
         }
 
 
