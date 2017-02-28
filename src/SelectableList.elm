@@ -28,10 +28,10 @@ type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     }
 
 
-createListWidget :
+createWidget :
     Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
     -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel factoryInput) (List factoryInput)
-createListWidget params =
+createWidget params =
     { initModel = emptyModel params
     , initMsg = Init
     , update = update params
