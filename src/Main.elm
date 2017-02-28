@@ -21,7 +21,7 @@ listExampleWidget =
             SelectableList.createListWidget
                 { binding = Binding.listBinding
                 , newItemWidget = NewText.widget
-                , itemWidget = SelectableText.createWidget Binding.textBinding
+                , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                 , converter = identity
                 }
         , pathAdapter2 = identity
@@ -36,7 +36,7 @@ formExampleWidget =
                 { divOrSpan = Span
                 , wrappedWidget1 =
                     CircleWidget.createCircleWidget
-                        { wrappedWidget = SelectableText.createNormalWidget Binding.textBinding, pathAdapter = identity }
+                        { wrappedWidget = SelectableText.createWidget Binding.textBinding, pathAdapter = identity }
                 , pathAdapter1 = identity
                 , wrappedWidget2 = Text.createWidget Binding.textBinding
                 , pathAdapter2 = identity
