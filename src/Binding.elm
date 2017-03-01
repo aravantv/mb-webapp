@@ -42,19 +42,6 @@ mapBinding fGet fSet binding =
     }
 
 
-type alias CollectionBinding msg err collectionPath =
-    { itemAdded : Path -> Sub (Result err collectionPath)
-    , itemRemoved : Path -> Sub (Result err collectionPath)
-    , addItem : Path -> collectionPath -> Cmd msg
-    , removeItem : Path -> collectionPath -> Cmd msg
-    , askItemContent : Path -> collectionPath -> Cmd msg
-    }
-
-
-type alias ListBinding msg err =
-    CollectionBinding msg err Index
-
-
 textBinding : Binding msg String
 textBinding =
     { get =
@@ -90,7 +77,20 @@ plus2Binding =
     mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
 
 
-listBinding : ListBinding msg ()
+type alias CollectionBinding msg collectionPath =
+    { itemAdded : Path -> Sub (BindingResult collectionPath)
+    , itemRemoved : Path -> Sub (BindingResult collectionPath)
+    , addItem : Path -> collectionPath -> BindingResult (Cmd msg)
+    , removeItem : Path -> collectionPath -> BindingResult (Cmd msg)
+    , askItemContent : Path -> collectionPath -> Cmd msg
+    }
+
+
+type alias ListBinding msg =
+    CollectionBinding msg Index
+
+
+listBinding : ListBinding msg
 listBinding =
     { itemAdded =
         \p ->
@@ -98,10 +98,10 @@ listBinding =
                 (\path ->
                     case substract path p of
                         Just [ Widget.Index i ] ->
-                            Result.Ok i
+                            Ok i
 
                         _ ->
-                            Result.Err ()
+                            Irrelevant
                 )
     , itemRemoved =
         \p ->
@@ -109,13 +109,13 @@ listBinding =
                 (\path ->
                     case substract path p of
                         Just [ Widget.Index i ] ->
-                            Result.Ok i
+                            Ok i
 
                         _ ->
-                            Result.Err ()
+                            Irrelevant
                 )
-    , addItem = \p i -> LocalStorage.addItemCmd (Index i :: p)
-    , removeItem = \p i -> LocalStorage.removeItemCmd (Index i :: p)
+    , addItem = \p i -> Ok <| LocalStorage.addItemCmd (Index i :: p)
+    , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
     , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
     }
 
