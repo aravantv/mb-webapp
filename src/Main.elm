@@ -15,14 +15,34 @@ import Widget exposing (ISelectable, Index, makeTopWidget)
 listExampleWidget =
     GroupWidget.createWidget
         { divOrSpan = Div
-        , wrappedWidget1 = Label.createWidget "List of stuff:"
+        , wrappedWidget1 =
+            GroupWidget.createWidget
+                { divOrSpan = Div
+                , wrappedWidget1 = Label.createWidget "List of stuff:"
+                , pathAdapter1 = identity
+                , wrappedWidget2 =
+                    SelectableList.createWidget
+                        { binding = Binding.listBinding
+                        , newItemWidget = NewText.widget
+                        , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
+                        , converter = identity
+                        }
+                , pathAdapter2 = identity
+                }
         , pathAdapter1 = identity
         , wrappedWidget2 =
-            SelectableList.createWidget
-                { binding = Binding.listBinding
-                , newItemWidget = NewText.widget
-                , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                , converter = identity
+            GroupWidget.createWidget
+                { divOrSpan = Div
+                , wrappedWidget1 = Label.createWidget "Only numbers:"
+                , pathAdapter1 = identity
+                , wrappedWidget2 =
+                    SelectableList.createWidget
+                        { binding = Binding.listBinding
+                        , newItemWidget = NewText.widget
+                        , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
+                        , converter = identity
+                        }
+                , pathAdapter2 = identity
                 }
         , pathAdapter2 = identity
         }
@@ -57,7 +77,7 @@ formExampleWidget =
 main =
     let
         widget =
-            formExampleWidget
+            listExampleWidget
     in
         Html.program <|
             makeTopWidget
