@@ -90,8 +90,42 @@ type alias ListBinding msg =
     CollectionBinding msg Index
 
 
+type alias ListBindingTransformer msg =
+    ListBinding msg -> ListBinding msg
+
+
 listBinding : ListBinding msg
 listBinding =
+    { itemAdded =
+        \p ->
+            LocalStorage.itemAddedSub
+                (\path ->
+                    case substract path p of
+                        Just [ Widget.Index i ] ->
+                            Ok i
+
+                        _ ->
+                            Irrelevant
+                )
+    , itemRemoved =
+        \p ->
+            LocalStorage.itemRemovedSub
+                (\path ->
+                    case substract path p of
+                        Just [ Widget.Index i ] ->
+                            Ok i
+
+                        _ ->
+                            Irrelevant
+                )
+    , addItem = \p i -> Ok <| LocalStorage.addItemCmd (Index i :: p)
+    , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
+    , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
+    }
+
+
+filterIntegerListBinding : ListBinding msg
+filterIntegerListBinding =
     { itemAdded =
         \p ->
             LocalStorage.itemAddedSub
