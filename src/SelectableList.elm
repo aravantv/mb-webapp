@@ -20,8 +20,8 @@ type alias Converter fromModel toModelFactoryInput =
     fromModel -> toModelFactoryInput
 
 
-type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err =
-    { binding : ListBinding (Msg newItemMsg itemMsg itemModel factoryInput) err
+type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput =
+    { binding : ListBinding (Msg newItemMsg itemMsg itemModel factoryInput)
     , newItemWidget : NewItemWidget newItemModel newItemMsg factoryInput
     , itemWidget : ItemWidget itemModel itemMsg factoryInput
     , converter : Converter newItemModel factoryInput
@@ -29,7 +29,7 @@ type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
 
 
 createWidget :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel factoryInput) (List factoryInput)
 createWidget params =
     { initModel = emptyModel params
@@ -48,7 +48,7 @@ type alias Model newItemModel itemModel =
     { itemToAdd : newItemModel, contents : List itemModel }
 
 
-emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err -> Model newItemModel itemModel
+emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg factoryInput -> Model newItemModel itemModel
 emptyModel params =
     { itemToAdd = params.newItemWidget.initModel, contents = [] }
 
@@ -70,7 +70,7 @@ type Msg newItemMsg itemMsg itemModel factoryInput
 
 
 update :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Msg newItemMsg itemMsg itemModel factoryInput
     -> Model newItemModel itemModel
     -> Path
@@ -99,7 +99,15 @@ update params msg model path =
                 ( { model | contents = unselectedUpdatedItems }, Cmd.batch [ updateCmd, unselectCmds ] )
 
         Remove i ->
-            ( model, params.binding.removeItem path i )
+            case params.binding.removeItem path i of
+                Binding.Ok cmd ->
+                    ( model, cmd )
+
+                Binding.Err _ ->
+                    doNothing model
+
+                Binding.Irrelevant ->
+                    doNothing model
 
         SelectNext i ->
             update params (DelegateToItemMsg (i + 1) params.itemWidget.selectMsg) model path
@@ -132,7 +140,7 @@ update params msg model path =
 
 
 delegateUpdateToItemToAdd :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Model newItemModel itemModel
     -> newItemMsg
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
@@ -145,24 +153,29 @@ delegateUpdateToItemToAdd params model subMsg =
 
 
 addItemCmd :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Path
     -> Index
     -> factoryInput
     -> Cmd (Msg newItemMsg itemMsg itemModel factoryInput)
 addItemCmd params path indexToAdd itemToAdd =
     let
-        addItemToListCmd =
-            params.binding.addItem path indexToAdd
-
         initItemWithItemToAddCmd =
             cmdOfMsg (DelegateToItemMsg indexToAdd (params.itemWidget.initMsg itemToAdd))
     in
-        Cmd.batch [ addItemToListCmd, initItemWithItemToAddCmd ]
+        case params.binding.addItem path indexToAdd of
+            Binding.Ok res ->
+                Cmd.batch [ res, initItemWithItemToAddCmd ]
+
+            Binding.Err _ ->
+                initItemWithItemToAddCmd
+
+            Binding.Irrelevant ->
+                initItemWithItemToAddCmd
 
 
 unselectPreviouslySelectedItems :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Path
     -> List itemModel
     -> Index
@@ -186,7 +199,7 @@ unselectPreviouslySelectedItems params path items exceptIndex msg =
 
 
 delegateUpdateToItem :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Path
     -> List itemModel
     -> Index
@@ -212,21 +225,30 @@ delegateUpdateToItem params path contents itemIndex itemMsg =
 
 
 subscriptions :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Model newItemModel itemModel
     -> Path
     -> Sub (Msg newItemMsg itemMsg itemModel factoryInput)
 subscriptions params model path =
     let
-        bindingToMsg msgBuilder =
-            Sub.map (Result.withDefault NoOp << Result.map msgBuilder)
-
         itemSub i itemModel =
             Sub.map (DelegateToItemMsg i) <| params.itemWidget.subscriptions itemModel (Index i :: path)
+
+        msgOfBindingRes f res =
+            case res of
+                Binding.Ok v ->
+                    f v
+
+                Binding.Irrelevant ->
+                    NoOp
+
+                {--No handling of error for now: no use case actually...--}
+                Binding.Err err ->
+                    NoOp
     in
         Sub.batch
-            ([ bindingToMsg BackendAddedItem (params.binding.itemAdded path)
-             , bindingToMsg BackendRemovedItem (params.binding.itemRemoved path)
+            ([ Sub.map (msgOfBindingRes BackendAddedItem) (params.binding.itemAdded path)
+             , Sub.map (msgOfBindingRes BackendRemovedItem) (params.binding.itemRemoved path)
              ]
                 ++ List.indexedMap itemSub model.contents
             )
@@ -237,7 +259,7 @@ subscriptions params model path =
 
 
 view :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput err
+    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
     -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel factoryInput)
 view params model =
