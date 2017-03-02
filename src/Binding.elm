@@ -9,8 +9,8 @@ type alias BindingErr =
     { description : String }
 
 
-type BindingResult res
-    = Ok res
+type BindingResult serializedType
+    = Ok serializedType
     | Err BindingErr
     | Irrelevant
 
