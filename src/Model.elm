@@ -3,7 +3,7 @@ module Model exposing (..)
 import Dict exposing (Dict)
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode
-import MetaModel exposing (AttributeDescription, AttributeType, ClassDictionary, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
+import MetaModel exposing (AttributeDescription, AttributeType, MetaModel, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
 
 
 type alias Object =
@@ -34,22 +34,27 @@ jsonOfObject obj =
         Json.Encode.object <| ( classFieldName, MetaModel.jsonOfClassRef obj.classRef ) :: attrs
 
 
-objectDecoder : ClassDictionary -> MetaModel.ClassDef -> Decoder Object
-objectDecoder classDict classDef =
-    let
-        attrsDecoder =
-            attributesDecoder classDict classDef.class.attributes
-    in
-        Dec.map2 (\ref attrs -> { classRef = ref, attributes = attrs }) (classRefFieldDecoder classDef) attrsDecoder
+objectDecoder : MetaModel -> MetaModel.ClassRef -> Decoder Object
+objectDecoder mm classRef =
+    case MetaModel.classDefOfClassRef mm classRef of
+        Just classDef ->
+            let
+                attrsDecoder =
+                    attributesDecoder mm classDef.class.attributes
+            in
+                Dec.map2 (\ref attrs -> { classRef = ref, attributes = attrs }) (classRefFieldDecoder classDef) attrsDecoder
+
+        Nothing ->
+            Dec.fail <| "Class " ++ MetaModel.stringOfClassRef classRef ++ " unknown"
 
 
-attributesDecoder : ClassDictionary -> Dict String AttributeDescription -> Decoder (Dict String AttributeValue)
-attributesDecoder classDict attrs =
+attributesDecoder : MetaModel -> Dict String AttributeDescription -> Decoder (Dict String AttributeValue)
+attributesDecoder mm attrs =
     let
         accumulateFieldDecoder requestedAttrName requestedAttrDesc decoderAcc =
             let
                 fieldDecoder =
-                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDescDecoder classDict requestedAttrDesc)
+                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDescDecoder mm requestedAttrDesc)
             in
                 Dec.map2 (\dict attrValue -> Dict.insert requestedAttrName attrValue dict) decoderAcc fieldDecoder
     in
@@ -123,8 +128,8 @@ jsonOfAttributeValue attributeValue =
                 encodeList jsonOfObject l
 
 
-attributeDescDecoder : ClassDictionary -> AttributeDescription -> Dec.Decoder AttributeValue
-attributeDescDecoder classDict desc =
+attributeDescDecoder : MetaModel -> AttributeDescription -> Dec.Decoder AttributeValue
+attributeDescDecoder mm desc =
     case desc.type_ of
         MetaModel.String ->
             case desc.multiplicity of
@@ -151,14 +156,9 @@ attributeDescDecoder classDict desc =
                     Dec.map BoolList <| Dec.list Dec.bool
 
         MetaModel.ClassRef ref ->
-            case MetaModel.classDefOfClassRef classDict ref of
-                Just classDef ->
-                    case desc.multiplicity of
-                        MetaModel.Single ->
-                            Dec.map ObjectRef <| Dec.maybe (objectDecoder classDict classDef)
+            case desc.multiplicity of
+                MetaModel.Single ->
+                    Dec.map ObjectRef <| Dec.maybe (objectDecoder mm ref)
 
-                        MetaModel.Multiple ->
-                            Dec.map ObjectRefList <| Dec.list (objectDecoder classDict classDef)
-
-                Nothing ->
-                    Dec.fail <| "Class " ++ stringOfClassRef ref ++ " not found"
+                MetaModel.Multiple ->
+                    Dec.map ObjectRefList <| Dec.list (objectDecoder mm ref)
