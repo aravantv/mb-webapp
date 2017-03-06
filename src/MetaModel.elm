@@ -42,13 +42,13 @@ type Multiplicity
 
 
 type alias AttributeDescription =
-    { type_ : AttributeType
+    { type_ : ModelType
     , isReference : Bool
     , multiplicity : Multiplicity
     }
 
 
-type AttributeType
+type ModelType
     = String
     | Int
     | Bool
