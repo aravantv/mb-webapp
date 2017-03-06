@@ -3,13 +3,26 @@ module Model exposing (..)
 import Dict exposing (Dict)
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode
-import MetaModel exposing (AttributeDescription, ModelType, MetaModel, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
+import MetaModel exposing (AttributeDescription, ClassRef, MetaModel, ModelType, Multiplicity, RootedMetaModel, classRefDecoder, matchesClass, stringOfClassRef)
 
 
 type alias Object =
     { classRef : MetaModel.ClassRef
     , attributes : Dict String AttributeValue
     }
+
+
+rootedMetaModelFactory : RootedMetaModel -> Maybe Object
+rootedMetaModelFactory rmm =
+    MetaModel.classDefOfClassRef rmm.metamodel rmm.root
+        |> Maybe.map
+            (\classDef ->
+                let
+                    attrValues =
+                        Dict.map (always attributeFactory) classDef.class.attributes
+                in
+                    { classRef = rmm.root, attributes = attrValues }
+            )
 
 
 sanitizeAttributeName : String -> String
@@ -118,6 +131,27 @@ type AttributeValue
     | IntList (List Int)
     | BoolList (List Bool)
     | ObjectRefList (List Object)
+
+
+attributeFactory : AttributeDescription -> AttributeValue
+attributeFactory attrDesc =
+    case attrDesc.multiplicity of
+        MetaModel.Single ->
+            SingleModel Nothing
+
+        MetaModel.Multiple ->
+            case attrDesc.type_ of
+                MetaModel.String ->
+                    StringList []
+
+                MetaModel.Int ->
+                    IntList []
+
+                MetaModel.Bool ->
+                    BoolList []
+
+                MetaModel.ClassRef _ ->
+                    ObjectRefList []
 
 
 jsonOfAttributeValue : AttributeValue -> Json.Encode.Value
