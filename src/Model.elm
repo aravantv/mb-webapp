@@ -3,7 +3,7 @@ module Model exposing (..)
 import Dict exposing (Dict)
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode
-import MetaModel exposing (AttributeDescription, AttributeType, MetaModel, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
+import MetaModel exposing (AttributeDescription, ModelType, MetaModel, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
 
 
 type alias Object =
@@ -54,7 +54,7 @@ attributesDecoder mm attrs =
         accumulateFieldDecoder requestedAttrName requestedAttrDesc decoderAcc =
             let
                 fieldDecoder =
-                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDescDecoder mm requestedAttrDesc)
+                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDecoder mm requestedAttrDesc)
             in
                 Dec.map2 (\dict attrValue -> Dict.insert requestedAttrName attrValue dict) decoderAcc fieldDecoder
     in
@@ -73,11 +73,47 @@ classRefFieldDecoder class =
         Dec.field classFieldName classRefDecoder |> Dec.andThen filtersClass
 
 
+type Model
+    = String String
+    | Int Int
+    | Bool Bool
+    | ObjectRef Object
+
+
+jsonOfModel : Model -> Json.Encode.Value
+jsonOfModel model =
+    case model of
+        String s ->
+            Json.Encode.string s
+
+        Int n ->
+            Json.Encode.int n
+
+        Bool b ->
+            Json.Encode.bool b
+
+        ObjectRef obj ->
+            jsonOfObject obj
+
+
+modelDecoder : MetaModel -> MetaModel.ModelType -> Decoder Model
+modelDecoder mm ty =
+    case ty of
+        MetaModel.String ->
+            Dec.map String Dec.string
+
+        MetaModel.Int ->
+            Dec.map Int Dec.int
+
+        MetaModel.Bool ->
+            Dec.map Bool Dec.bool
+
+        MetaModel.ClassRef ref ->
+            Dec.map ObjectRef (objectDecoder mm ref)
+
+
 type AttributeValue
-    = String (Maybe String)
-    | Int (Maybe Int)
-    | Bool (Maybe Bool)
-    | ObjectRef (Maybe Object)
+    = SingleModel (Maybe Model)
     | StringList (List String)
     | IntList (List Int)
     | BoolList (List Bool)
@@ -91,29 +127,11 @@ jsonOfAttributeValue attributeValue =
             Json.Encode.list << List.map atomicEncoder
     in
         case attributeValue of
-            String Nothing ->
+            SingleModel Nothing ->
                 Json.Encode.null
 
-            Int Nothing ->
-                Json.Encode.null
-
-            Bool Nothing ->
-                Json.Encode.null
-
-            ObjectRef Nothing ->
-                Json.Encode.null
-
-            String (Just s) ->
-                Json.Encode.string s
-
-            Int (Just n) ->
-                Json.Encode.int n
-
-            Bool (Just b) ->
-                Json.Encode.bool b
-
-            ObjectRef (Just obj) ->
-                jsonOfObject obj
+            SingleModel (Just model) ->
+                jsonOfModel model
 
             StringList l ->
                 encodeList Json.Encode.string l
@@ -128,37 +146,22 @@ jsonOfAttributeValue attributeValue =
                 encodeList jsonOfObject l
 
 
-attributeDescDecoder : MetaModel -> AttributeDescription -> Dec.Decoder AttributeValue
-attributeDescDecoder mm desc =
-    case desc.type_ of
-        MetaModel.String ->
-            case desc.multiplicity of
-                MetaModel.Single ->
-                    Dec.map String <| Dec.maybe Dec.string
+attributeDecoder : MetaModel -> AttributeDescription -> Dec.Decoder AttributeValue
+attributeDecoder mm desc =
+    case desc.multiplicity of
+        MetaModel.Single ->
+            Dec.map SingleModel <| Dec.maybe (modelDecoder mm desc.type_)
 
-                MetaModel.Multiple ->
+        MetaModel.Multiple ->
+            case desc.type_ of
+                MetaModel.String ->
                     Dec.map StringList <| Dec.list Dec.string
 
-        MetaModel.Int ->
-            case desc.multiplicity of
-                MetaModel.Single ->
-                    Dec.map Int <| Dec.maybe Dec.int
-
-                MetaModel.Multiple ->
+                MetaModel.Int ->
                     Dec.map IntList <| Dec.list Dec.int
 
-        MetaModel.Bool ->
-            case desc.multiplicity of
-                MetaModel.Single ->
-                    Dec.map Bool <| Dec.maybe Dec.bool
-
-                MetaModel.Multiple ->
+                MetaModel.Bool ->
                     Dec.map BoolList <| Dec.list Dec.bool
 
-        MetaModel.ClassRef ref ->
-            case desc.multiplicity of
-                MetaModel.Single ->
-                    Dec.map ObjectRef <| Dec.maybe (objectDecoder mm ref)
-
-                MetaModel.Multiple ->
+                MetaModel.ClassRef ref ->
                     Dec.map ObjectRefList <| Dec.list (objectDecoder mm ref)
