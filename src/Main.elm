@@ -1,15 +1,34 @@
 module Main exposing (..)
 
 import Binding exposing (textBinding)
-import GroupWidget exposing (..)
 import CircleWidget
+import GroupWidget exposing (..)
+import Html
 import Label
+import MetaModel exposing (MetaModel)
 import NewText
 import SelectableList
 import SelectableText
 import Text
-import Html
 import Widget exposing (ISelectable, Index, makeTopWidget)
+
+
+-- METAMODEL
+
+
+metamodel : MetaModel
+metamodel =
+    MetaModel.metamodel
+        ( "MyList"
+        , [ ( "MyList"
+            , []
+            )
+          ]
+        )
+
+
+
+-- WIDGET
 
 
 listExampleWidget =
