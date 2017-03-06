@@ -5,7 +5,7 @@ import CircleWidget
 import GroupWidget exposing (..)
 import Html
 import Label
-import MetaModel exposing (MetaModel)
+import MetaModel exposing (MetaModel, Multiplicity)
 import NewText
 import SelectableList
 import SelectableText
@@ -21,7 +21,7 @@ metamodel =
     MetaModel.metamodel
         ( "MyList"
         , [ ( "MyList"
-            , []
+            , [ ( "todos", { type_ = MetaModel.String, isReference = False, multiplicity = MetaModel.Multiple } ) ]
             )
           ]
         )
