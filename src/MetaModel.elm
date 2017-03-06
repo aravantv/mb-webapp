@@ -34,9 +34,15 @@ type alias ClassDef =
     { id : ClassID, class : Class }
 
 
+type Multiplicity
+    = Single
+    | Multiple
+
+
 type alias AttributeDescription =
     { type_ : AttributeType
     , isReference : Bool
+    , multiplicity : Multiplicity
     }
 
 
