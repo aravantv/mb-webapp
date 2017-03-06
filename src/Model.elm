@@ -3,7 +3,7 @@ module Model exposing (..)
 import Dict exposing (Dict)
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode
-import MetaModel exposing (AttributeDescription, AttributeType, ClassDictionary, ClassRef, classRefDecoder, matchesClass, stringOfClassRef)
+import MetaModel exposing (AttributeDescription, AttributeType, ClassDictionary, ClassRef, Multiplicity, classRefDecoder, matchesClass, stringOfClassRef)
 
 
 type alias Object =
@@ -49,7 +49,7 @@ attributesDecoder classDict attrs =
         accumulateFieldDecoder requestedAttrName requestedAttrDesc decoderAcc =
             let
                 fieldDecoder =
-                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeTypeDecoder classDict requestedAttrDesc.type_)
+                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDescDecoder classDict requestedAttrDesc)
             in
                 Dec.map2 (\dict attrValue -> Dict.insert requestedAttrName attrValue dict) decoderAcc fieldDecoder
     in
@@ -69,44 +69,96 @@ classRefFieldDecoder class =
 
 
 type AttributeValue
-    = String String
-    | Int Int
-    | Bool Bool
-    | ObjectRef Object
+    = String (Maybe String)
+    | Int (Maybe Int)
+    | Bool (Maybe Bool)
+    | ObjectRef (Maybe Object)
+    | StringList (List String)
+    | IntList (List Int)
+    | BoolList (List Bool)
+    | ObjectRefList (List Object)
 
 
 jsonOfAttributeValue : AttributeValue -> Json.Encode.Value
 jsonOfAttributeValue attributeValue =
-    case attributeValue of
-        String s ->
-            Json.Encode.string s
+    let
+        encodeList atomicEncoder =
+            Json.Encode.list << List.map atomicEncoder
+    in
+        case attributeValue of
+            String Nothing ->
+                Json.Encode.null
 
-        Int n ->
-            Json.Encode.int n
+            Int Nothing ->
+                Json.Encode.null
 
-        Bool b ->
-            Json.Encode.bool b
+            Bool Nothing ->
+                Json.Encode.null
 
-        ObjectRef obj ->
-            jsonOfObject obj
+            ObjectRef Nothing ->
+                Json.Encode.null
+
+            String (Just s) ->
+                Json.Encode.string s
+
+            Int (Just n) ->
+                Json.Encode.int n
+
+            Bool (Just b) ->
+                Json.Encode.bool b
+
+            ObjectRef (Just obj) ->
+                jsonOfObject obj
+
+            StringList l ->
+                encodeList Json.Encode.string l
+
+            IntList l ->
+                encodeList Json.Encode.int l
+
+            BoolList l ->
+                encodeList Json.Encode.bool l
+
+            ObjectRefList l ->
+                encodeList jsonOfObject l
 
 
-attributeTypeDecoder : ClassDictionary -> AttributeType -> Dec.Decoder AttributeValue
-attributeTypeDecoder classDict ty =
-    case ty of
+attributeDescDecoder : ClassDictionary -> AttributeDescription -> Dec.Decoder AttributeValue
+attributeDescDecoder classDict desc =
+    case desc.type_ of
         MetaModel.String ->
-            Dec.map String Dec.string
+            case desc.multiplicity of
+                MetaModel.Single ->
+                    Dec.map String <| Dec.maybe Dec.string
+
+                MetaModel.Multiple ->
+                    Dec.map StringList <| Dec.list Dec.string
 
         MetaModel.Int ->
-            Dec.map Int Dec.int
+            case desc.multiplicity of
+                MetaModel.Single ->
+                    Dec.map Int <| Dec.maybe Dec.int
+
+                MetaModel.Multiple ->
+                    Dec.map IntList <| Dec.list Dec.int
 
         MetaModel.Bool ->
-            Dec.map Bool Dec.bool
+            case desc.multiplicity of
+                MetaModel.Single ->
+                    Dec.map Bool <| Dec.maybe Dec.bool
+
+                MetaModel.Multiple ->
+                    Dec.map BoolList <| Dec.list Dec.bool
 
         MetaModel.ClassRef ref ->
             case MetaModel.classDefOfClassRef classDict ref of
                 Just classDef ->
-                    Dec.map ObjectRef (objectDecoder classDict classDef)
+                    case desc.multiplicity of
+                        MetaModel.Single ->
+                            Dec.map ObjectRef <| Dec.maybe (objectDecoder classDict classDef)
+
+                        MetaModel.Multiple ->
+                            Dec.map ObjectRefList <| Dec.list (objectDecoder classDict classDef)
 
                 Nothing ->
                     Dec.fail <| "Class " ++ stringOfClassRef ref ++ " not found"
