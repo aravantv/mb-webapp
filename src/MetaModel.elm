@@ -5,29 +5,31 @@ import Json.Decode
 import Json.Encode
 
 
+type alias ClassID =
+    String
+
+
 type alias MetaModel =
-    { root : ClassRef
-    , dict : ClassDictionary
-    }
+    Dict ClassID Class
 
 
-metamodel : ( ClassRef, List ( ClassID, List ( String, AttributeDescription ) ) ) -> MetaModel
-metamodel ( r, l ) =
+metamodel : List ( ClassID, List ( String, AttributeDescription ) ) -> MetaModel
+metamodel l =
     let
         lWithDict =
             List.map (\( id, attrs ) -> ( id, { attributes = Dict.fromList attrs } )) l
     in
-        { root = r
-        , dict = Dict.fromList lWithDict
-        }
+        Dict.fromList lWithDict
+
+
+type alias RootedMetaModel =
+    { root : ClassRef
+    , metamodel : MetaModel
+    }
 
 
 type alias Class =
     { attributes : Dict String AttributeDescription }
-
-
-type alias ClassID =
-    String
 
 
 type alias ClassDef =
@@ -51,10 +53,6 @@ type AttributeType
     | Int
     | Bool
     | ClassRef ClassRef
-
-
-type alias ClassDictionary =
-    Dict ClassID Class
 
 
 type alias ClassRef =
@@ -82,13 +80,13 @@ idOfClassRef =
     identity
 
 
-classDefOfClassRef : ClassDictionary -> ClassRef -> Maybe ClassDef
-classDefOfClassRef dict ref =
+classDefOfClassRef : MetaModel -> ClassRef -> Maybe ClassDef
+classDefOfClassRef mm ref =
     let
         id =
             idOfClassRef ref
     in
-        Maybe.map (\c -> { id = id, class = c }) (Dict.get id dict)
+        Maybe.map (\c -> { id = id, class = c }) (Dict.get id mm)
 
 
 classRefDecoder : Json.Decode.Decoder ClassRef
