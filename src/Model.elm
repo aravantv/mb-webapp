@@ -150,7 +150,7 @@ attributeDecoder : MetaModel -> AttributeDescription -> Dec.Decoder AttributeVal
 attributeDecoder mm desc =
     case desc.multiplicity of
         MetaModel.Single ->
-            Dec.map SingleModel <| Dec.maybe (modelDecoder mm desc.type_)
+            Dec.map SingleModel <| Dec.nullable (modelDecoder mm desc.type_)
 
         MetaModel.Multiple ->
             case desc.type_ of
