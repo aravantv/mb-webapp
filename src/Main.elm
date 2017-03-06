@@ -16,15 +16,16 @@ import Widget exposing (ISelectable, Index, makeTopWidget)
 -- METAMODEL
 
 
-metamodel : MetaModel
+metamodel : RootedMetaModel
 metamodel =
-    MetaModel.metamodel
-        ( "MyList"
-        , [ ( "MyList"
-            , [ ( "todos", { type_ = MetaModel.String, isReference = False, multiplicity = MetaModel.Multiple } ) ]
-            )
-          ]
-        )
+    { root = "MyList"
+    , metamodel =
+        MetaModel.metamodel
+            [ ( "MyList"
+              , [ ( "todos", { type_ = MetaModel.String, isReference = False, multiplicity = MetaModel.Multiple } ) ]
+              )
+            ]
+    }
 
 
 
