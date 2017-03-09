@@ -4,33 +4,30 @@ import Binding exposing (ListBinding)
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import ListUtils exposing (..)
+import Model exposing (Model)
 import Utils exposing (enterKey, onKeyDown, onKeyUp, shiftCode, tabKey)
-import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Widget exposing (Factory, IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
-type alias ItemWidget model msg factoryInput =
-    ISelectable model msg (Widget model msg factoryInput)
+type alias ItemWidget model msg =
+    ISelectable model msg (Widget model msg)
 
 
-type alias NewItemWidget model msg factoryInput =
-    IDecision msg (UnboundWidget model msg factoryInput)
+type alias NewItemWidget model msg =
+    IDecision msg (UnboundWidget model msg)
 
 
-type alias Converter fromModel toModelFactoryInput =
-    fromModel -> toModelFactoryInput
-
-
-type alias Parameters newItemModel itemModel newItemMsg itemMsg factoryInput =
-    { binding : ListBinding (Msg newItemMsg itemMsg itemModel factoryInput)
-    , newItemWidget : NewItemWidget newItemModel newItemMsg factoryInput
-    , itemWidget : ItemWidget itemModel itemMsg factoryInput
-    , converter : Converter newItemModel factoryInput
+type alias Parameters newItemModel itemModel newItemMsg itemMsg =
+    { binding : ListBinding (Msg newItemMsg itemMsg itemModel)
+    , newItemWidget : NewItemWidget newItemModel newItemMsg
+    , itemWidget : ItemWidget itemModel itemMsg
+    , factory : Factory newItemModel
     }
 
 
 createWidget :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
-    -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel factoryInput) (List factoryInput)
+    Parameters newItemModel itemModel newItemMsg itemMsg
+    -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel)
 createWidget params =
     { initModel = emptyModel params
     , initMsg = Init
@@ -48,7 +45,7 @@ type alias Model newItemModel itemModel =
     { itemToAdd : newItemModel, contents : List itemModel }
 
 
-emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg factoryInput -> Model newItemModel itemModel
+emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg -> Model newItemModel itemModel
 emptyModel params =
     { itemToAdd = params.newItemWidget.initModel, contents = [] }
 
@@ -57,30 +54,30 @@ emptyModel params =
 -- UPDATE
 
 
-type Msg newItemMsg itemMsg itemModel factoryInput
+type Msg newItemMsg itemMsg itemModel
     = DelegateToNewItemMsg newItemMsg
     | DelegateToItemMsg Index itemMsg
     | Remove Index
     | SelectNext Index
     | SelectPrevious Index
-    | BackendAddedItem Index
+    | BackendAddedItem ( Index, Model.Model )
     | BackendRemovedItem Index
     | NoOp
-    | Init (List factoryInput)
+    | Init Model.Model
 
 
 update :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
-    -> Msg newItemMsg itemMsg itemModel factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
+    -> Msg newItemMsg itemMsg itemModel
     -> Model newItemModel itemModel
     -> Path
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 update params msg model path =
     case msg of
         DelegateToNewItemMsg subMsg ->
             if subMsg == params.newItemWidget.confirmMsg then
                 ( { model | itemToAdd = params.newItemWidget.initModel }
-                , addItemCmd params path 0 (params.converter model.itemToAdd)
+                , addItemCmd params path 0 (params.factory model.itemToAdd)
                 )
             else
                 delegateUpdateToItemToAdd params model subMsg
@@ -115,7 +112,7 @@ update params msg model path =
         SelectPrevious i ->
             update params (DelegateToItemMsg (i - 1) params.itemWidget.selectMsg) model path
 
-        BackendAddedItem i ->
+        BackendAddedItem ( i, m ) ->
             case insert model.contents params.itemWidget.initModel i of
                 Just newContents ->
                     ( { model | contents = newContents }, params.binding.askItemContent path i )
@@ -133,17 +130,17 @@ update params msg model path =
                         model
 
         Init l ->
-            ( emptyModel params, Cmd.batch (List.indexedMap (\i fi -> addItemCmd params path i fi) l) )
+            ( emptyModel params, Cmd.none )
 
         NoOp ->
             doNothing model
 
 
 delegateUpdateToItemToAdd :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Model newItemModel itemModel
     -> newItemMsg
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 delegateUpdateToItemToAdd params model subMsg =
     let
         ( updatedItemToAdd, cmd ) =
@@ -153,17 +150,17 @@ delegateUpdateToItemToAdd params model subMsg =
 
 
 addItemCmd :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Path
     -> Index
-    -> factoryInput
-    -> Cmd (Msg newItemMsg itemMsg itemModel factoryInput)
+    -> Model.Model
+    -> Cmd (Msg newItemMsg itemMsg itemModel)
 addItemCmd params path indexToAdd itemToAdd =
     let
         initItemWithItemToAddCmd =
             cmdOfMsg (DelegateToItemMsg indexToAdd (params.itemWidget.initMsg itemToAdd))
     in
-        case params.binding.addItem path indexToAdd of
+        case params.binding.addItem path indexToAdd itemToAdd of
             Binding.Ok res ->
                 Cmd.batch [ res, initItemWithItemToAddCmd ]
 
@@ -175,12 +172,12 @@ addItemCmd params path indexToAdd itemToAdd =
 
 
 unselectPreviouslySelectedItems :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Path
     -> List itemModel
     -> Index
     -> itemMsg
-    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 unselectPreviouslySelectedItems params path items exceptIndex msg =
     let
         unselectIfPreviouslySelected j itemModel =
@@ -199,12 +196,12 @@ unselectPreviouslySelectedItems params path items exceptIndex msg =
 
 
 delegateUpdateToItem :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Path
     -> List itemModel
     -> Index
     -> itemMsg
-    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel factoryInput) )
+    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 delegateUpdateToItem params path contents itemIndex itemMsg =
     case get contents itemIndex of
         Nothing ->
@@ -225,14 +222,14 @@ delegateUpdateToItem params path contents itemIndex itemMsg =
 
 
 subscriptions :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Model newItemModel itemModel
     -> Path
-    -> Sub (Msg newItemMsg itemMsg itemModel factoryInput)
+    -> Sub (Msg newItemMsg itemMsg itemModel)
 subscriptions params model path =
     let
         itemSub i itemModel =
-            Sub.map (DelegateToItemMsg i) <| params.itemWidget.subscriptions itemModel (Index i :: path)
+            Sub.map (DelegateToItemMsg i) <| params.itemWidget.subscriptions itemModel (params.binding.getAbsolutePath path i)
 
         msgOfBindingRes f res =
             case res of
@@ -259,9 +256,9 @@ subscriptions params model path =
 
 
 view :
-    Parameters newItemModel itemModel newItemMsg itemMsg factoryInput
+    Parameters newItemModel itemModel newItemMsg itemMsg
     -> Model newItemModel itemModel
-    -> Html (Msg newItemMsg itemMsg itemModel factoryInput)
+    -> Html (Msg newItemMsg itemMsg itemModel)
 view params model =
     let
         delegateViewToItem i m =
