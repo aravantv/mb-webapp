@@ -1,7 +1,8 @@
 module GroupWidget exposing (..)
 
 import Html exposing (..)
-import Widget exposing (Path, IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Model
+import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type alias PathTransformer =
@@ -13,21 +14,21 @@ type DivOrSpan
     | Span
 
 
-type alias Parameters subModel1 msg1 factoryInput1 subModel2 msg2 factoryInput2 =
-    { wrappedWidget1 : Widget subModel1 msg1 factoryInput1
+type alias Parameters subModel1 msg1 subModel2 msg2 =
+    { wrappedWidget1 : Widget subModel1 msg1
     , pathAdapter1 : PathTransformer
-    , wrappedWidget2 : Widget subModel2 msg2 factoryInput2
+    , wrappedWidget2 : Widget subModel2 msg2
     , pathAdapter2 : PathTransformer
     , divOrSpan : DivOrSpan
     }
 
 
 createWidget :
-    Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
-    -> Widget (Model subModel1 subModel2) (Msg subMsg1 subMsg2 factoryInput1 factoryInput2) ( factoryInput1, factoryInput2 )
+    Parameters subModel1 subMsg1 subModel2 subMsg2
+    -> Widget (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
 createWidget params =
     { initModel = emptyModel params
-    , initMsg = Init
+    , initMsg = \m -> Init ( m, m )
     , update = update params
     , subscriptions = subscriptions params
     , view = view params
@@ -45,7 +46,7 @@ type alias Model subModel1 subModel2 =
 
 
 emptyModel :
-    Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
+    Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Model subModel1 subModel2
 emptyModel params =
     { wrappedModel1 = params.wrappedWidget1.initModel
@@ -57,18 +58,18 @@ emptyModel params =
 -- UPDATE
 
 
-type Msg subMsg1 subMsg2 factoryInput1 factoryInput2
+type Msg subMsg1 subMsg2
     = DelegateToWidget1 subMsg1
     | DelegateToWidget2 subMsg2
-    | Init ( factoryInput1, factoryInput2 )
+    | Init ( Model.Model, Model.Model )
 
 
 update :
-    Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
-    -> Msg subMsg1 subMsg2 factoryInput1 factoryInput2
+    Parameters subModel1 subMsg1 subModel2 subMsg2
+    -> Msg subMsg1 subMsg2
     -> Model subModel1 subModel2
     -> Path
-    -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2 factoryInput1 factoryInput2) )
+    -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
 update params msg model path =
     case msg of
         DelegateToWidget1 subMsg ->
@@ -101,10 +102,10 @@ update params msg model path =
 
 
 subscriptions :
-    Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
+    Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Model subModel1 subModel2
     -> Path
-    -> Sub (Msg subMsg1 subMsg2 factoryInput1 factoryInput2)
+    -> Sub (Msg subMsg1 subMsg2)
 subscriptions params model path =
     let
         sub1 =
@@ -121,9 +122,9 @@ subscriptions params model path =
 
 
 view :
-    Parameters subModel1 subMsg1 factoryInput1 subModel2 subMsg2 factoryInput2
+    Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Model subModel1 subModel2
-    -> Html (Msg subMsg1 subMsg2 factoryInput1 factoryInput2)
+    -> Html (Msg subMsg1 subMsg2)
 view params model =
     let
         divOrSpanHtml =
