@@ -8,13 +8,13 @@ import Utils exposing (enterKey, onKeyUp)
 import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createSelectableWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg String)
+createSelectableWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg)
 createSelectableWidget binding =
     let
         textWidget =
             Text.createWidget binding
     in
-        { initMsg = DelegateToTextMsg << Text.Init
+        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
         , initModel = initModel textWidget
         , update = update textWidget
         , view = view textWidget
@@ -25,13 +25,13 @@ createSelectableWidget binding =
         }
 
 
-createWidget : Binding Text.Msg String -> Widget Model Msg String
+createWidget : Binding Text.Msg String -> Widget Model Msg
 createWidget binding =
     let
         textWidget =
             Text.createWidget binding
     in
-        { initMsg = DelegateToTextMsg << Text.Init
+        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
         , initModel = initModel textWidget
         , update = update textWidget
         , view = view textWidget
@@ -49,7 +49,7 @@ type alias Model =
     }
 
 
-initModel : Widget Text.Model Text.Msg String -> Model
+initModel : Widget Text.Model Text.Msg -> Model
 initModel textWidget =
     { textModel = textWidget.initModel, editMode = False }
 
@@ -64,7 +64,7 @@ type Msg
     | UIConfirm
 
 
-update : Widget Text.Model Text.Msg String -> Msg -> Model -> Path -> ( Model, Cmd Msg )
+update : Widget Text.Model Text.Msg -> Msg -> Model -> Path -> ( Model, Cmd Msg )
 update textWidget msg model p =
     case msg of
         DelegateToTextMsg textMsg ->
@@ -107,7 +107,7 @@ update textWidget msg model p =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Widget Text.Model Text.Msg String -> Model -> Path -> Sub Msg
+subscriptions : Widget Text.Model Text.Msg -> Model -> Path -> Sub Msg
 subscriptions textWidget m p =
     Sub.map DelegateToTextMsg <| textWidget.subscriptions m.textModel p
 
@@ -116,7 +116,7 @@ subscriptions textWidget m p =
 -- VIEW
 
 
-view : Widget Text.Model Text.Msg String -> Model -> Html Msg
+view : Widget Text.Model Text.Msg -> Model -> Html Msg
 view textWidget model =
     if model.editMode then
         span [ onKeyUp [ ( enterKey, UIConfirm ) ] ]
