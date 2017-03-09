@@ -5,9 +5,10 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
 import Widget exposing (IDecision, TopWidget, UnboundWidget, doNothing)
+import Model
 
 
-widget : IDecision Msg (UnboundWidget Model Msg String)
+widget : IDecision Msg (UnboundWidget Model Msg)
 widget =
     { initModel = emptyModel
     , initMsg = Init
@@ -39,7 +40,7 @@ type Msg
     = Change String
     | Confirm
     | Cancel
-    | Init String
+    | Init Model.Model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,8 +60,13 @@ transform msg model =
         Cancel ->
             ""
 
-        Init s ->
-            s
+        Init m ->
+            case m of
+                Model.String s ->
+                    s
+
+                _ ->
+                    ""
 
 
 
