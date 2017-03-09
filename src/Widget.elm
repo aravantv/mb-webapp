@@ -2,6 +2,7 @@ module Widget exposing (..)
 
 import Html exposing (Html)
 import Json.Decode exposing (decodeString, int)
+import Model exposing (Model)
 import Task
 
 
@@ -44,9 +45,9 @@ type alias Path =
 {-| note: all effects are functions taking a path as parameter, but the in the top-widget,
 the one given to Html.program, these are not present anymore
 -}
-type alias Widget model msg factoryInput =
+type alias Widget model msg =
     { initModel : model
-    , initMsg : factoryInput -> msg
+    , initMsg : Model -> msg
     , update : msg -> model -> Path -> ( model, Cmd msg )
     , subscriptions : model -> Path -> Sub msg
     , view : model -> Html msg
@@ -61,25 +62,25 @@ type alias TopWidget model msg =
     }
 
 
-makeTopWidget : Widget model msg factoryInput -> TopWidget model msg
-makeTopWidget widget =
+makeTopWidget : Widget model msg -> Path -> TopWidget model msg
+makeTopWidget widget rootPath =
     { init = doNothing widget.initModel
-    , update = \ms m -> widget.update ms m []
-    , subscriptions = \m -> widget.subscriptions m []
+    , update = \ms m -> widget.update ms m rootPath
+    , subscriptions = \m -> widget.subscriptions m rootPath
     , view = widget.view
     }
 
 
-type alias UnboundWidget model msg factoryInput =
+type alias UnboundWidget model msg =
     { initModel : model
-    , initMsg : factoryInput -> msg
+    , initMsg : Model -> msg
     , update : msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
     , view : model -> Html msg
     }
 
 
-makeBoundWidget : UnboundWidget model msg factoryInput -> Widget model msg factoryInput
+makeBoundWidget : UnboundWidget model msg -> Widget model msg
 makeBoundWidget widget =
     { initModel = widget.initModel
     , initMsg = widget.initMsg
@@ -123,3 +124,7 @@ cmdOfMsg msg =
 emptySubscription : model -> Sub msg
 emptySubscription _ =
     Sub.none
+
+
+type alias Factory widgetModel =
+    widgetModel -> Model
