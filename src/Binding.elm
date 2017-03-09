@@ -1,7 +1,10 @@
 module Binding exposing (..)
 
+import Dict
 import ListUtils exposing (..)
 import LocalStorage
+import MetaModel exposing (ClassRef, MetaModel, ModelType)
+import Model exposing (Object)
 import Widget exposing (ISelectable, Index, Path, makeTopWidget)
 
 
@@ -77,12 +80,13 @@ plus2Binding =
     mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
 
 
-type alias CollectionBinding msg collectionPath =
-    { itemAdded : Path -> Sub (BindingResult collectionPath)
-    , itemRemoved : Path -> Sub (BindingResult collectionPath)
-    , addItem : Path -> collectionPath -> BindingResult (Cmd msg)
-    , removeItem : Path -> collectionPath -> BindingResult (Cmd msg)
-    , askItemContent : Path -> collectionPath -> Cmd msg
+type alias CollectionBinding msg relativePath =
+    { itemAdded : Path -> Sub (BindingResult ( relativePath, Model.Model ))
+    , itemRemoved : Path -> Sub (BindingResult relativePath)
+    , addItem : Path -> relativePath -> Model.Model -> BindingResult (Cmd msg)
+    , removeItem : Path -> relativePath -> BindingResult (Cmd msg)
+    , askItemContent : Path -> relativePath -> Cmd msg
+    , getAbsolutePath : Path -> relativePath -> Path
     }
 
 
@@ -94,15 +98,21 @@ type alias ListBindingTransformer msg =
     ListBinding msg -> ListBinding msg
 
 
-listBinding : ListBinding msg
-listBinding =
+listBinding : MetaModel -> ModelType -> ListBinding msg
+listBinding mm ty =
     { itemAdded =
         \p ->
-            LocalStorage.itemAddedSub
-                (\path ->
+            LocalStorage.itemAddedSub mm
+                ty
+                (\( path, maybeObj ) ->
                     case substract path p of
                         Just [ Widget.Index i ] ->
-                            Ok i
+                            case maybeObj of
+                                Result.Ok obj ->
+                                    Ok ( i, obj )
+
+                                Result.Err err ->
+                                    Err { description = err }
 
                         _ ->
                             Irrelevant
@@ -118,9 +128,10 @@ listBinding =
                         _ ->
                             Irrelevant
                 )
-    , addItem = \p i -> Ok <| LocalStorage.addItemCmd (Index i :: p)
+    , addItem = \p i m -> Ok <| LocalStorage.addItemCmd (Index i :: p) m
     , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
     , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
+    , getAbsolutePath = \p i -> Index i :: p
     }
 
 
@@ -128,11 +139,17 @@ filterIntegerListBinding : ListBinding msg
 filterIntegerListBinding =
     { itemAdded =
         \p ->
-            LocalStorage.itemAddedSub
-                (\path ->
+            LocalStorage.itemAddedSub Dict.empty
+                MetaModel.Int
+                (\( path, maybeObj ) ->
                     case substract path p of
                         Just [ Widget.Index i ] ->
-                            Ok i
+                            case maybeObj of
+                                Result.Ok obj ->
+                                    Ok ( i, obj )
+
+                                Result.Err err ->
+                                    Err { description = err }
 
                         _ ->
                             Irrelevant
@@ -148,9 +165,10 @@ filterIntegerListBinding =
                         _ ->
                             Irrelevant
                 )
-    , addItem = \p i -> Ok <| LocalStorage.addItemCmd (Index i :: p)
+    , addItem = \p i m -> Ok <| LocalStorage.addItemCmd (Index i :: p) m
     , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
     , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
+    , getAbsolutePath = \p i -> Index i :: p
     }
 
 
