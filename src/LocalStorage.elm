@@ -9,6 +9,10 @@ port module LocalStorage
         , askContentCmd
         )
 
+import Json.Decode
+import Json.Encode
+import MetaModel exposing (ModelType, ClassRef, MetaModel)
+import Model exposing (Object)
 import Platform.Sub
 import Widget exposing (genericFieldOfString, stringOfGenericField)
 
@@ -57,12 +61,16 @@ setStringCmd ( p, s ) =
     setStringCmdPort ( storagePathOfWidgetPath p, s )
 
 
-port itemAddedSubPort : (StoragePath -> msg) -> Sub msg
+port itemAddedSubPort : (( StoragePath, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : (Widget.Path -> c) -> Sub c
-itemAddedSub msgBuilder =
-    itemAddedSubPort (msgBuilder << widgetPathOfStoragePath)
+itemAddedSub : MetaModel -> ModelType -> (( Widget.Path, Result String Model.Model ) -> c) -> Sub c
+itemAddedSub mm ty msgBuilder =
+    let
+        objOfJson json =
+            Json.Decode.decodeValue (Model.modelDecoder mm ty) json
+    in
+        itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
 
 
 port askContentCmdPort : StoragePath -> Cmd msg
@@ -83,12 +91,12 @@ itemRemovedSub msgBuilder =
 
 {-| addItemCmd literally adds an item: it inserts an element at the given path but does not fill it in with any value!
 -}
-port addItemCmdPort : StoragePath -> Cmd msg
+port addItemCmdPort : ( StoragePath, Json.Encode.Value ) -> Cmd msg
 
 
-addItemCmd : Widget.Path -> Cmd msg
-addItemCmd =
-    addItemCmdPort << storagePathOfWidgetPath
+addItemCmd : Widget.Path -> Model.Model -> Cmd msg
+addItemCmd p m =
+    addItemCmdPort ( storagePathOfWidgetPath p, Model.jsonOfModel m )
 
 
 port removeItemCmdPort : StoragePath -> Cmd msg
