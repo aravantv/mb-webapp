@@ -4,18 +4,29 @@ import Binding exposing (..)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
+import Model
 import Utils exposing (..)
 import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Msg String -> Widget Model Msg String
+createWidget : Binding Msg String -> Widget Model Msg
 createWidget binding =
-    { initMsg = Init
+    { initMsg = initMsg
     , initModel = emptyModel
     , update = update binding
     , view = view
     , subscriptions = subscriptions binding
     }
+
+
+initMsg : Model.Model -> Msg
+initMsg m =
+    case m of
+        Model.String s ->
+            Init s
+
+        _ ->
+            NoOp
 
 
 
