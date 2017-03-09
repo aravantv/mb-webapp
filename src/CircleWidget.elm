@@ -7,21 +7,22 @@ import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeW
 import Svg.Events
 import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
 import Json.Decode
+import Model
 
 
 type alias PathTransformer =
     Path -> Path
 
 
-type alias Parameters subModel subMsg factoryInput =
-    { wrappedWidget : Widget subModel subMsg factoryInput
+type alias Parameters subModel subMsg =
+    { wrappedWidget : Widget subModel subMsg
     , pathAdapter : PathTransformer
     }
 
 
 createWidget :
-    Parameters subModel subMsg factoryInput
-    -> Widget (Model subModel) (Msg subMsg factoryInput) factoryInput
+    Parameters subModel subMsg
+    -> Widget (Model subModel) (Msg subMsg)
 createWidget params =
     { initModel = emptyModel params
     , initMsg = Init
@@ -44,7 +45,7 @@ type alias Model subModel =
     }
 
 
-emptyModel : Parameters subModel subMsg factoryInput -> Model subModel
+emptyModel : Parameters subModel subMsg -> Model subModel
 emptyModel params =
     { wrappedModel = params.wrappedWidget.initModel, cx = 100, cy = 100, r = 50, dragStartPosition = Nothing }
 
@@ -53,20 +54,20 @@ emptyModel params =
 -- UPDATE
 
 
-type Msg subMsg factoryInput
+type Msg subMsg
     = DelegateToWidget subMsg
-    | Init factoryInput
+    | Init Model.Model
     | StartDragging Mouse.Position
     | Dragging ( Mouse.Position, Mouse.Position )
     | EndDragging
 
 
 update :
-    Parameters subModel subMsg factoryInput
-    -> Msg subMsg factoryInput
+    Parameters subModel subMsg
+    -> Msg subMsg
     -> Model subModel
     -> Path
-    -> ( Model subModel, Cmd (Msg subMsg factoryInput) )
+    -> ( Model subModel, Cmd (Msg subMsg) )
 update params msg model path =
     case msg of
         DelegateToWidget subMsg ->
@@ -102,7 +103,7 @@ update params msg model path =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Parameters subModel subMsg factoryInput -> Model subModel -> Path -> Sub (Msg subMsg factoryInput)
+subscriptions : Parameters subModel subMsg -> Model subModel -> Path -> Sub (Msg subMsg)
 subscriptions params model path =
     let
         subSub =
@@ -120,7 +121,7 @@ subscriptions params model path =
 -- VIEW
 
 
-view : Parameters subModel subMsg factoryInput -> Model subModel -> Html (Msg subMsg factoryInput)
+view : Parameters subModel subMsg -> Model subModel -> Html (Msg subMsg)
 view params model =
     let
         rect attrs =
