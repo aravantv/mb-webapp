@@ -62,9 +62,9 @@
             mbwebapp.ports.getStringSubPort.send([path, o[f]]);
           } else if (Array.isArray(o[f])) {
             o[f].forEach(function(elt, i) {
-              var sanitizedPath = path.slice();
-              sanitizedPath.splice(0, 0, i.toString());
-              mbwebapp.ports.itemAddedSubPort.send(sanitizedPath);
+              var elementPath = path.slice();
+              elementPath.splice(0, 0, i.toString());
+              mbwebapp.ports.itemAddedSubPort.send([elementPath, elt]);
             });
           }
         });
@@ -88,10 +88,14 @@
         mbwebapp.ports.getStringSubPort.send(args);
     })
 
-    mbwebapp.ports.addItemCmdPort.subscribe(function (path) {
-        insertValue(path, null, state);
+    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
+        var path = args[0]
+        var value = args[1]
+        insertValue(path, value, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemAddedSubPort.send(path);
+
+        console.log("sending : " + path + " and " + value)
+        mbwebapp.ports.itemAddedSubPort.send(args);
     });
 
     mbwebapp.ports.removeItemCmdPort.subscribe(function (path) {

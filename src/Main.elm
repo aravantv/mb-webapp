@@ -3,14 +3,15 @@ module Main exposing (..)
 import Binding exposing (textBinding)
 import CircleWidget
 import GroupWidget exposing (..)
-import Html
 import Label
-import MetaModel exposing (MetaModel, Multiplicity)
+import MetaModel exposing (MetaModel, Multiplicity, RootedMetaModel)
+import Model
 import NewText
 import SelectableList
 import SelectableText
+import TimeTravel.Html as TimeTravel
 import Text
-import Widget exposing (ISelectable, Index, makeTopWidget)
+import Widget exposing (GenericField, ISelectable, Index, makeTopWidget)
 
 
 -- METAMODEL
@@ -42,10 +43,10 @@ listExampleWidget =
                 , pathAdapter1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding
+                        { binding = Binding.listBinding metamodel.metamodel MetaModel.String
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , converter = identity
+                        , factory = Model.String
                         }
                 , pathAdapter2 = identity
                 }
@@ -57,10 +58,10 @@ listExampleWidget =
                 , pathAdapter1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding
+                        { binding = Binding.listBinding metamodel.metamodel MetaModel.String
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , converter = identity
+                        , factory = Model.String
                         }
                 , pathAdapter2 = identity
                 }
@@ -99,7 +100,7 @@ main =
         widget =
             listExampleWidget
     in
-        Html.program <|
+        TimeTravel.program <|
             makeTopWidget
                 { initModel = widget.initModel
                 , initMsg = widget.initMsg
@@ -107,3 +108,5 @@ main =
                 , view = widget.view
                 , subscriptions = widget.subscriptions
                 }
+                -- ICI donner le metamodel aussi et celui-ci serait ensuite transmis aux sous-bindings?
+                [ Widget.Field "todos" ]
