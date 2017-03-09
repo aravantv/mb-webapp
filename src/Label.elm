@@ -2,17 +2,26 @@ module Label exposing (..)
 
 import Html exposing (Html, input, label, text)
 import Widget exposing (IDecision, Widget, TopWidget, UnboundWidget, doNothing, makeBoundWidget)
+import Model
 
 
-createWidget : String -> Widget Model Msg String
+createWidget : String -> Widget Model Msg
 createWidget =
     createUnboundWidget >> makeBoundWidget
 
 
-createUnboundWidget : String -> UnboundWidget Model Msg String
+createUnboundWidget : String -> UnboundWidget Model Msg
 createUnboundWidget s =
     { initModel = s
-    , initMsg = ChangeLabel
+    , initMsg =
+        \m ->
+            ChangeLabel <|
+                case m of
+                    Model.String s ->
+                        s
+
+                    _ ->
+                        ""
     , update = update
     , view = view
     , subscriptions = Widget.emptySubscription
