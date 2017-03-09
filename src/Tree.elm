@@ -45,8 +45,8 @@ remove t path =
     applyAtPath t ListUtils.remove path
 
 
-indexedMap : Tree a -> (TreePath -> a -> b) -> Tree b
-indexedMap t f =
+indexedMap : (TreePath -> a -> b) -> Tree a -> Tree b
+indexedMap f t =
     let
         rec (Node l) currentPath =
             let
@@ -60,3 +60,12 @@ indexedMap t f =
                 Node <| List.indexedMap listF l
     in
         rec t []
+
+
+toList : Tree a -> List a
+toList (Node l) =
+    let
+        ( xs, subTrees ) =
+            List.unzip l
+    in
+        xs ++ List.concat (List.map toList subTrees)
