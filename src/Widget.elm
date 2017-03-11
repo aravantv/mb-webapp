@@ -32,10 +32,10 @@ type alias TopWidget model msg =
 
 
 makeTopWidget : Widget model msg -> ModelElementIdentifier -> TopWidget model msg
-makeTopWidget widget rootPath =
+makeTopWidget widget rootId =
     { init = doNothing widget.initModel
-    , update = \ms m -> widget.update ms m rootPath
-    , subscriptions = \m -> widget.subscriptions m rootPath
+    , update = \ms m -> widget.update ms m rootId
+    , subscriptions = \m -> widget.subscriptions m rootId
     , view = widget.view
     }
 
