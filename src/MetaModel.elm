@@ -1,8 +1,9 @@
 module MetaModel exposing (..)
 
 import Dict exposing (Dict)
-import Json.Decode
+import Json.Decode exposing (decodeString)
 import Json.Encode
+import ListUtils
 
 
 type alias ClassID =
@@ -92,3 +93,78 @@ classDefOfClassRef mm ref =
 classRefDecoder : Json.Decode.Decoder ClassRef
 classRefDecoder =
     Json.Decode.string
+
+
+type GenericField
+    = Field String
+    | Index Int
+
+
+stringOfGenericField : GenericField -> String
+stringOfGenericField f =
+    case f of
+        Field s ->
+            s
+
+        Index i ->
+            toString i
+
+
+genericFieldOfString : String -> GenericField
+genericFieldOfString s =
+    case String.toInt s of
+        Ok n ->
+            Index n
+
+        Err _ ->
+            Field s
+
+
+{-| Paths are provided as a list of string: the root is the *last* element.
+-}
+type alias Path =
+    List GenericField
+
+
+{-| I see here three possibilities to identify a model element:
+* ID for each model element
+* path within the model
+* checksum
+For now we use paths
+-}
+type alias ModelElementIdentifier =
+    Path
+
+
+getChildIdentifier : ModelElementIdentifier -> String -> ModelElementIdentifier
+getChildIdentifier path fieldName =
+    Field fieldName :: path
+
+
+getItemIdentifier : ModelElementIdentifier -> Int -> ModelElementIdentifier
+getItemIdentifier path n =
+    Index n :: path
+
+
+isItemOf : ModelElementIdentifier -> ModelElementIdentifier -> Maybe Int
+isItemOf candidatePath path =
+    case ListUtils.substract candidatePath path of
+        Just [ Index i ] ->
+            Just i
+
+        _ ->
+            Nothing
+
+
+isChildOf : ModelElementIdentifier -> ModelElementIdentifier -> Maybe String
+isChildOf candidatePath path =
+    case ListUtils.substract candidatePath path of
+        Just [ Field fieldName ] ->
+            Just fieldName
+
+        _ ->
+            Nothing
+
+
+type alias ModelElementSelector =
+    ModelElementIdentifier -> ModelElementIdentifier
