@@ -2,6 +2,7 @@
     "elm-community/elm-material-icons": "2.0.1",
     "elm-lang/navigation": "2.1.0",
     "elm-lang/virtual-dom": "2.0.4",
+    "elm-lang/mouse": "1.0.1",
     "elm-lang/lazy": "2.0.0",
     "jinjor/elm-time-travel": "2.0.0",
     "elm-lang/dom": "1.1.1",
