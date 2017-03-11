@@ -1,7 +1,7 @@
 module Widget exposing (..)
 
 import Html exposing (Html)
-import Json.Decode exposing (decodeString, int)
+import MetaModel exposing (ModelElementIdentifier)
 import Model exposing (Model)
 import Task
 
@@ -11,45 +11,14 @@ import Task
 -- just use wrappers if you do not have the precise concrete type
 
 
-type GenericField
-    = Field String
-    | Index Int
-
-
-stringOfGenericField : GenericField -> String
-stringOfGenericField f =
-    case f of
-        Field s ->
-            s
-
-        Index i ->
-            toString i
-
-
-genericFieldOfString : String -> GenericField
-genericFieldOfString s =
-    case decodeString int s of
-        Ok n ->
-            Index n
-
-        Err _ ->
-            Field s
-
-
-{-| Paths are provided as a list of string: the root is the *last* element.
--}
-type alias Path =
-    List GenericField
-
-
 {-| note: all effects are functions taking a path as parameter, but the in the top-widget,
 the one given to Html.program, these are not present anymore
 -}
 type alias Widget model msg =
     { initModel : model
     , initMsg : Model -> msg
-    , update : msg -> model -> Path -> ( model, Cmd msg )
-    , subscriptions : model -> Path -> Sub msg
+    , update : msg -> model -> ModelElementIdentifier -> ( model, Cmd msg )
+    , subscriptions : model -> ModelElementIdentifier -> Sub msg
     , view : model -> Html msg
     }
 
@@ -62,7 +31,7 @@ type alias TopWidget model msg =
     }
 
 
-makeTopWidget : Widget model msg -> Path -> TopWidget model msg
+makeTopWidget : Widget model msg -> ModelElementIdentifier -> TopWidget model msg
 makeTopWidget widget rootPath =
     { init = doNothing widget.initModel
     , update = \ms m -> widget.update ms m rootPath

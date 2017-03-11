@@ -1,11 +1,9 @@
 module Binding exposing (..)
 
-import Dict
-import ListUtils exposing (..)
 import LocalStorage
-import MetaModel exposing (ClassRef, MetaModel, ModelType)
+import MetaModel exposing (ClassRef, MetaModel, ModelElementIdentifier, ModelType, getItemIdentifier, isItemOf)
 import Model exposing (Object)
-import Widget exposing (ISelectable, Index, Path, makeTopWidget)
+import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
 type alias BindingErr =
@@ -19,8 +17,8 @@ type BindingResult serializedType
 
 
 type alias Binding msg serializedType =
-    { get : Path -> Sub (BindingResult serializedType)
-    , set : Path -> serializedType -> BindingResult (Cmd msg)
+    { get : ModelElementIdentifier -> Sub (BindingResult serializedType)
+    , set : ModelElementIdentifier -> serializedType -> BindingResult (Cmd msg)
     }
 
 
@@ -28,12 +26,12 @@ type alias BindingTransformer msg ty1 ty2 =
     Binding msg ty1 -> Binding msg ty2
 
 
-andThenGet : (t1 -> BindingResult t2) -> (Path -> Sub (BindingResult t1)) -> (Path -> Sub (BindingResult t2))
+andThenGet : (t1 -> BindingResult t2) -> (ModelElementIdentifier -> Sub (BindingResult t1)) -> (ModelElementIdentifier -> Sub (BindingResult t2))
 andThenGet f get p =
     Sub.map (andThen f) (get p)
 
 
-andThenSet : (t1 -> BindingResult t2) -> (Path -> t2 -> BindingResult (Cmd msg)) -> (Path -> t1 -> BindingResult (Cmd msg))
+andThenSet : (t1 -> BindingResult t2) -> (ModelElementIdentifier -> t2 -> BindingResult (Cmd msg)) -> (ModelElementIdentifier -> t1 -> BindingResult (Cmd msg))
 andThenSet f set p val =
     andThen (\n -> set p n) (f val)
 
@@ -48,15 +46,15 @@ mapBinding fGet fSet binding =
 textBinding : Binding msg String
 textBinding =
     { get =
-        \p ->
+        \boundId ->
             LocalStorage.getStringSub
-                (\( path, s ) ->
-                    if path == p then
+                (\( id, s ) ->
+                    if id == boundId then
                         Ok s
                     else
                         Irrelevant
                 )
-    , set = \p s -> Ok <| LocalStorage.setStringCmd ( p, s )
+    , set = \boundId s -> Ok <| LocalStorage.setStringCmd ( boundId, s )
     }
 
 
@@ -81,12 +79,12 @@ plus2Binding =
 
 
 type alias CollectionBinding msg relativePath =
-    { itemAdded : Path -> Sub (BindingResult ( relativePath, Model.Model ))
-    , itemRemoved : Path -> Sub (BindingResult relativePath)
-    , addItem : Path -> relativePath -> Model.Model -> BindingResult (Cmd msg)
-    , removeItem : Path -> relativePath -> BindingResult (Cmd msg)
-    , askItemContent : Path -> relativePath -> Cmd msg
-    , getAbsolutePath : Path -> relativePath -> Path
+    { itemAdded : ModelElementIdentifier -> Sub (BindingResult ( relativePath, Model.Model ))
+    , itemRemoved : ModelElementIdentifier -> Sub (BindingResult relativePath)
+    , addItem : ModelElementIdentifier -> relativePath -> Model.Model -> BindingResult (Cmd msg)
+    , removeItem : ModelElementIdentifier -> relativePath -> BindingResult (Cmd msg)
+    , askItemContent : ModelElementIdentifier -> relativePath -> Cmd msg
+    , getChildIdentifier : ModelElementIdentifier -> relativePath -> ModelElementIdentifier
     }
 
 
@@ -101,12 +99,12 @@ type alias ListBindingTransformer msg =
 listBinding : MetaModel -> ModelType -> ListBinding msg
 listBinding mm ty =
     { itemAdded =
-        \p ->
+        \boundId ->
             LocalStorage.itemAddedSub mm
                 ty
-                (\( path, maybeObj ) ->
-                    case substract path p of
-                        Just [ Widget.Index i ] ->
+                (\( id, maybeObj ) ->
+                    case id |> isItemOf boundId of
+                        Just i ->
                             case maybeObj of
                                 Result.Ok obj ->
                                     Ok ( i, obj )
@@ -118,57 +116,20 @@ listBinding mm ty =
                             Irrelevant
                 )
     , itemRemoved =
-        \p ->
+        \boundId ->
             LocalStorage.itemRemovedSub
-                (\path ->
-                    case substract path p of
-                        Just [ Widget.Index i ] ->
+                (\id ->
+                    case id |> isItemOf boundId of
+                        Just i ->
                             Ok i
 
                         _ ->
                             Irrelevant
                 )
-    , addItem = \p i m -> Ok <| LocalStorage.addItemCmd (Index i :: p) m
-    , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
-    , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
-    , getAbsolutePath = \p i -> Index i :: p
-    }
-
-
-filterIntegerListBinding : ListBinding msg
-filterIntegerListBinding =
-    { itemAdded =
-        \p ->
-            LocalStorage.itemAddedSub Dict.empty
-                MetaModel.Int
-                (\( path, maybeObj ) ->
-                    case substract path p of
-                        Just [ Widget.Index i ] ->
-                            case maybeObj of
-                                Result.Ok obj ->
-                                    Ok ( i, obj )
-
-                                Result.Err err ->
-                                    Err { description = err }
-
-                        _ ->
-                            Irrelevant
-                )
-    , itemRemoved =
-        \p ->
-            LocalStorage.itemRemovedSub
-                (\path ->
-                    case substract path p of
-                        Just [ Widget.Index i ] ->
-                            Ok i
-
-                        _ ->
-                            Irrelevant
-                )
-    , addItem = \p i m -> Ok <| LocalStorage.addItemCmd (Index i :: p) m
-    , removeItem = \p i -> Ok <| LocalStorage.removeItemCmd (Index i :: p)
-    , askItemContent = \p i -> LocalStorage.askContentCmd (Index i :: p)
-    , getAbsolutePath = \p i -> Index i :: p
+    , addItem = \boundId i m -> Ok <| LocalStorage.addItemCmd (getItemIdentifier boundId i) m
+    , removeItem = \boundId i -> Ok <| LocalStorage.removeItemCmd (getItemIdentifier boundId i)
+    , askItemContent = \boundId i -> LocalStorage.askContentCmd (getItemIdentifier boundId i)
+    , getChildIdentifier = \id i -> getItemIdentifier id i
     }
 
 

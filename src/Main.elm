@@ -11,7 +11,7 @@ import SelectableList
 import SelectableText
 import TimeTravel.Html as TimeTravel
 import Text
-import Widget exposing (GenericField, ISelectable, Index, makeTopWidget)
+import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
 -- METAMODEL
@@ -40,7 +40,7 @@ listExampleWidget =
             GroupWidget.createWidget
                 { divOrSpan = Div
                 , wrappedWidget1 = Label.createWidget "List of stuff:"
-                , pathAdapter1 = identity
+                , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
                         { binding = Binding.listBinding metamodel.metamodel MetaModel.String
@@ -48,14 +48,14 @@ listExampleWidget =
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = Model.String
                         }
-                , pathAdapter2 = identity
+                , selector2 = identity
                 }
-        , pathAdapter1 = identity
+        , selector1 = identity
         , wrappedWidget2 =
             GroupWidget.createWidget
                 { divOrSpan = Div
                 , wrappedWidget1 = Label.createWidget "Only numbers:"
-                , pathAdapter1 = identity
+                , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
                         { binding = Binding.listBinding metamodel.metamodel MetaModel.String
@@ -63,9 +63,9 @@ listExampleWidget =
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = Model.String
                         }
-                , pathAdapter2 = identity
+                , selector2 = identity
                 }
-        , pathAdapter2 = identity
+        , selector2 = identity
         }
 
 
@@ -77,21 +77,21 @@ formExampleWidget =
                 { divOrSpan = Span
                 , wrappedWidget1 =
                     CircleWidget.createWidget
-                        { wrappedWidget = SelectableText.createWidget Binding.textBinding, pathAdapter = identity }
-                , pathAdapter1 = identity
+                        { wrappedWidget = SelectableText.createWidget Binding.textBinding, selector = identity }
+                , selector1 = identity
                 , wrappedWidget2 = Text.createWidget Binding.textBinding
-                , pathAdapter2 = identity
+                , selector2 = identity
                 }
-        , pathAdapter1 = identity
+        , selector1 = identity
         , wrappedWidget2 =
             GroupWidget.createWidget
                 { divOrSpan = Span
                 , wrappedWidget1 = Label.createWidget "Number+2:"
-                , pathAdapter1 = identity
+                , selector1 = identity
                 , wrappedWidget2 = Text.createWidget (Binding.intToStringTransformer Binding.plus2Binding textBinding)
-                , pathAdapter2 = identity
+                , selector2 = identity
                 }
-        , pathAdapter2 = identity
+        , selector2 = identity
         }
 
 
@@ -109,4 +109,4 @@ main =
                 , subscriptions = widget.subscriptions
                 }
                 -- ICI donner le metamodel aussi et celui-ci serait ensuite transmis aux sous-bindings?
-                [ Widget.Field "todos" ]
+                [ MetaModel.Field "todos" ]

@@ -1,12 +1,9 @@
 module GroupWidget exposing (..)
 
 import Html exposing (..)
+import MetaModel exposing (ModelElementIdentifier, ModelElementSelector)
 import Model
-import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
-
-
-type alias PathTransformer =
-    Path -> Path
+import Widget exposing (IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type DivOrSpan
@@ -16,9 +13,9 @@ type DivOrSpan
 
 type alias Parameters subModel1 msg1 subModel2 msg2 =
     { wrappedWidget1 : Widget subModel1 msg1
-    , pathAdapter1 : PathTransformer
+    , selector1 : ModelElementSelector
     , wrappedWidget2 : Widget subModel2 msg2
-    , pathAdapter2 : PathTransformer
+    , selector2 : ModelElementSelector
     , divOrSpan : DivOrSpan
     }
 
@@ -68,21 +65,21 @@ update :
     Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Msg subMsg1 subMsg2
     -> Model subModel1 subModel2
-    -> Path
+    -> ModelElementIdentifier
     -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
-update params msg model path =
+update params msg model id =
     case msg of
         DelegateToWidget1 subMsg ->
             let
                 ( updatedModel1, cmd ) =
-                    params.wrappedWidget1.update subMsg model.wrappedModel1 (params.pathAdapter1 path)
+                    params.wrappedWidget1.update subMsg model.wrappedModel1 (params.selector1 id)
             in
                 ( { model | wrappedModel1 = updatedModel1 }, Cmd.map DelegateToWidget1 cmd )
 
         DelegateToWidget2 subMsg ->
             let
                 ( updatedModel2, cmd ) =
-                    params.wrappedWidget2.update subMsg model.wrappedModel2 (params.pathAdapter2 path)
+                    params.wrappedWidget2.update subMsg model.wrappedModel2 (params.selector2 id)
             in
                 ( { model | wrappedModel2 = updatedModel2 }, Cmd.map DelegateToWidget2 cmd )
 
@@ -104,15 +101,15 @@ update params msg model path =
 subscriptions :
     Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Model subModel1 subModel2
-    -> Path
+    -> ModelElementIdentifier
     -> Sub (Msg subMsg1 subMsg2)
-subscriptions params model path =
+subscriptions params model id =
     let
         sub1 =
-            Sub.map DelegateToWidget1 <| params.wrappedWidget1.subscriptions model.wrappedModel1 (params.pathAdapter1 path)
+            Sub.map DelegateToWidget1 <| params.wrappedWidget1.subscriptions model.wrappedModel1 (params.selector1 id)
 
         sub2 =
-            Sub.map DelegateToWidget2 <| params.wrappedWidget2.subscriptions model.wrappedModel2 (params.pathAdapter2 path)
+            Sub.map DelegateToWidget2 <| params.wrappedWidget2.subscriptions model.wrappedModel2 (params.selector2 id)
     in
         Sub.batch [ sub1, sub2 ]
 

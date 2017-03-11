@@ -4,9 +4,10 @@ import Binding exposing (..)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
+import MetaModel exposing (ModelElementIdentifier)
 import Model
 import Utils exposing (..)
-import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
+import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
 
 
 createWidget : Binding Msg String -> Widget Model Msg
@@ -63,17 +64,17 @@ type Msg
     | NoOp
 
 
-update : Binding Msg String -> Msg -> Model -> Path -> ( Model, Cmd Msg )
-update binding msg model p =
+update : Binding Msg String -> Msg -> Model -> ModelElementIdentifier -> ( Model, Cmd Msg )
+update binding msg model id =
     case msg of
         Init s ->
-            update binding (UIChange s) emptyModel p
+            update binding (UIChange s) emptyModel id
 
         UIChange newContent ->
-            update binding ConfirmModel { model | content = newContent, error = False } p
+            update binding ConfirmModel { model | content = newContent, error = False } id
 
         ConfirmModel ->
-            case binding.set p model.content of
+            case binding.set id model.content of
                 Binding.Ok cmd ->
                     ( model, cmd )
 
@@ -89,7 +90,7 @@ update binding msg model p =
                     doNothing model
 
                 Just initialContent ->
-                    update binding (UIChange initialContent) model p
+                    update binding (UIChange initialContent) model id
 
         ModelChange chgRes ->
             case chgRes of
@@ -111,8 +112,8 @@ update binding msg model p =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String -> Model -> Path -> Sub Msg
-subscriptions binding m p =
+subscriptions : Binding Msg String -> Model -> ModelElementIdentifier -> Sub Msg
+subscriptions binding m id =
     let
         f bindingRes =
             case bindingRes of
@@ -125,7 +126,7 @@ subscriptions binding m p =
                 Binding.Irrelevant ->
                     NoOp
     in
-        Sub.map f (binding.get p)
+        Sub.map f (binding.get id)
 
 
 

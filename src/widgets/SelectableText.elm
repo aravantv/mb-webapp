@@ -3,9 +3,10 @@ module SelectableText exposing (..)
 import Binding exposing (Binding)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
+import MetaModel exposing (ModelElementIdentifier)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (ISelectable, Path, Widget, cmdOfMsg, doNothing)
+import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
 
 
 createSelectableWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg)
@@ -64,13 +65,13 @@ type Msg
     | UIConfirm
 
 
-update : Widget Text.Model Text.Msg -> Msg -> Model -> Path -> ( Model, Cmd Msg )
-update textWidget msg model p =
+update : Widget Text.Model Text.Msg -> Msg -> Model -> ModelElementIdentifier -> ( Model, Cmd Msg )
+update textWidget msg model id =
     case msg of
         DelegateToTextMsg textMsg ->
             let
                 ( textModel, textCmd ) =
-                    textWidget.update textMsg model.textModel p
+                    textWidget.update textMsg model.textModel id
 
                 cmd =
                     Cmd.map DelegateToTextMsg textCmd
@@ -98,7 +99,7 @@ update textWidget msg model p =
         UIConfirm ->
             let
                 ( textModel, textCmd ) =
-                    textWidget.update Text.ConfirmModel model.textModel p
+                    textWidget.update Text.ConfirmModel model.textModel id
             in
                 ( { model | textModel = textModel, editMode = False }, Cmd.map DelegateToTextMsg textCmd )
 
@@ -107,9 +108,9 @@ update textWidget msg model p =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Widget Text.Model Text.Msg -> Model -> Path -> Sub Msg
-subscriptions textWidget m p =
-    Sub.map DelegateToTextMsg <| textWidget.subscriptions m.textModel p
+subscriptions : Widget Text.Model Text.Msg -> Model -> ModelElementIdentifier -> Sub Msg
+subscriptions textWidget m id =
+    Sub.map DelegateToTextMsg <| textWidget.subscriptions m.textModel id
 
 
 

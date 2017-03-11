@@ -1,22 +1,19 @@
 module CircleWidget exposing (..)
 
 import Html exposing (..)
+import Json.Decode
+import MetaModel exposing (ModelElementIdentifier, ModelElementSelector)
+import Model
 import Mouse
 import Svg exposing (clipPath, svg)
 import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeWidth, transform, width)
 import Svg.Events
-import Widget exposing (IDecision, ISelectable, Index, Path, UnboundWidget, Widget, cmdOfMsg, doNothing)
-import Json.Decode
-import Model
-
-
-type alias PathTransformer =
-    Path -> Path
+import Widget exposing (IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
 
 
 type alias Parameters subModel subMsg =
     { wrappedWidget : Widget subModel subMsg
-    , pathAdapter : PathTransformer
+    , selector : ModelElementSelector
     }
 
 
@@ -66,14 +63,14 @@ update :
     Parameters subModel subMsg
     -> Msg subMsg
     -> Model subModel
-    -> Path
+    -> ModelElementIdentifier
     -> ( Model subModel, Cmd (Msg subMsg) )
-update params msg model path =
+update params msg model id =
     case msg of
         DelegateToWidget subMsg ->
             let
                 ( updatedModel, cmd ) =
-                    params.wrappedWidget.update subMsg model.wrappedModel (params.pathAdapter path)
+                    params.wrappedWidget.update subMsg model.wrappedModel (params.selector id)
             in
                 ( { model | wrappedModel = updatedModel }, Cmd.map DelegateToWidget cmd )
 
@@ -103,11 +100,11 @@ update params msg model path =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Parameters subModel subMsg -> Model subModel -> Path -> Sub (Msg subMsg)
-subscriptions params model path =
+subscriptions : Parameters subModel subMsg -> Model subModel -> ModelElementIdentifier -> Sub (Msg subMsg)
+subscriptions params model id =
     let
         subSub =
-            Sub.map DelegateToWidget <| params.wrappedWidget.subscriptions model.wrappedModel (params.pathAdapter path)
+            Sub.map DelegateToWidget <| params.wrappedWidget.subscriptions model.wrappedModel (params.selector id)
     in
         case model.dragStartPosition of
             Just startPos ->
