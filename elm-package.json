@@ -5,7 +5,8 @@
     "license": "MIT",
     "source-directories": [
         "nesting",
-        "src"
+        "src",
+        "src/widgets"
     ],
     "exposed-modules": [],
     "dependencies": {
