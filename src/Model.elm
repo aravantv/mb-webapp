@@ -4,6 +4,7 @@ import Dict exposing (Dict)
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode
 import MetaModel exposing (AttributeDescription, ClassRef, MetaModel, ModelType, Multiplicity, RootedMetaModel, classRefDecoder, matchesClass, stringOfClassRef)
+import ModelJsonParameters exposing (boolTypeID, intTypeID, sanitizeName, stringTypeID, typeFieldName, unsanitizeName, valueFieldName)
 
 
 type alias Object =
@@ -25,65 +26,36 @@ rootedMetaModelFactory rmm =
             )
 
 
-sanitizeAttributeName : String -> String
-sanitizeAttributeName name =
-    if name == classFieldName then
-        name ++ "_"
-    else
-        name
-
-
-classFieldName : String
-classFieldName =
-    "classReference"
-
-
 jsonOfObject : Object -> Json.Encode.Value
 jsonOfObject obj =
     let
         attrs =
-            List.map (\( name, value ) -> ( sanitizeAttributeName name, jsonOfAttributeValue value )) (Dict.toList obj.attributes)
+            List.map (\( name, value ) -> ( sanitizeName name, jsonOfAttributeValue value )) (Dict.toList obj.attributes)
     in
-        Json.Encode.object <| ( classFieldName, MetaModel.jsonOfClassRef obj.classRef ) :: attrs
+        Json.Encode.object attrs
 
 
-objectDecoder : MetaModel -> MetaModel.ClassRef -> Decoder Object
-objectDecoder mm classRef =
+attributesDecoder : MetaModel -> MetaModel.ClassRef -> Decoder (Dict String AttributeValue)
+attributesDecoder mm classRef =
     case MetaModel.classDefOfClassRef mm classRef of
         Just classDef ->
             let
-                attrsDecoder =
-                    attributesDecoder mm classDef.class.attributes
+                accumulateFieldDecoder requestedAttrName requestedAttrDesc decoderAcc =
+                    let
+                        fieldDecoder =
+                            Dec.field (sanitizeName requestedAttrName) (attributeDecoder mm requestedAttrDesc)
+                    in
+                        Dec.map2 (\dict attrValue -> Dict.insert requestedAttrName attrValue dict) decoderAcc fieldDecoder
             in
-                Dec.map2 (\ref attrs -> { classRef = ref, attributes = attrs }) (classRefFieldDecoder classDef) attrsDecoder
+                Dict.foldl accumulateFieldDecoder (Dec.succeed Dict.empty) classDef.class.attributes
 
         Nothing ->
             Dec.fail <| "Class " ++ MetaModel.stringOfClassRef classRef ++ " unknown"
 
 
-attributesDecoder : MetaModel -> Dict String AttributeDescription -> Decoder (Dict String AttributeValue)
-attributesDecoder mm attrs =
-    let
-        accumulateFieldDecoder requestedAttrName requestedAttrDesc decoderAcc =
-            let
-                fieldDecoder =
-                    Dec.field (sanitizeAttributeName requestedAttrName) (attributeDecoder mm requestedAttrDesc)
-            in
-                Dec.map2 (\dict attrValue -> Dict.insert requestedAttrName attrValue dict) decoderAcc fieldDecoder
-    in
-        Dict.foldl accumulateFieldDecoder (Dec.succeed Dict.empty) attrs
-
-
-classRefFieldDecoder : MetaModel.ClassDef -> Dec.Decoder ClassRef
-classRefFieldDecoder class =
-    let
-        filtersClass classRef =
-            if matchesClass classRef class then
-                Dec.succeed classRef
-            else
-                Dec.fail (MetaModel.stringOfClassRef classRef)
-    in
-        Dec.field classFieldName classRefDecoder |> Dec.andThen filtersClass
+objectDecoder : MetaModel -> MetaModel.ClassRef -> Decoder Object
+objectDecoder mm classRef =
+    Dec.map (\attrs -> { classRef = classRef, attributes = attrs }) <| attributesDecoder mm classRef
 
 
 type Model
@@ -93,8 +65,34 @@ type Model
     | ObjectRef Object
 
 
-jsonOfModel : Model -> Json.Encode.Value
-jsonOfModel model =
+typeOfModel : Model -> Json.Encode.Value
+typeOfModel model =
+    case model of
+        String s ->
+            Json.Encode.string stringTypeID
+
+        Int n ->
+            Json.Encode.string intTypeID
+
+        Bool b ->
+            Json.Encode.string boolTypeID
+
+        ObjectRef obj ->
+            let
+                json =
+                    MetaModel.jsonOfClassRef obj.classRef
+            in
+                -- sanitizes the name to ensure no collision with string/bool/int
+                case Dec.decodeValue Dec.string json of
+                    Ok s ->
+                        Json.Encode.string (sanitizeName s)
+
+                    Err _ ->
+                        json
+
+
+jsonOfValue : Model -> Json.Encode.Value
+jsonOfValue model =
     case model of
         String s ->
             Json.Encode.string s
@@ -109,20 +107,26 @@ jsonOfModel model =
             jsonOfObject obj
 
 
+jsonOfModel : Model -> Json.Encode.Value
+jsonOfModel model =
+    Json.Encode.object [ ( typeFieldName, typeOfModel model ), ( valueFieldName, jsonOfValue model ) ]
+
+
 modelDecoder : MetaModel -> MetaModel.ModelType -> Decoder Model
 modelDecoder mm ty =
-    case ty of
-        MetaModel.String ->
-            Dec.map String Dec.string
-
-        MetaModel.Int ->
-            Dec.map Int Dec.int
-
-        MetaModel.Bool ->
-            Dec.map Bool Dec.bool
-
-        MetaModel.ClassRef ref ->
-            Dec.map ObjectRef (objectDecoder mm ref)
+    Dec.field typeFieldName Dec.string
+        |> Dec.andThen
+            (\s ->
+                Dec.field valueFieldName <|
+                    if s == stringTypeID then
+                        Dec.map String Dec.string
+                    else if s == intTypeID then
+                        Dec.map Int Dec.int
+                    else if s == boolTypeID then
+                        Dec.map Bool Dec.bool
+                    else
+                        Dec.map ObjectRef <| objectDecoder mm (unsanitizeName s)
+            )
 
 
 type AttributeValue
