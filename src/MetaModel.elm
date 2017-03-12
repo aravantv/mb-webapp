@@ -67,8 +67,8 @@ matchesClass cr c =
 
 
 jsonOfClassRef : ClassRef -> Json.Encode.Value
-jsonOfClassRef ref =
-    Json.Encode.string ref
+jsonOfClassRef =
+    Json.Encode.string
 
 
 stringOfClassRef : ClassRef -> String
