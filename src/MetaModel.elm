@@ -24,7 +24,7 @@ metamodel l =
 
 
 type alias RootedMetaModel =
-    { root : ClassRef
+    { root : ModelType
     , metamodel : MetaModel
     }
 
