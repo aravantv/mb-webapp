@@ -63,11 +63,11 @@ setStringCmd ( p, s ) =
 port itemAddedSubPort : (( StoragePath, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : MetaModel -> ModelType -> (( ModelElementIdentifier, Result String Model.Model ) -> c) -> Sub c
-itemAddedSub mm ty msgBuilder =
+itemAddedSub : MetaModel -> (( ModelElementIdentifier, Result String Model.Model ) -> c) -> Sub c
+itemAddedSub mm msgBuilder =
     let
         objOfJson json =
-            Json.Decode.decodeValue (Model.modelDecoder mm ty) json
+            Json.Decode.decodeValue (Model.modelDecoder mm) json
     in
         itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
 

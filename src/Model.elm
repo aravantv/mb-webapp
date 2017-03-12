@@ -112,8 +112,8 @@ jsonOfModel model =
     Json.Encode.object [ ( typeFieldName, typeOfModel model ), ( valueFieldName, jsonOfValue model ) ]
 
 
-modelDecoder : MetaModel -> MetaModel.ModelType -> Decoder Model
-modelDecoder mm ty =
+modelDecoder : MetaModel -> Decoder Model
+modelDecoder mm =
     Dec.field typeFieldName Dec.string
         |> Dec.andThen
             (\s ->
@@ -188,7 +188,7 @@ attributeDecoder : MetaModel -> AttributeDescription -> Dec.Decoder AttributeVal
 attributeDecoder mm desc =
     case desc.multiplicity of
         MetaModel.Single ->
-            Dec.map SingleModel <| Dec.nullable (modelDecoder mm desc.type_)
+            Dec.map SingleModel <| Dec.nullable (modelDecoder mm)
 
         MetaModel.Multiple ->
             case desc.type_ of

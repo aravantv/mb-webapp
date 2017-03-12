@@ -96,12 +96,11 @@ type alias ListBindingTransformer msg =
     ListBinding msg -> ListBinding msg
 
 
-listBinding : MetaModel -> ModelType -> ListBinding msg
-listBinding mm ty =
+listBinding : MetaModel -> ListBinding msg
+listBinding mm =
     { itemAdded =
         \boundId ->
             LocalStorage.itemAddedSub mm
-                ty
                 (\( id, maybeObj ) ->
                     case id |> isItemOf boundId of
                         Just i ->

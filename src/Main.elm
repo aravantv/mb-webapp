@@ -43,7 +43,7 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.metamodel MetaModel.String
+                        { binding = Binding.listBinding metamodel.metamodel
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = Model.String
@@ -58,7 +58,7 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.metamodel MetaModel.String
+                        { binding = Binding.listBinding metamodel.metamodel
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = Model.String
