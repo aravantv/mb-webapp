@@ -13,17 +13,28 @@ type alias Object =
     }
 
 
-rootedMetaModelFactory : RootedMetaModel -> Maybe Object
+rootedMetaModelFactory : RootedMetaModel -> Maybe Model
 rootedMetaModelFactory rmm =
-    MetaModel.classDefOfClassRef rmm.metamodel rmm.root
-        |> Maybe.map
-            (\classDef ->
-                let
-                    attrValues =
-                        Dict.map (always attributeFactory) classDef.class.attributes
-                in
-                    { classRef = rmm.root, attributes = attrValues }
-            )
+    case rmm.root of
+        MetaModel.String ->
+            Just (String "")
+
+        MetaModel.Int ->
+            Just (Int 0)
+
+        MetaModel.Bool ->
+            Just (Bool False)
+
+        MetaModel.ClassRef classRef ->
+            MetaModel.classDefOfClassRef rmm.metamodel classRef
+                |> Maybe.map
+                    (\classDef ->
+                        let
+                            attrValues =
+                                Dict.map (always attributeFactory) classDef.class.attributes
+                        in
+                            ObjectRef { classRef = classRef, attributes = attrValues }
+                    )
 
 
 jsonOfObject : Object -> Json.Encode.Value
