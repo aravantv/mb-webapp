@@ -23,10 +23,9 @@ metamodel l =
         Dict.fromList lWithDict
 
 
-type alias RootedMetaModel =
-    { root : ModelType
-    , metamodel : MetaModel
-    }
+emptyMetamodel : MetaModel
+emptyMetamodel =
+    Dict.empty
 
 
 type alias Class =
@@ -54,6 +53,12 @@ type ModelType
     | Int
     | Bool
     | ClassRef ClassRef
+
+
+type alias RootedMetaModel =
+    { root : ModelType
+    , metamodel : MetaModel
+    }
 
 
 type alias ClassRef =
@@ -137,18 +142,18 @@ type alias ModelElementIdentifier =
 
 
 getChildIdentifier : ModelElementIdentifier -> String -> ModelElementIdentifier
-getChildIdentifier path fieldName =
-    Field fieldName :: path
+getChildIdentifier id fieldName =
+    Field fieldName :: id
 
 
 getItemIdentifier : ModelElementIdentifier -> Int -> ModelElementIdentifier
-getItemIdentifier path n =
-    Index n :: path
+getItemIdentifier id n =
+    Index n :: id
 
 
 isItemOf : ModelElementIdentifier -> ModelElementIdentifier -> Maybe Int
-isItemOf candidatePath path =
-    case ListUtils.substract candidatePath path of
+isItemOf candidateModelId id =
+    case ListUtils.substract candidateModelId id of
         Just [ Index i ] ->
             Just i
 
@@ -157,8 +162,8 @@ isItemOf candidatePath path =
 
 
 isChildOf : ModelElementIdentifier -> ModelElementIdentifier -> Maybe String
-isChildOf candidatePath path =
-    case ListUtils.substract candidatePath path of
+isChildOf candidateModelId id =
+    case ListUtils.substract candidateModelId id of
         Just [ Field fieldName ] ->
             Just fieldName
 
