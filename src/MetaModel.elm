@@ -28,6 +28,28 @@ emptyMetamodel =
     Dict.empty
 
 
+atomicRootMetaModel : ModelType -> RootedMetaModel
+atomicRootMetaModel mt =
+    { root = mt
+    , metamodel = emptyMetamodel
+    }
+
+
+stringRootMetaModel : RootedMetaModel
+stringRootMetaModel =
+    atomicRootMetaModel String
+
+
+intRootMetaModel : RootedMetaModel
+intRootMetaModel =
+    atomicRootMetaModel Int
+
+
+boolRootMetaModel : RootedMetaModel
+boolRootMetaModel =
+    atomicRootMetaModel Bool
+
+
 type alias Class =
     { attributes : Dict String AttributeDescription }
 
