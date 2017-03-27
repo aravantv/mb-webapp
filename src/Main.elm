@@ -4,13 +4,13 @@ import Binding exposing (textBinding)
 import CircleWidget
 import GroupWidget exposing (..)
 import Label
-import MetaModel exposing (MetaModel, Multiplicity, RootedMetaModel)
+import MetaModel exposing (ClassRef, MetaModel, Multiplicity, RootedMetaModel)
 import Model
 import NewText
 import SelectableList
 import SelectableText
-import TimeTravel.Html as TimeTravel
 import Text
+import TimeTravel.Html as TimeTravel
 import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
@@ -19,7 +19,7 @@ import Widget exposing (ISelectable, Index, makeTopWidget)
 
 metamodel : RootedMetaModel
 metamodel =
-    { root = "MyList"
+    { root = ClassRef "MyList"
     , metamodel =
         MetaModel.metamodel
             [ ( "MyList"
@@ -95,6 +95,10 @@ formExampleWidget =
         }
 
 
+textExampleWidget =
+    Text.createWidget Binding.textBinding
+
+
 main =
     let
         widget =
@@ -102,11 +106,6 @@ main =
     in
         TimeTravel.program <|
             makeTopWidget
-                { initModel = widget.initModel
-                , initMsg = widget.initMsg
-                , update = widget.update
-                , view = widget.view
-                , subscriptions = widget.subscriptions
-                }
+                textExampleWidget
                 -- ICI donner le metamodel aussi et celui-ci serait ensuite transmis aux sous-bindings?
                 [ MetaModel.Field "todos" ]
