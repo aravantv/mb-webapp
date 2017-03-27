@@ -7,15 +7,15 @@ import ListUtils exposing (..)
 import MetaModel exposing (ModelElementIdentifier, getItemIdentifier)
 import Model exposing (Model)
 import Utils exposing (enterKey, onKeyDown, onKeyUp, shiftCode, tabKey)
-import Widget exposing (Factory, IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Widget exposing (BoundWidget, Factory, IDecision, ISelectable, Index, Unbound, Widget, cmdOfMsg, doNothing)
 
 
 type alias ItemWidget model msg =
-    ISelectable model msg (Widget model msg)
+    ISelectable model msg { widget : Widget model msg }
 
 
 type alias NewItemWidget model msg =
-    IDecision msg (UnboundWidget model msg)
+    IDecision msg { widget : Widget model msg }
 
 
 type alias Parameters newItemModel itemModel newItemMsg itemMsg =
@@ -29,12 +29,12 @@ type alias Parameters newItemModel itemModel newItemMsg itemMsg =
 createWidget :
     Parameters newItemModel itemModel newItemMsg itemMsg
     -> Widget (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel)
-createWidget params =
-    { initModel = emptyModel params
+createWidget params id =
+    { initModel = emptyModel params id
     , initMsg = Init
-    , update = update params
-    , subscriptions = subscriptions params
-    , view = view params
+    , update = update params id
+    , subscriptions = subscriptions params id
+    , view = view params id
     }
 
 
@@ -46,9 +46,12 @@ type alias Model newItemModel itemModel =
     { itemToAdd : newItemModel, contents : List itemModel }
 
 
-emptyModel : Parameters newItemModel itemModel newItemMsg itemMsg -> Model newItemModel itemModel
-emptyModel params =
-    { itemToAdd = params.newItemWidget.initModel, contents = [] }
+emptyModel :
+    Parameters newItemModel itemModel newItemMsg itemMsg
+    -> ModelElementIdentifier
+    -> Model newItemModel itemModel
+emptyModel params id =
+    { itemToAdd = (params.newItemWidget.widget id).initModel, contents = [] }
 
 
 
@@ -69,19 +72,19 @@ type Msg newItemMsg itemMsg itemModel
 
 update :
     Parameters newItemModel itemModel newItemMsg itemMsg
+    -> ModelElementIdentifier
     -> Msg newItemMsg itemMsg itemModel
     -> Model newItemModel itemModel
-    -> ModelElementIdentifier
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-update params msg model id =
+update params id msg model =
     case msg of
         DelegateToNewItemMsg subMsg ->
             if subMsg == params.newItemWidget.confirmMsg then
-                ( { model | itemToAdd = params.newItemWidget.initModel }
+                ( { model | itemToAdd = (params.newItemWidget.widget id).initModel }
                 , addItemCmd params id 0 (params.factory model.itemToAdd)
                 )
             else
-                delegateUpdateToItemToAdd params model subMsg
+                delegateUpdateToItemToAdd params id model subMsg
 
         DelegateToItemMsg i subMsg ->
             let
@@ -108,13 +111,13 @@ update params msg model id =
                     doNothing model
 
         SelectNext i ->
-            update params (DelegateToItemMsg (i + 1) params.itemWidget.selectMsg) model id
+            update params id (DelegateToItemMsg (i + 1) params.itemWidget.selectMsg) model
 
         SelectPrevious i ->
-            update params (DelegateToItemMsg (i - 1) params.itemWidget.selectMsg) model id
+            update params id (DelegateToItemMsg (i - 1) params.itemWidget.selectMsg) model
 
         BackendAddedItem ( i, m ) ->
-            case insert model.contents params.itemWidget.initModel i of
+            case insert model.contents (params.itemWidget.widget id).initModel i of
                 Just newContents ->
                     ( { model | contents = newContents }, params.binding.askItemContent id i )
 
@@ -131,7 +134,7 @@ update params msg model id =
                         model
 
         Init l ->
-            ( emptyModel params, Cmd.none )
+            ( emptyModel params id, Cmd.none )
 
         NoOp ->
             doNothing model
@@ -139,13 +142,14 @@ update params msg model id =
 
 delegateUpdateToItemToAdd :
     Parameters newItemModel itemModel newItemMsg itemMsg
+    -> ModelElementIdentifier
     -> Model newItemModel itemModel
     -> newItemMsg
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
-delegateUpdateToItemToAdd params model subMsg =
+delegateUpdateToItemToAdd params id model subMsg =
     let
         ( updatedItemToAdd, cmd ) =
-            params.newItemWidget.update subMsg model.itemToAdd
+            (params.newItemWidget.widget id).update subMsg model.itemToAdd
     in
         ( { model | itemToAdd = updatedItemToAdd }, Cmd.map DelegateToNewItemMsg cmd )
 
@@ -159,7 +163,7 @@ addItemCmd :
 addItemCmd params id indexToAdd itemToAdd =
     let
         initItemWithItemToAddCmd =
-            cmdOfMsg (DelegateToItemMsg indexToAdd (params.itemWidget.initMsg itemToAdd))
+            cmdOfMsg (DelegateToItemMsg indexToAdd ((params.itemWidget.widget id).initMsg itemToAdd))
     in
         case params.binding.addItem id indexToAdd itemToAdd of
             Binding.Ok res ->
@@ -183,7 +187,11 @@ unselectPreviouslySelectedItems params id items exceptIndex msg =
     let
         unselectIfPreviouslySelected j itemModel =
             if params.itemWidget.isSelected itemModel && j /= exceptIndex then
-                params.itemWidget.update params.itemWidget.unselectMsg itemModel (getItemIdentifier id j)
+                let
+                    instantiatedWidget =
+                        params.itemWidget.widget (getItemIdentifier id j)
+                in
+                    instantiatedWidget.update params.itemWidget.unselectMsg itemModel
             else
                 doNothing itemModel
 
@@ -210,8 +218,11 @@ delegateUpdateToItem params id contents itemIndex itemMsg =
 
         Just subModel ->
             let
+                instantiatedWidget =
+                    params.itemWidget.widget (MetaModel.getItemIdentifier id itemIndex)
+
                 ( updatedSubModel, cmd ) =
-                    params.itemWidget.update itemMsg subModel (MetaModel.getItemIdentifier id itemIndex)
+                    instantiatedWidget.update itemMsg subModel
             in
                 ( List.take itemIndex contents ++ [ updatedSubModel ] ++ List.drop (itemIndex + 1) contents
                 , Cmd.map (DelegateToItemMsg itemIndex) cmd
@@ -224,13 +235,17 @@ delegateUpdateToItem params id contents itemIndex itemMsg =
 
 subscriptions :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> Model newItemModel itemModel
     -> ModelElementIdentifier
+    -> Model newItemModel itemModel
     -> Sub (Msg newItemMsg itemMsg itemModel)
-subscriptions params model id =
+subscriptions params id model =
     let
         itemSub i itemModel =
-            Sub.map (DelegateToItemMsg i) <| params.itemWidget.subscriptions itemModel (params.binding.getChildIdentifier id i)
+            let
+                instantiatedWidget =
+                    params.itemWidget.widget (params.binding.getChildIdentifier id i)
+            in
+                Sub.map (DelegateToItemMsg i) (instantiatedWidget.subscriptions itemModel)
 
         msgOfBindingRes f res =
             case res of
@@ -258,20 +273,27 @@ subscriptions params model id =
 
 view :
     Parameters newItemModel itemModel newItemMsg itemMsg
+    -> ModelElementIdentifier
     -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel)
-view params model =
+view params id model =
     let
+        instantiatedWidget i =
+            params.itemWidget.widget (params.binding.getChildIdentifier id i)
+
         delegateViewToItem i m =
             li []
                 [ span
                     {--We need to use key down here because browsers have their own interpretation of this key combination. --}
                     [ onKeyDown [ ( tabKey, SelectNext i ), ( shiftCode tabKey, SelectPrevious i ) ] ]
-                    [ Html.map (DelegateToItemMsg i) <| params.itemWidget.view m
+                    [ Html.map (DelegateToItemMsg i) <| (instantiatedWidget i).view m
                     , button [ onClick <| Remove i ] [ text "-" ]
                     ]
                 ]
+
+        instantiatedNewWidget =
+            params.newItemWidget.widget id
     in
         ul [] <|
-            li [] [ Html.map DelegateToNewItemMsg <| params.newItemWidget.view model.itemToAdd ]
+            li [] [ Html.map DelegateToNewItemMsg <| instantiatedNewWidget.view model.itemToAdd ]
                 :: List.indexedMap delegateViewToItem model.contents

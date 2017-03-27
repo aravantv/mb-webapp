@@ -1,17 +1,12 @@
 module Label exposing (..)
 
 import Html exposing (Html, input, label, text)
-import Widget exposing (IDecision, Widget, TopWidget, UnboundWidget, doNothing, makeBoundWidget)
+import Widget exposing (IDecision, Widget, TopWidget, doNothing)
 import Model
 
 
 createWidget : String -> Widget Model Msg
-createWidget =
-    createUnboundWidget >> makeBoundWidget
-
-
-createUnboundWidget : String -> UnboundWidget Model Msg
-createUnboundWidget s =
+createWidget s _ =
     { initModel = s
     , initMsg =
         \m ->

@@ -10,13 +10,13 @@ import Utils exposing (..)
 import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : Binding Msg String -> Widget Model Msg
-createWidget binding =
+createWidget : GenericBinding Msg String -> Widget Model Msg
+createWidget binding id =
     { initMsg = initMsg
     , initModel = emptyModel
-    , update = update binding
+    , update = update binding id
     , view = view
-    , subscriptions = subscriptions binding
+    , subscriptions = subscriptions id binding
     }
 
 
@@ -64,17 +64,17 @@ type Msg
     | NoOp
 
 
-update : Binding Msg String -> Msg -> Model -> ModelElementIdentifier -> ( Model, Cmd Msg )
-update binding msg model id =
+update : GenericBinding Msg String -> ModelElementIdentifier -> Msg -> Model -> ( Model, Cmd Msg )
+update binding id msg model =
     case msg of
         Init s ->
-            update binding (UIChange s) emptyModel id
+            update binding id (UIChange s) emptyModel
 
         UIChange newContent ->
-            update binding ConfirmModel { model | content = newContent, error = False } id
+            update binding id ConfirmModel { model | content = newContent, error = False }
 
         ConfirmModel ->
-            case binding.set id model.content of
+            case (binding id).set model.content of
                 Binding.Ok cmd ->
                     ( model, cmd )
 
@@ -90,7 +90,7 @@ update binding msg model id =
                     doNothing model
 
                 Just initialContent ->
-                    update binding (UIChange initialContent) model id
+                    update binding id (UIChange initialContent) model
 
         ModelChange chgRes ->
             case chgRes of
@@ -112,13 +112,13 @@ update binding msg model id =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Binding Msg String -> Model -> ModelElementIdentifier -> Sub Msg
-subscriptions binding m id =
+subscriptions : ModelElementIdentifier -> GenericBinding Msg String -> Model -> Sub Msg
+subscriptions id binding m =
     let
         f bindingRes =
             case bindingRes of
-                Binding.Ok v ->
-                    ModelChange (Result.Ok v)
+                Binding.Ok s ->
+                    ModelChange (Result.Ok s)
 
                 Binding.Err err ->
                     ModelChange (Result.Err err)
@@ -126,7 +126,7 @@ subscriptions binding m id =
                 Binding.Irrelevant ->
                     NoOp
     in
-        Sub.map f (binding.get id)
+        Sub.map f (binding id).get
 
 
 

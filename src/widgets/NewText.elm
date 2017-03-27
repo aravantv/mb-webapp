@@ -3,19 +3,22 @@ module NewText exposing (..)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
-import Utils exposing (..)
-import Widget exposing (IDecision, TopWidget, UnboundWidget, doNothing)
 import Model
+import Utils exposing (..)
+import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget, doNothing)
 
 
-widget : IDecision Msg (UnboundWidget Model Msg)
+widget : IDecision Msg { widget : Widget Model Msg }
 widget =
-    { initModel = emptyModel
-    , initMsg = Init
-    , update = update
-    , view = view
-    , subscriptions = Widget.emptySubscription
-    , confirmMsg = Confirm
+    { confirmMsg = Confirm
+    , widget =
+        \_ ->
+            { initModel = emptyModel
+            , initMsg = Init
+            , update = update
+            , view = view
+            , subscriptions = Widget.emptySubscription
+            }
     }
 
 

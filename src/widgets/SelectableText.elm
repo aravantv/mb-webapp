@@ -1,43 +1,34 @@
 module SelectableText exposing (..)
 
-import Binding exposing (Binding)
+import Binding exposing (Binding, GenericBinding)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
-import MetaModel exposing (ModelElementIdentifier)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
+import Widget exposing (BoundWidget, ISelectable, Unbound, Widget, cmdOfMsg, doNothing)
 
 
-createSelectableWidget : Binding Text.Msg String -> ISelectable Model Msg (Widget Model Msg)
+createWidget : GenericBinding Text.Msg String -> Widget Model Msg
+createWidget binding id =
+    let
+        textWidget =
+            Text.createWidget binding id
+    in
+        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
+        , initModel = initModel textWidget
+        , update = update textWidget
+        , view = view textWidget
+        , subscriptions = subscriptions textWidget
+        }
+
+
+createSelectableWidget : GenericBinding Text.Msg String -> ISelectable Model Msg { widget : Widget Model Msg }
 createSelectableWidget binding =
-    let
-        textWidget =
-            Text.createWidget binding
-    in
-        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
-        , initModel = initModel textWidget
-        , update = update textWidget
-        , view = view textWidget
-        , subscriptions = subscriptions textWidget
-        , isSelected = .editMode
-        , selectMsg = UISelect
-        , unselectMsg = UIConfirm
-        }
-
-
-createWidget : Binding Text.Msg String -> Widget Model Msg
-createWidget binding =
-    let
-        textWidget =
-            Text.createWidget binding
-    in
-        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
-        , initModel = initModel textWidget
-        , update = update textWidget
-        , view = view textWidget
-        , subscriptions = subscriptions textWidget
-        }
+    { isSelected = .editMode
+    , selectMsg = UISelect
+    , unselectMsg = UIConfirm
+    , widget = createWidget binding
+    }
 
 
 
@@ -50,7 +41,7 @@ type alias Model =
     }
 
 
-initModel : Widget Text.Model Text.Msg -> Model
+initModel : BoundWidget Text.Model Text.Msg -> Model
 initModel textWidget =
     { textModel = textWidget.initModel, editMode = False }
 
@@ -65,13 +56,13 @@ type Msg
     | UIConfirm
 
 
-update : Widget Text.Model Text.Msg -> Msg -> Model -> ModelElementIdentifier -> ( Model, Cmd Msg )
-update textWidget msg model id =
+update : BoundWidget Text.Model Text.Msg -> Msg -> Model -> ( Model, Cmd Msg )
+update textWidget msg model =
     case msg of
         DelegateToTextMsg textMsg ->
             let
                 ( textModel, textCmd ) =
-                    textWidget.update textMsg model.textModel id
+                    textWidget.update textMsg model.textModel
 
                 cmd =
                     Cmd.map DelegateToTextMsg textCmd
@@ -99,7 +90,7 @@ update textWidget msg model id =
         UIConfirm ->
             let
                 ( textModel, textCmd ) =
-                    textWidget.update Text.ConfirmModel model.textModel id
+                    textWidget.update Text.ConfirmModel model.textModel
             in
                 ( { model | textModel = textModel, editMode = False }, Cmd.map DelegateToTextMsg textCmd )
 
@@ -108,16 +99,16 @@ update textWidget msg model id =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Widget Text.Model Text.Msg -> Model -> ModelElementIdentifier -> Sub Msg
-subscriptions textWidget m id =
-    Sub.map DelegateToTextMsg <| textWidget.subscriptions m.textModel id
+subscriptions : BoundWidget Text.Model Text.Msg -> Model -> Sub Msg
+subscriptions textWidget m =
+    Sub.map DelegateToTextMsg (textWidget.subscriptions m.textModel)
 
 
 
 -- VIEW
 
 
-view : Widget Text.Model Text.Msg -> Model -> Html Msg
+view : BoundWidget Text.Model Text.Msg -> Model -> Html Msg
 view textWidget model =
     if model.editMode then
         span [ onKeyUp [ ( enterKey, UIConfirm ) ] ]

@@ -3,7 +3,7 @@ module GroupWidget exposing (..)
 import Html exposing (..)
 import MetaModel exposing (ModelElementIdentifier, ModelElementSelector)
 import Model
-import Widget exposing (IDecision, ISelectable, Index, UnboundWidget, Widget, cmdOfMsg, doNothing)
+import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothing)
 
 
 type DivOrSpan
@@ -23,12 +23,12 @@ type alias Parameters subModel1 msg1 subModel2 msg2 =
 createWidget :
     Parameters subModel1 subMsg1 subModel2 subMsg2
     -> Widget (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
-createWidget params =
-    { initModel = emptyModel params
+createWidget params id =
+    { initModel = emptyModel params id
     , initMsg = \m -> Init ( m, m )
-    , update = update params
-    , subscriptions = subscriptions params
-    , view = view params
+    , update = update params id
+    , subscriptions = subscriptions params id
+    , view = view params id
     }
 
 
@@ -44,10 +44,11 @@ type alias Model subModel1 subModel2 =
 
 emptyModel :
     Parameters subModel1 subMsg1 subModel2 subMsg2
+    -> ModelElementIdentifier
     -> Model subModel1 subModel2
-emptyModel params =
-    { wrappedModel1 = params.wrappedWidget1.initModel
-    , wrappedModel2 = params.wrappedWidget2.initModel
+emptyModel params id =
+    { wrappedModel1 = (params.wrappedWidget1 (params.selector1 id)).initModel
+    , wrappedModel2 = (params.wrappedWidget2 (params.selector2 id)).initModel
     }
 
 
@@ -63,35 +64,42 @@ type Msg subMsg1 subMsg2
 
 update :
     Parameters subModel1 subMsg1 subModel2 subMsg2
+    -> ModelElementIdentifier
     -> Msg subMsg1 subMsg2
     -> Model subModel1 subModel2
-    -> ModelElementIdentifier
     -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
-update params msg model id =
-    case msg of
-        DelegateToWidget1 subMsg ->
-            let
-                ( updatedModel1, cmd ) =
-                    params.wrappedWidget1.update subMsg model.wrappedModel1 (params.selector1 id)
-            in
-                ( { model | wrappedModel1 = updatedModel1 }, Cmd.map DelegateToWidget1 cmd )
+update params id msg model =
+    let
+        instantiatedWidget1 =
+            params.wrappedWidget1 (params.selector1 id)
 
-        DelegateToWidget2 subMsg ->
-            let
-                ( updatedModel2, cmd ) =
-                    params.wrappedWidget2.update subMsg model.wrappedModel2 (params.selector2 id)
-            in
-                ( { model | wrappedModel2 = updatedModel2 }, Cmd.map DelegateToWidget2 cmd )
+        instantiatedWidget2 =
+            params.wrappedWidget2 (params.selector2 id)
+    in
+        case msg of
+            DelegateToWidget1 subMsg ->
+                let
+                    ( updatedModel1, cmd ) =
+                        instantiatedWidget1.update subMsg model.wrappedModel1
+                in
+                    ( { model | wrappedModel1 = updatedModel1 }, Cmd.map DelegateToWidget1 cmd )
 
-        Init ( fi1, fi2 ) ->
-            let
-                initCmd1 =
-                    cmdOfMsg <| DelegateToWidget1 (params.wrappedWidget1.initMsg fi1)
+            DelegateToWidget2 subMsg ->
+                let
+                    ( updatedModel2, cmd ) =
+                        instantiatedWidget2.update subMsg model.wrappedModel2
+                in
+                    ( { model | wrappedModel2 = updatedModel2 }, Cmd.map DelegateToWidget2 cmd )
 
-                initCmd2 =
-                    cmdOfMsg <| DelegateToWidget2 (params.wrappedWidget2.initMsg fi2)
-            in
-                ( emptyModel params, Cmd.batch [ initCmd1, initCmd2 ] )
+            Init ( fi1, fi2 ) ->
+                let
+                    initCmd1 =
+                        cmdOfMsg <| DelegateToWidget1 (instantiatedWidget1.initMsg fi1)
+
+                    initCmd2 =
+                        cmdOfMsg <| DelegateToWidget2 (instantiatedWidget2.initMsg fi2)
+                in
+                    ( emptyModel params id, Cmd.batch [ initCmd1, initCmd2 ] )
 
 
 
@@ -100,16 +108,16 @@ update params msg model id =
 
 subscriptions :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> Model subModel1 subModel2
     -> ModelElementIdentifier
+    -> Model subModel1 subModel2
     -> Sub (Msg subMsg1 subMsg2)
-subscriptions params model id =
+subscriptions params id model =
     let
         sub1 =
-            Sub.map DelegateToWidget1 <| params.wrappedWidget1.subscriptions model.wrappedModel1 (params.selector1 id)
+            Sub.map DelegateToWidget1 <| (params.wrappedWidget1 (params.selector1 id)).subscriptions model.wrappedModel1
 
         sub2 =
-            Sub.map DelegateToWidget2 <| params.wrappedWidget2.subscriptions model.wrappedModel2 (params.selector2 id)
+            Sub.map DelegateToWidget2 <| (params.wrappedWidget2 (params.selector2 id)).subscriptions model.wrappedModel2
     in
         Sub.batch [ sub1, sub2 ]
 
@@ -120,9 +128,10 @@ subscriptions params model id =
 
 view :
     Parameters subModel1 subMsg1 subModel2 subMsg2
+    -> ModelElementIdentifier
     -> Model subModel1 subModel2
     -> Html (Msg subMsg1 subMsg2)
-view params model =
+view params id model =
     let
         divOrSpanHtml =
             case params.divOrSpan of
@@ -133,6 +142,6 @@ view params model =
                     span
     in
         divOrSpanHtml []
-            [ Html.map DelegateToWidget1 (params.wrappedWidget1.view model.wrappedModel1)
-            , Html.map DelegateToWidget2 (params.wrappedWidget2.view model.wrappedModel2)
+            [ Html.map DelegateToWidget1 ((params.wrappedWidget1 (params.selector1 id)).view model.wrappedModel1)
+            , Html.map DelegateToWidget2 ((params.wrappedWidget2 (params.selector2 id)).view model.wrappedModel2)
             ]
