@@ -6,57 +6,52 @@ import Model exposing (Model)
 import Task
 
 
--- Row types are used only to compose new types in a modular fashion,
--- *not* to make functions accept abstract structures:
--- just use wrappers if you do not have the precise concrete type
-
-
 {-| note: all effects are functions taking a path as parameter, but the in the top-widget,
 the one given to Html.program, these are not present anymore
 -}
-type alias Widget model msg =
+type alias BoundWidget model msg =
     { initModel : model
     , initMsg : Model -> msg
-    , update : msg -> model -> ModelElementIdentifier -> ( model, Cmd msg )
-    , subscriptions : model -> ModelElementIdentifier -> Sub msg
+    , update : msg -> model -> ( model, Cmd msg )
+    , subscriptions : model -> Sub msg
     , view : model -> Html msg
     }
+
+
+type alias Unbound boundWidget =
+    ModelElementIdentifier -> boundWidget
+
+
+type alias Widget model msg =
+    Unbound (BoundWidget model msg)
 
 
 type alias TopWidget model msg =
-    { init : ( model, Cmd msg )
-    , update : msg -> model -> ( model, Cmd msg )
-    , subscriptions : model -> Sub msg
-    , view : model -> Html msg
-    }
+    ModelElementIdentifier
+    -> { init : ( model, Cmd msg )
+       , update : msg -> model -> ( model, Cmd msg )
+       , subscriptions : model -> Sub msg
+       , view : model -> Html msg
+       }
 
 
-makeTopWidget : Widget model msg -> ModelElementIdentifier -> TopWidget model msg
-makeTopWidget widget rootId =
-    { init = doNothing widget.initModel
-    , update = \ms m -> widget.update ms m rootId
-    , subscriptions = \m -> widget.subscriptions m rootId
-    , view = widget.view
-    }
+makeTopWidget : Widget model msg -> TopWidget model msg
+makeTopWidget widget id =
+    let
+        instantiatedWidget =
+            widget id
+    in
+        { init = doNothing instantiatedWidget.initModel
+        , update = instantiatedWidget.update
+        , subscriptions = instantiatedWidget.subscriptions
+        , view = instantiatedWidget.view
+        }
 
 
-type alias UnboundWidget model msg =
-    { initModel : model
-    , initMsg : Model -> msg
-    , update : msg -> model -> ( model, Cmd msg )
-    , subscriptions : model -> Sub msg
-    , view : model -> Html msg
-    }
 
-
-makeBoundWidget : UnboundWidget model msg -> Widget model msg
-makeBoundWidget widget =
-    { initModel = widget.initModel
-    , initMsg = widget.initMsg
-    , update = \msg model p -> widget.update msg model
-    , subscriptions = \model p -> widget.subscriptions model
-    , view = widget.view
-    }
+-- Row types are used only to compose new types in a modular fashion,
+-- *not* to make functions accept abstract structures:
+-- just use wrappers if you do not have the precise concrete type
 
 
 type alias ISelectable model msg base =
