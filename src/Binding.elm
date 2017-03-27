@@ -1,7 +1,7 @@
 module Binding exposing (..)
 
 import LocalStorage
-import MetaModel exposing (ClassRef, MetaModel, ModelElementIdentifier, ModelType, getItemIdentifier, isItemOf)
+import MetaModel exposing (ClassRef, MetaModel, ModelElementIdentifier, ModelType, RootedMetaModel, emptyMetamodel, getItemIdentifier, intRootMetaModel, isItemOf, stringRootMetaModel)
 import Model exposing (Object)
 import Widget exposing (ISelectable, Index, makeTopWidget)
 
@@ -10,72 +10,95 @@ type alias BindingErr =
     { description : String }
 
 
-type BindingResult serializedType
-    = Ok serializedType
+type BindingResult resType
+    = Ok resType
     | Err BindingErr
     | Irrelevant
 
 
-type alias Binding msg serializedType =
-    { get : ModelElementIdentifier -> Sub (BindingResult serializedType)
-    , set : ModelElementIdentifier -> serializedType -> BindingResult (Cmd msg)
-    }
+type alias ChildKey =
+    String
 
 
-type alias BindingTransformer msg ty1 ty2 =
-    Binding msg ty1 -> Binding msg ty2
+type alias GenericBinding msg carriedValue =
+    ModelElementIdentifier
+    -> { get : Sub (BindingResult carriedValue)
+       , set : carriedValue -> BindingResult (Cmd msg)
+       , metamodel : RootedMetaModel
+       }
 
 
-andThenGet : (t1 -> BindingResult t2) -> (ModelElementIdentifier -> Sub (BindingResult t1)) -> (ModelElementIdentifier -> Sub (BindingResult t2))
-andThenGet f get p =
-    Sub.map (andThen f) (get p)
+type alias Binding msg =
+    GenericBinding msg Model.Model
 
 
-andThenSet : (t1 -> BindingResult t2) -> (ModelElementIdentifier -> t2 -> BindingResult (Cmd msg)) -> (ModelElementIdentifier -> t1 -> BindingResult (Cmd msg))
-andThenSet f set p val =
-    andThen (\n -> set p n) (f val)
+type alias BindingTransformer msg carriedFrom carriedTo =
+    GenericBinding msg carriedFrom -> GenericBinding msg carriedTo
 
 
-mapBinding : (t1 -> BindingResult t2) -> (t2 -> BindingResult t1) -> Binding msg t1 -> Binding msg t2
-mapBinding fGet fSet binding =
-    { get = andThenGet fGet binding.get
-    , set = andThenSet fSet binding.set
-    }
+andThenGet : (t1 -> BindingResult t2) -> Sub (BindingResult t1) -> Sub (BindingResult t2)
+andThenGet f get =
+    Sub.map (andThen f) get
 
 
-textBinding : Binding msg String
-textBinding =
+andThenSet : (t1 -> BindingResult t2) -> (t2 -> BindingResult t3) -> (t1 -> BindingResult t3)
+andThenSet f set val =
+    andThen set (f val)
+
+
+mapBinding :
+    (t1 -> BindingResult t2)
+    -> (t2 -> BindingResult t1)
+    -> RootedMetaModel
+    -> GenericBinding msg t1
+    -> GenericBinding msg t2
+mapBinding fGet fSet mm binding id =
+    let
+        concreteBinding =
+            binding id
+    in
+        { get = andThenGet fGet concreteBinding.get
+        , set = andThenSet fSet concreteBinding.set
+        , metamodel = mm
+        }
+
+
+textBinding : GenericBinding msg String
+textBinding boundId =
     { get =
-        \boundId ->
-            LocalStorage.getStringSub
-                (\( id, s ) ->
-                    if id == boundId then
-                        Ok s
-                    else
-                        Irrelevant
-                )
-    , set = \boundId s -> Ok <| LocalStorage.setStringCmd ( boundId, s )
+        LocalStorage.getStringSub
+            (\( id, s ) ->
+                if id == boundId then
+                    Ok s
+                else
+                    Irrelevant
+            )
+    , set = \s -> Ok <| LocalStorage.setStringCmd ( boundId, s )
+    , metamodel =
+        { root = MetaModel.String
+        , metamodel = emptyMetamodel
+        }
     }
 
 
 stringToIntBinding : BindingTransformer msg String Int
 stringToIntBinding =
-    mapBinding (ofResult << String.toInt) (alwaysOk toString)
+    mapBinding (ofResult << String.toInt) (alwaysOk toString) intRootMetaModel
 
 
 intToStringBinding : BindingTransformer msg Int String
 intToStringBinding =
-    mapBinding (alwaysOk toString) (ofResult << String.toInt)
+    mapBinding (alwaysOk toString) (ofResult << String.toInt) stringRootMetaModel
 
 
 intToStringTransformer : BindingTransformer msg Int Int -> BindingTransformer msg String String
-intToStringTransformer binding b =
-    intToStringBinding (binding (stringToIntBinding b))
+intToStringTransformer binding =
+    intToStringBinding << binding << stringToIntBinding
 
 
 plus2Binding : BindingTransformer msg Int Int
 plus2Binding =
-    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
+    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2)) intRootMetaModel
 
 
 type alias CollectionBinding msg relativePath =
