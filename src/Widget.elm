@@ -1,8 +1,8 @@
 module Widget exposing (..)
 
+import Data exposing (Data)
+import DataID exposing (DataID)
 import Html exposing (Html)
-import MetaModel exposing (ModelElementIdentifier)
-import Model exposing (Model)
 import Task
 
 
@@ -11,7 +11,7 @@ the one given to Html.program, these are not present anymore
 -}
 type alias BoundWidget model msg =
     { initModel : model
-    , initMsg : Model -> msg
+    , initMsg : Data -> msg
     , update : msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
     , view : model -> Html msg
@@ -19,7 +19,7 @@ type alias BoundWidget model msg =
 
 
 type alias Unbound boundWidget =
-    ModelElementIdentifier -> boundWidget
+    DataID -> boundWidget
 
 
 type alias Widget model msg =
@@ -27,7 +27,7 @@ type alias Widget model msg =
 
 
 type alias TopWidget model msg =
-    ModelElementIdentifier
+    DataID
     -> { init : ( model, Cmd msg )
        , update : msg -> model -> ( model, Cmd msg )
        , subscriptions : model -> Sub msg
@@ -91,4 +91,4 @@ emptySubscription _ =
 
 
 type alias Factory widgetModel =
-    widgetModel -> Model
+    widgetModel -> Data
