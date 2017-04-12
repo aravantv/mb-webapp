@@ -2,10 +2,10 @@ module Main exposing (..)
 
 import Binding exposing (textBinding)
 import CircleWidget
+import Data exposing (Data(..))
+import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
 import Label
-import MetaModel exposing (ClassRef, MetaModel, Multiplicity, RootedMetaModel)
-import Model
 import NewText
 import SelectableList
 import SelectableText
@@ -17,13 +17,13 @@ import Widget exposing (ISelectable, Index, makeTopWidget)
 -- METAMODEL
 
 
-metamodel : RootedMetaModel
+metamodel : FullDataType
 metamodel =
     { root = ClassRef "MyList"
-    , metamodel =
-        MetaModel.metamodel
+    , dataTypeSet =
+        dataTypeSet
             [ ( "MyList"
-              , [ ( "todos", { type_ = MetaModel.String, isReference = False, multiplicity = MetaModel.Multiple } ) ]
+              , [ ( "todos", { type_ = DataType.String, isReference = False, multiplicity = DataType.Multiple } ) ]
               )
             ]
     }
@@ -43,10 +43,10 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.metamodel
+                        { binding = Binding.listBinding metamodel.dataTypeSet
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , factory = Model.String
+                        , factory = String
                         }
                 , selector2 = identity
                 }
@@ -58,10 +58,10 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.metamodel
+                        { binding = Binding.listBinding metamodel.dataTypeSet
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , factory = Model.String
+                        , factory = String
                         }
                 , selector2 = identity
                 }
@@ -95,17 +95,13 @@ formExampleWidget =
         }
 
 
-textExampleWidget =
-    Text.createWidget Binding.textBinding
-
-
 main =
     let
         widget =
-            listExampleWidget
+            formExampleWidget
     in
         TimeTravel.program <|
             makeTopWidget
-                textExampleWidget
+                widget
                 -- ICI donner le metamodel aussi et celui-ci serait ensuite transmis aux sous-bindings?
-                [ MetaModel.Field "todos" ]
+                [ DataType.Field "todos" ]
