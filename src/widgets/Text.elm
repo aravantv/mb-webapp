@@ -16,7 +16,7 @@ createWidget binding id =
     , initModel = emptyModel
     , update = update binding id
     , view = view
-    , subscriptions = subscriptions id binding
+    , subscriptions = subscriptions binding id
     }
 
 
@@ -112,8 +112,8 @@ update binding id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : DataID -> GenericBinding Msg String -> Model -> Sub Msg
-subscriptions id binding m =
+subscriptions : GenericBinding Msg String -> DataID -> Model -> Sub Msg
+subscriptions binding id m =
     let
         f bindingRes =
             case bindingRes of
