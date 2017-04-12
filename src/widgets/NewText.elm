@@ -3,7 +3,7 @@ module NewText exposing (..)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
-import Model
+import Data exposing (Data(..))
 import Utils exposing (..)
 import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget, doNothing)
 
@@ -43,7 +43,7 @@ type Msg
     = Change String
     | Confirm
     | Cancel
-    | Init Model.Model
+    | Init Data
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -65,7 +65,7 @@ transform msg model =
 
         Init m ->
             case m of
-                Model.String s ->
+                String s ->
                     s
 
                 _ ->

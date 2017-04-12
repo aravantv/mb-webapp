@@ -2,7 +2,7 @@ module Label exposing (..)
 
 import Html exposing (Html, input, label, text)
 import Widget exposing (IDecision, Widget, TopWidget, doNothing)
-import Model
+import Data exposing (Data(..))
 
 
 createWidget : String -> Widget Model Msg
@@ -12,7 +12,7 @@ createWidget s _ =
         \m ->
             ChangeLabel <|
                 case m of
-                    Model.String s ->
+                    String s ->
                         s
 
                     _ ->

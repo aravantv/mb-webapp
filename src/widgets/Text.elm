@@ -1,11 +1,11 @@
 module Text exposing (..)
 
 import Binding exposing (..)
+import Data exposing (Data(..))
+import DataID exposing (DataID)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
-import MetaModel exposing (ModelElementIdentifier)
-import Model
 import Utils exposing (..)
 import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
 
@@ -20,10 +20,10 @@ createWidget binding id =
     }
 
 
-initMsg : Model.Model -> Msg
+initMsg : Data -> Msg
 initMsg m =
     case m of
-        Model.String s ->
+        String s ->
             Init s
 
         _ ->
@@ -64,7 +64,7 @@ type Msg
     | NoOp
 
 
-update : GenericBinding Msg String -> ModelElementIdentifier -> Msg -> Model -> ( Model, Cmd Msg )
+update : GenericBinding Msg String -> DataID -> Msg -> Model -> ( Model, Cmd Msg )
 update binding id msg model =
     case msg of
         Init s ->
@@ -112,7 +112,7 @@ update binding id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : ModelElementIdentifier -> GenericBinding Msg String -> Model -> Sub Msg
+subscriptions : DataID -> GenericBinding Msg String -> Model -> Sub Msg
 subscriptions id binding m =
     let
         f bindingRes =

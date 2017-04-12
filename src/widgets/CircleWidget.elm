@@ -2,8 +2,8 @@ module CircleWidget exposing (..)
 
 import Html exposing (..)
 import Json.Decode
-import MetaModel exposing (ModelElementIdentifier, ModelElementSelector)
-import Model
+import DataID exposing (DataID, DataSelector)
+import Data exposing (Data)
 import Mouse
 import Svg exposing (clipPath, svg)
 import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeWidth, transform, width)
@@ -13,7 +13,7 @@ import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothi
 
 type alias Parameters subModel subMsg =
     { wrappedWidget : Widget subModel subMsg
-    , selector : ModelElementSelector
+    , selector : DataSelector
     }
 
 
@@ -42,7 +42,7 @@ type alias Model subModel =
     }
 
 
-emptyModel : Parameters subModel subMsg -> ModelElementIdentifier -> Model subModel
+emptyModel : Parameters subModel subMsg -> DataID -> Model subModel
 emptyModel params id =
     { wrappedModel = (params.wrappedWidget id).initModel, cx = 100, cy = 100, r = 50, dragStartPosition = Nothing }
 
@@ -53,7 +53,7 @@ emptyModel params id =
 
 type Msg subMsg
     = DelegateToWidget subMsg
-    | Init Model.Model
+    | Init Data
     | StartDragging Mouse.Position
     | Dragging ( Mouse.Position, Mouse.Position )
     | EndDragging
@@ -61,7 +61,7 @@ type Msg subMsg
 
 update :
     Parameters subModel subMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Msg subMsg
     -> Model subModel
     -> ( Model subModel, Cmd (Msg subMsg) )
@@ -104,7 +104,7 @@ update params id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Parameters subModel subMsg -> ModelElementIdentifier -> Model subModel -> Sub (Msg subMsg)
+subscriptions : Parameters subModel subMsg -> DataID -> Model subModel -> Sub (Msg subMsg)
 subscriptions params id model =
     let
         instantiatedWrappedWidget =
@@ -125,7 +125,7 @@ subscriptions params id model =
 -- VIEW
 
 
-view : Parameters subModel subMsg -> ModelElementIdentifier -> Model subModel -> Html (Msg subMsg)
+view : Parameters subModel subMsg -> DataID -> Model subModel -> Html (Msg subMsg)
 view params id model =
     let
         rect attrs =

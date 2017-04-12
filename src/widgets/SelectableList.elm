@@ -4,8 +4,8 @@ import Binding exposing (ListBinding)
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
 import ListUtils exposing (..)
-import MetaModel exposing (ModelElementIdentifier, getItemIdentifier)
-import Model exposing (Model)
+import DataID exposing (DataID, getItemIdentifier)
+import Data exposing (Data)
 import Utils exposing (enterKey, onKeyDown, onKeyUp, shiftCode, tabKey)
 import Widget exposing (BoundWidget, Factory, IDecision, ISelectable, Index, Unbound, Widget, cmdOfMsg, doNothing)
 
@@ -48,7 +48,7 @@ type alias Model newItemModel itemModel =
 
 emptyModel :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Model newItemModel itemModel
 emptyModel params id =
     { itemToAdd = (params.newItemWidget.widget id).initModel, contents = [] }
@@ -64,15 +64,15 @@ type Msg newItemMsg itemMsg itemModel
     | Remove Index
     | SelectNext Index
     | SelectPrevious Index
-    | BackendAddedItem ( Index, Model.Model )
+    | BackendAddedItem ( Index, Data )
     | BackendRemovedItem Index
     | NoOp
-    | Init Model.Model
+    | Init Data
 
 
 update :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Msg newItemMsg itemMsg itemModel
     -> Model newItemModel itemModel
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
@@ -142,7 +142,7 @@ update params id msg model =
 
 delegateUpdateToItemToAdd :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Model newItemModel itemModel
     -> newItemMsg
     -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
@@ -156,9 +156,9 @@ delegateUpdateToItemToAdd params id model subMsg =
 
 addItemCmd :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Index
-    -> Model.Model
+    -> Data
     -> Cmd (Msg newItemMsg itemMsg itemModel)
 addItemCmd params id indexToAdd itemToAdd =
     let
@@ -178,7 +178,7 @@ addItemCmd params id indexToAdd itemToAdd =
 
 unselectPreviouslySelectedItems :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> List itemModel
     -> Index
     -> itemMsg
@@ -206,7 +206,7 @@ unselectPreviouslySelectedItems params id items exceptIndex msg =
 
 delegateUpdateToItem :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> List itemModel
     -> Index
     -> itemMsg
@@ -219,7 +219,7 @@ delegateUpdateToItem params id contents itemIndex itemMsg =
         Just subModel ->
             let
                 instantiatedWidget =
-                    params.itemWidget.widget (MetaModel.getItemIdentifier id itemIndex)
+                    params.itemWidget.widget (getItemIdentifier id itemIndex)
 
                 ( updatedSubModel, cmd ) =
                     instantiatedWidget.update itemMsg subModel
@@ -235,7 +235,7 @@ delegateUpdateToItem params id contents itemIndex itemMsg =
 
 subscriptions :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Model newItemModel itemModel
     -> Sub (Msg newItemMsg itemMsg itemModel)
 subscriptions params id model =
@@ -273,7 +273,7 @@ subscriptions params id model =
 
 view :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> ModelElementIdentifier
+    -> DataID
     -> Model newItemModel itemModel
     -> Html (Msg newItemMsg itemMsg itemModel)
 view params id model =

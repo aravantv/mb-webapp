@@ -1,8 +1,8 @@
 module GroupWidget exposing (..)
 
 import Html exposing (..)
-import MetaModel exposing (ModelElementIdentifier, ModelElementSelector)
-import Model
+import DataID exposing (DataID, DataSelector)
+import Data exposing (Data)
 import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothing)
 
 
@@ -13,9 +13,9 @@ type DivOrSpan
 
 type alias Parameters subModel1 msg1 subModel2 msg2 =
     { wrappedWidget1 : Widget subModel1 msg1
-    , selector1 : ModelElementSelector
+    , selector1 : DataSelector
     , wrappedWidget2 : Widget subModel2 msg2
-    , selector2 : ModelElementSelector
+    , selector2 : DataSelector
     , divOrSpan : DivOrSpan
     }
 
@@ -44,7 +44,7 @@ type alias Model subModel1 subModel2 =
 
 emptyModel :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> ModelElementIdentifier
+    -> DataID
     -> Model subModel1 subModel2
 emptyModel params id =
     { wrappedModel1 = (params.wrappedWidget1 (params.selector1 id)).initModel
@@ -59,12 +59,12 @@ emptyModel params id =
 type Msg subMsg1 subMsg2
     = DelegateToWidget1 subMsg1
     | DelegateToWidget2 subMsg2
-    | Init ( Model.Model, Model.Model )
+    | Init ( Data, Data )
 
 
 update :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> ModelElementIdentifier
+    -> DataID
     -> Msg subMsg1 subMsg2
     -> Model subModel1 subModel2
     -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
@@ -108,7 +108,7 @@ update params id msg model =
 
 subscriptions :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> ModelElementIdentifier
+    -> DataID
     -> Model subModel1 subModel2
     -> Sub (Msg subMsg1 subMsg2)
 subscriptions params id model =
@@ -128,7 +128,7 @@ subscriptions params id model =
 
 view :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> ModelElementIdentifier
+    -> DataID
     -> Model subModel1 subModel2
     -> Html (Msg subMsg1 subMsg2)
 view params id model =
