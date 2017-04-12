@@ -1,8 +1,10 @@
 module Binding exposing (..)
 
+import Data exposing (Object)
+import DataID exposing (DataID, getItemIdentifier, isItemOf)
+import DataManager
+import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, emptyDataTypeSet, intDataType, stringDataType)
 import LocalStorage
-import MetaModel exposing (ClassRef, MetaModel, ModelElementIdentifier, ModelType, RootedMetaModel, emptyMetamodel, getItemIdentifier, intRootMetaModel, isItemOf, stringRootMetaModel)
-import Model exposing (Object)
 import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
@@ -21,15 +23,15 @@ type alias ChildKey =
 
 
 type alias GenericBinding msg carriedValue =
-    ModelElementIdentifier
+    DataID
     -> { get : Sub (BindingResult carriedValue)
        , set : carriedValue -> BindingResult (Cmd msg)
-       , metamodel : RootedMetaModel
+       , datatype : FullDataType
        }
 
 
 type alias Binding msg =
-    GenericBinding msg Model.Model
+    GenericBinding msg Data.Data
 
 
 type alias BindingTransformer msg carriedFrom carriedTo =
@@ -49,46 +51,46 @@ andThenSet f set val =
 mapBinding :
     (t1 -> BindingResult t2)
     -> (t2 -> BindingResult t1)
-    -> RootedMetaModel
+    -> FullDataType
     -> GenericBinding msg t1
     -> GenericBinding msg t2
-mapBinding fGet fSet mm binding id =
+mapBinding fGet fSet fdt binding id =
     let
         concreteBinding =
             binding id
     in
         { get = andThenGet fGet concreteBinding.get
         , set = andThenSet fSet concreteBinding.set
-        , metamodel = mm
+        , datatype = fdt
         }
 
 
 textBinding : GenericBinding msg String
 textBinding boundId =
     { get =
-        LocalStorage.getStringSub
+        DataManager.getStringSub
             (\( id, s ) ->
                 if id == boundId then
                     Ok s
                 else
                     Irrelevant
             )
-    , set = \s -> Ok <| LocalStorage.setStringCmd ( boundId, s )
-    , metamodel =
-        { root = MetaModel.String
-        , metamodel = emptyMetamodel
+    , set = \s -> Ok <| DataManager.setStringCmd ( boundId, s )
+    , datatype =
+        { root = DataType.String
+        , dataTypeSet = emptyDataTypeSet
         }
     }
 
 
 stringToIntBinding : BindingTransformer msg String Int
 stringToIntBinding =
-    mapBinding (ofResult << String.toInt) (alwaysOk toString) intRootMetaModel
+    mapBinding (ofResult << String.toInt) (alwaysOk toString) intDataType
 
 
 intToStringBinding : BindingTransformer msg Int String
 intToStringBinding =
-    mapBinding (alwaysOk toString) (ofResult << String.toInt) stringRootMetaModel
+    mapBinding (alwaysOk toString) (ofResult << String.toInt) stringDataType
 
 
 intToStringTransformer : BindingTransformer msg Int Int -> BindingTransformer msg String String
@@ -98,16 +100,16 @@ intToStringTransformer binding =
 
 plus2Binding : BindingTransformer msg Int Int
 plus2Binding =
-    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2)) intRootMetaModel
+    mapBinding (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2)) intDataType
 
 
 type alias CollectionBinding msg relativePath =
-    { itemAdded : ModelElementIdentifier -> Sub (BindingResult ( relativePath, Model.Model ))
-    , itemRemoved : ModelElementIdentifier -> Sub (BindingResult relativePath)
-    , addItem : ModelElementIdentifier -> relativePath -> Model.Model -> BindingResult (Cmd msg)
-    , removeItem : ModelElementIdentifier -> relativePath -> BindingResult (Cmd msg)
-    , askItemContent : ModelElementIdentifier -> relativePath -> Cmd msg
-    , getChildIdentifier : ModelElementIdentifier -> relativePath -> ModelElementIdentifier
+    { itemAdded : DataID -> Sub (BindingResult ( relativePath, Data.Data ))
+    , itemRemoved : DataID -> Sub (BindingResult relativePath)
+    , addItem : DataID -> relativePath -> Data.Data -> BindingResult (Cmd msg)
+    , removeItem : DataID -> relativePath -> BindingResult (Cmd msg)
+    , askItemContent : DataID -> relativePath -> Cmd msg
+    , getChildIdentifier : DataID -> relativePath -> DataID
     }
 
 
@@ -119,11 +121,11 @@ type alias ListBindingTransformer msg =
     ListBinding msg -> ListBinding msg
 
 
-listBinding : MetaModel -> ListBinding msg
+listBinding : DataTypeSet -> ListBinding msg
 listBinding mm =
     { itemAdded =
         \boundId ->
-            LocalStorage.itemAddedSub mm
+            DataManager.itemAddedSub mm
                 (\( id, maybeObj ) ->
                     case id |> isItemOf boundId of
                         Just i ->
@@ -139,7 +141,7 @@ listBinding mm =
                 )
     , itemRemoved =
         \boundId ->
-            LocalStorage.itemRemovedSub
+            DataManager.itemRemovedSub
                 (\id ->
                     case id |> isItemOf boundId of
                         Just i ->
@@ -148,8 +150,8 @@ listBinding mm =
                         _ ->
                             Irrelevant
                 )
-    , addItem = \boundId i m -> Ok <| LocalStorage.addItemCmd (getItemIdentifier boundId i) m
-    , removeItem = \boundId i -> Ok <| LocalStorage.removeItemCmd (getItemIdentifier boundId i)
+    , addItem = \boundId i m -> Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
+    , removeItem = \boundId i -> Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
     , askItemContent = \boundId i -> LocalStorage.askContentCmd (getItemIdentifier boundId i)
     , getChildIdentifier = \id i -> getItemIdentifier id i
     }
