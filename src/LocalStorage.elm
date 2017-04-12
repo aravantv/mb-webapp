@@ -9,10 +9,11 @@ port module LocalStorage
         , askContentCmd
         )
 
+import Data exposing (Object, Data)
+import DataID exposing (DataID)
+import DataType exposing (ClassRef, DataType, DataTypeSet, genericFieldOfString, stringOfGenericField)
 import Json.Decode
 import Json.Encode
-import MetaModel exposing (ClassRef, MetaModel, ModelElementIdentifier, ModelType, genericFieldOfString, stringOfGenericField)
-import Model exposing (Object)
 import Platform.Sub
 
 
@@ -34,12 +35,12 @@ type alias JsonString =
 
 {-| Just reverts a path
 -}
-storagePathOfWidgetPath : ModelElementIdentifier -> StoragePath
+storagePathOfWidgetPath : DataID -> StoragePath
 storagePathOfWidgetPath p =
     List.reverse (List.map stringOfGenericField p)
 
 
-widgetPathOfStoragePath : StoragePath -> ModelElementIdentifier
+widgetPathOfStoragePath : StoragePath -> DataID
 widgetPathOfStoragePath sp =
     List.reverse (List.map genericFieldOfString sp)
 
@@ -47,7 +48,7 @@ widgetPathOfStoragePath sp =
 port getStringSubPort : (( StoragePath, JsonString ) -> msg) -> Sub msg
 
 
-getStringSub : (( ModelElementIdentifier, JsonString ) -> a) -> Sub a
+getStringSub : (( DataID, JsonString ) -> a) -> Sub a
 getStringSub msgBuilder =
     getStringSubPort (\( p, s ) -> msgBuilder ( widgetPathOfStoragePath p, s ))
 
@@ -55,7 +56,7 @@ getStringSub msgBuilder =
 port setStringCmdPort : ( StoragePath, String ) -> Cmd msg
 
 
-setStringCmd : ( ModelElementIdentifier, String ) -> Cmd msg
+setStringCmd : ( DataID, String ) -> Cmd msg
 setStringCmd ( p, s ) =
     setStringCmdPort ( storagePathOfWidgetPath p, s )
 
@@ -63,11 +64,11 @@ setStringCmd ( p, s ) =
 port itemAddedSubPort : (( StoragePath, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : MetaModel -> (( ModelElementIdentifier, Result String Model.Model ) -> c) -> Sub c
-itemAddedSub mm msgBuilder =
+itemAddedSub : DataTypeSet -> (( DataID, Result String Data ) -> c) -> Sub c
+itemAddedSub dts msgBuilder =
     let
         objOfJson json =
-            Json.Decode.decodeValue (Model.modelDecoder mm) json
+            Json.Decode.decodeValue (Data.dataDecoder dts) json
     in
         itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
 
@@ -75,7 +76,7 @@ itemAddedSub mm msgBuilder =
 port askContentCmdPort : StoragePath -> Cmd msg
 
 
-askContentCmd : ModelElementIdentifier -> Cmd msg
+askContentCmd : DataID -> Cmd msg
 askContentCmd p =
     askContentCmdPort (storagePathOfWidgetPath p)
 
@@ -83,7 +84,7 @@ askContentCmd p =
 port itemRemovedSubPort : (StoragePath -> msg) -> Sub msg
 
 
-itemRemovedSub : (ModelElementIdentifier -> c) -> Sub c
+itemRemovedSub : (DataID -> c) -> Sub c
 itemRemovedSub msgBuilder =
     itemRemovedSubPort (msgBuilder << widgetPathOfStoragePath)
 
@@ -93,14 +94,14 @@ itemRemovedSub msgBuilder =
 port addItemCmdPort : ( StoragePath, Json.Encode.Value ) -> Cmd msg
 
 
-addItemCmd : ModelElementIdentifier -> Model.Model -> Cmd msg
-addItemCmd p m =
-    addItemCmdPort ( storagePathOfWidgetPath p, Model.jsonOfModel m )
+addItemCmd : DataID -> Data -> Cmd msg
+addItemCmd p d =
+    addItemCmdPort ( storagePathOfWidgetPath p, Data.jsonOfData d )
 
 
 port removeItemCmdPort : StoragePath -> Cmd msg
 
 
-removeItemCmd : ModelElementIdentifier -> Cmd msg
+removeItemCmd : DataID -> Cmd msg
 removeItemCmd =
     removeItemCmdPort << storagePathOfWidgetPath
