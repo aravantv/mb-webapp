@@ -1,6 +1,7 @@
 module Text exposing (..)
 
 import Binding exposing (..)
+import ConstraintUtils exposing (UnfulfillmentInfo)
 import Data exposing (Data(..))
 import DataID exposing (DataID)
 import Html exposing (Html, input, label, text)
@@ -59,7 +60,7 @@ type Msg
     = UIChange String
     | UICancel
     | ConfirmModel
-    | ModelChange (Result BindingErr String)
+    | ModelChange (Result UnfulfillmentInfo String)
     | Init String
     | NoOp
 
@@ -102,7 +103,7 @@ update binding id msg model =
                         doNothing { model | content = newContent, initialContent = newInitialContent, error = False }
 
                 Result.Err err ->
-                    doNothing { model | content = "error:" ++ err.description, error = True }
+                    doNothing { model | content = "error:" ++ err.unfulfillmentDescription, error = True }
 
         NoOp ->
             doNothing model
