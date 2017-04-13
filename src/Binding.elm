@@ -1,6 +1,7 @@
 module Binding exposing (..)
 
-import Data exposing (Object)
+import ConstraintUtils exposing (UnfulfillmentInfo, Fixes(..))
+import Data exposing (Data, Object)
 import DataID exposing (DataID, getItemIdentifier, isItemOf)
 import DataManager
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, emptyDataTypeSet, intDataType, stringDataType)
@@ -8,13 +9,9 @@ import LocalStorage
 import Widget exposing (ISelectable, Index, makeTopWidget)
 
 
-type alias BindingErr =
-    { description : String }
-
-
 type BindingResult resType
     = Ok resType
-    | Err BindingErr
+    | Err UnfulfillmentInfo
     | Irrelevant
 
 
@@ -104,13 +101,14 @@ plus2Binding =
 
 
 type alias CollectionBinding msg relativePath =
-    { itemAdded : DataID -> Sub (BindingResult ( relativePath, Data.Data ))
-    , itemRemoved : DataID -> Sub (BindingResult relativePath)
-    , addItem : DataID -> relativePath -> Data.Data -> BindingResult (Cmd msg)
-    , removeItem : DataID -> relativePath -> BindingResult (Cmd msg)
-    , askItemContent : DataID -> relativePath -> Cmd msg
-    , getChildIdentifier : DataID -> relativePath -> DataID
-    }
+    DataID
+    -> { itemAdded : Sub (BindingResult ( relativePath, Data ))
+       , itemRemoved : Sub (BindingResult relativePath)
+       , addItem : relativePath -> Data -> BindingResult (Cmd msg)
+       , removeItem : relativePath -> BindingResult (Cmd msg)
+       , askItemContent : relativePath -> Cmd msg
+       , getChildIdentifier : relativePath -> DataID
+       }
 
 
 type alias ListBinding msg =
@@ -123,8 +121,8 @@ type alias ListBindingTransformer msg =
 
 listBinding : DataTypeSet -> ListBinding msg
 listBinding mm =
-    { itemAdded =
-        \boundId ->
+    \boundId ->
+        { itemAdded =
             DataManager.itemAddedSub mm
                 (\( id, maybeObj ) ->
                     case id |> isItemOf boundId of
@@ -134,13 +132,12 @@ listBinding mm =
                                     Ok ( i, obj )
 
                                 Result.Err err ->
-                                    Err { description = err }
+                                    Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
 
                         _ ->
                             Irrelevant
                 )
-    , itemRemoved =
-        \boundId ->
+        , itemRemoved =
             DataManager.itemRemovedSub
                 (\id ->
                     case id |> isItemOf boundId of
@@ -150,11 +147,11 @@ listBinding mm =
                         _ ->
                             Irrelevant
                 )
-    , addItem = \boundId i m -> Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
-    , removeItem = \boundId i -> Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
-    , askItemContent = \boundId i -> LocalStorage.askContentCmd (getItemIdentifier boundId i)
-    , getChildIdentifier = \id i -> getItemIdentifier id i
-    }
+        , addItem = \i m -> Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
+        , removeItem = \i -> Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
+        , askItemContent = \i -> LocalStorage.askContentCmd (getItemIdentifier boundId i)
+        , getChildIdentifier = \i -> getItemIdentifier boundId i
+        }
 
 
 alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
@@ -169,7 +166,7 @@ ofResult res =
             Ok v
 
         Result.Err err ->
-            Err { description = err }
+            Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
 
 
 map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
