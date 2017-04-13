@@ -140,7 +140,7 @@ view params id model =
                     [ Svg.clipPath [ Svg.Attributes.id "id" ]
                         [ rect [ width (toString <| model.r - 6) ] ]
                     ]
-                , rect [ width (toString model.r), onMouseDown StartDragging, fill "yellow", stroke "blue", strokeWidth "3" ]
+                , rect [ width (toString model.r), onMouseDown StartDragging, fill "lightblue", stroke "lightskyblue", strokeWidth "3" ]
                 , Svg.foreignObject
                     [ Svg.Attributes.x "3"
                     , Svg.Attributes.y "3"
