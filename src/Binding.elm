@@ -45,11 +45,11 @@ statelessWrapper fSet fGet =
 
 
 applyBinding :
-    GenericBinding msg carriedValue
-    -> Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
+    Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
+    -> GenericBinding msg carriedValue
     -> Widget () () model msg
-applyBinding b =
-    mapParamsUp (\() -> b.set) << mapParamsSub (\() -> b.get)
+applyBinding w b =
+    mapParamsUp (\() -> b.set) (mapParamsSub (\() -> b.get) w)
 
 
 textBinding : DataID -> GenericBinding msg String
