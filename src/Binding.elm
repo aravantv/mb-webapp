@@ -1,12 +1,9 @@
 module Binding exposing (..)
 
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
-import Data exposing (Data, Object)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, GenericField(Index), emptyDataTypeSet, intDataType, stringDataType)
 import IndexMapping exposing (IndexMapping)
-import LocalStorage
 import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
 
 
@@ -29,49 +26,33 @@ type alias BindingGet carriedValue =
 
 
 type alias GenericBinding msg carriedValue =
-    DataID
-    -> { get : BindingGet carriedValue
-       , set : BindingSet carriedValue msg
-       }
+    { get : BindingGet carriedValue
+    , set : BindingSet carriedValue msg
+    }
 
 
-type alias Binding msg =
-    GenericBinding msg Data
-
-
-type alias BindingWrapper innerCarriedValue innerModel msg outerModel outerCarriedValue =
+type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedValue msg =
     Widget (BindingSet innerCarriedValue msg) (BindingGet innerCarriedValue) innerModel msg
     -> Widget (BindingSet outerCarriedValue msg) (BindingGet outerCarriedValue) outerModel msg
-
-
-andThenGet : (t1 -> BindingResult t2) -> Sub (BindingResult t1) -> Sub (BindingResult t2)
-andThenGet f get =
-    Sub.map (andThen f) get
-
-
-andThenSet : (t1 -> BindingResult t2) -> (t2 -> BindingResult t3) -> (t1 -> BindingResult t3)
-andThenSet f set =
-    andThen set << f
 
 
 statelessWrapper :
     (innerCarriedValue -> BindingResult outerCarriedValue)
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
-    -> BindingWrapper innerCarriedValue model msg model outerCarriedValue
+    -> BindingWrapper model innerCarriedValue model outerCarriedValue msg
 statelessWrapper fSet fGet =
     mapParamsUp (\set -> andThen set << fSet) << mapParamsSub (\get -> Sub.map (andThen fGet) get)
 
 
 applyBinding :
-    BindingSet carriedValue msg
-    -> BindingGet carriedValue
+    GenericBinding msg carriedValue
     -> Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
     -> Widget () () model msg
-applyBinding set get =
-    mapParamsUp (\() -> set) << mapParamsSub (\() -> get)
+applyBinding b =
+    mapParamsUp (\() -> b.set) << mapParamsSub (\() -> b.get)
 
 
-textBinding : GenericBinding msg String
+textBinding : DataID -> GenericBinding msg String
 textBinding boundId =
     { get =
         DataManager.getStringSub
@@ -85,39 +66,19 @@ textBinding boundId =
     }
 
 
-stringOfIntWrapper : BindingWrapper Int model msg model String
+stringOfIntWrapper : BindingWrapper model Int model String msg
 stringOfIntWrapper =
     statelessWrapper (alwaysOk toString) (ofResult << String.toInt)
 
 
-intOfStringWrapper : BindingWrapper String model msg model Int
+intOfStringWrapper : BindingWrapper model String model Int msg
 intOfStringWrapper =
     statelessWrapper (ofResult << String.toInt) (alwaysOk toString)
 
 
-plus2Wrapper : BindingWrapper Int model msg model Int
+plus2Wrapper : BindingWrapper model Int model Int msg
 plus2Wrapper =
     statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
-
-
-countWrapper : BindingWrapper Int model msg ( model, Int ) Int
-countWrapper binder widgetBuilder binding id =
-    let
-        wrappedWidget =
-            binder widgetBuilder binding id
-    in
-        { initModel = ( wrappedWidget.initModel, 0 )
-        , initMsg = wrappedWidget.initMsg
-        , update =
-            \msg ( wrappedModel, n ) ->
-                let
-                    ( updatedWrappedModel, cmd ) =
-                        wrappedWidget.update msg wrappedModel
-                in
-                    ( ( updatedWrappedModel, n ), cmd )
-        , subscriptions = \( wrappedModel, _ ) -> wrappedWidget.subscriptions wrappedModel
-        , view = \( wrappedModel, _ ) -> wrappedWidget.view wrappedModel
-        }
 
 
 
