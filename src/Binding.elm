@@ -12,10 +12,6 @@ type BindingResult resType
     | Irrelevant
 
 
-type alias ChildKey =
-    String
-
-
 type alias BindingSet carriedValue msg =
     carriedValue -> BindingResult (Cmd msg)
 
