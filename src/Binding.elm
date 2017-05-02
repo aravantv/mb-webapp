@@ -76,8 +76,8 @@ statelessWrapper :
     (innerCarriedValue -> BindingResult outerCarriedValue)
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
     -> BindingWrapper model innerCarriedValue model outerCarriedValue msg
-statelessWrapper fSet fGet =
-    mapParamsUp (\set -> andThen set << fSet) << mapParamsSub (\get -> Sub.map (andThen fGet) get)
+statelessWrapper in2out out2in =
+    mapParamsUp (\set -> andThen set << in2out) << mapParamsSub (\get -> Sub.map (andThen out2in) get)
 
 
 applyBinding :
