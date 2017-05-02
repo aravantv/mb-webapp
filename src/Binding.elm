@@ -12,6 +12,47 @@ type BindingResult resType
     | Irrelevant
 
 
+alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
+alwaysOk f x =
+    Ok (f x)
+
+
+ofResult : Result String res -> BindingResult res
+ofResult res =
+    case res of
+        Result.Ok v ->
+            Ok v
+
+        Result.Err err ->
+            Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
+
+
+map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
+map f res =
+    case res of
+        Ok v ->
+            Ok (f v)
+
+        Err e ->
+            Err e
+
+        Irrelevant ->
+            Irrelevant
+
+
+andThen : (res1 -> BindingResult res2) -> BindingResult res1 -> BindingResult res2
+andThen f res =
+    case res of
+        Ok v ->
+            f v
+
+        Err e ->
+            Err e
+
+        Irrelevant ->
+            Irrelevant
+
+
 type alias BindingSet carriedValue msg =
     carriedValue -> BindingResult (Cmd msg)
 
@@ -74,44 +115,3 @@ intOfStringWrapper =
 plus2Wrapper : BindingWrapper model Int model Int msg
 plus2Wrapper =
     statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
-
-
-alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
-alwaysOk f x =
-    Ok (f x)
-
-
-ofResult : Result String res -> BindingResult res
-ofResult res =
-    case res of
-        Result.Ok v ->
-            Ok v
-
-        Result.Err err ->
-            Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
-
-
-map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
-map f res =
-    case res of
-        Ok v ->
-            Ok (f v)
-
-        Err e ->
-            Err e
-
-        Irrelevant ->
-            Irrelevant
-
-
-andThen : (res1 -> BindingResult res2) -> BindingResult res1 -> BindingResult res2
-andThen f res =
-    case res of
-        Ok v ->
-            f v
-
-        Err e ->
-            Err e
-
-        Irrelevant ->
-            Irrelevant
