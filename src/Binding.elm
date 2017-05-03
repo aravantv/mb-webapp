@@ -67,9 +67,13 @@ type alias Binding msg carriedValue =
     }
 
 
+type alias WidgetWithBinding model msg carriedValue =
+    Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
+
+
 type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedValue msg =
-    Widget (BindingSet innerCarriedValue msg) (BindingGet innerCarriedValue) innerModel msg
-    -> Widget (BindingSet outerCarriedValue msg) (BindingGet outerCarriedValue) outerModel msg
+    WidgetWithBinding innerModel msg innerCarriedValue
+    -> WidgetWithBinding outerModel msg outerCarriedValue
 
 
 statelessWrapper :
@@ -81,7 +85,7 @@ statelessWrapper in2out out2in =
 
 
 applyBinding :
-    Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
+    WidgetWithBinding model msg carriedValue
     -> Binding msg carriedValue
     -> Widget () () model msg
 applyBinding w b =
