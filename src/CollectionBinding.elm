@@ -2,6 +2,7 @@ module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
+import Widget exposing (Widget, mapParamsSub, mapParamsUp)
 
 
 type alias BindingAddItem collectionPath carriedValue msg =
@@ -38,6 +39,46 @@ type alias CollectionBinding collectionPath msg carriedValue =
     , itemAdded : BindingItemAdded collectionPath carriedValue
     , itemRemoved : BindingItemRemoved collectionPath
     }
+
+
+type alias WidgetWithCollectionBinding collectionPath model msg carriedValue =
+    Widget (CollectionBindingUpdate collectionPath carriedValue msg) (CollectionBindingSubscriptions collectionPath carriedValue) model msg
+
+
+type alias CollectionBindingWrapper collectionPath innerModel innerCarriedValue outerModel outerCarriedValue msg =
+    WidgetWithCollectionBinding collectionPath innerModel msg innerCarriedValue
+    -> WidgetWithCollectionBinding collectionPath outerModel msg outerCarriedValue
+
+
+statelessWrapper :
+    (innerCarriedValue -> BindingResult outerCarriedValue)
+    -> (outerCarriedValue -> BindingResult innerCarriedValue)
+    -> CollectionBindingWrapper collectionPath model innerCarriedValue model outerCarriedValue msg
+statelessWrapper in2out out2in =
+    mapParamsUp
+        (\up ->
+            { addItem = \path -> andThen (up.addItem path) << in2out
+            , removeItem = up.removeItem
+            }
+        )
+        << mapParamsSub
+            (\sub ->
+                { itemAdded =
+                    Sub.map
+                        (andThen (\( path, value ) -> Binding.map (\x -> ( path, x )) (out2in value)))
+                        sub.itemAdded
+                , itemRemoved = sub.itemRemoved
+                }
+            )
+
+
+applyBinding :
+    WidgetWithCollectionBinding collectionPath model msg carriedValue
+    -> CollectionBinding collectionPath msg carriedValue
+    -> Widget () () model msg
+applyBinding w b =
+    mapParamsUp (\() -> { addItem = b.addItem, removeItem = b.removeItem })
+        (mapParamsSub (\() -> { itemAdded = b.itemAdded, itemRemoved = b.itemRemoved }) w)
 
 
 
@@ -219,44 +260,3 @@ intToDataListBinding binding boundId state =
         , getChildIdentifier = concreteBinding.getChildIdentifier
         }
 --}
-
-
-alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
-alwaysOk f x =
-    Binding.Ok (f x)
-
-
-ofResult : Result String res -> BindingResult res
-ofResult res =
-    case res of
-        Result.Ok v ->
-            Binding.Ok v
-
-        Result.Err err ->
-            Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
-
-
-map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
-map f res =
-    case res of
-        Binding.Ok v ->
-            Binding.Ok (f v)
-
-        Binding.Err e ->
-            Binding.Err e
-
-        Binding.Irrelevant ->
-            Binding.Irrelevant
-
-
-andThen : (res1 -> BindingResult res2) -> BindingResult res1 -> BindingResult res2
-andThen f res =
-    case res of
-        Binding.Ok v ->
-            f v
-
-        Binding.Err e ->
-            Binding.Err e
-
-        Binding.Irrelevant ->
-            Binding.Irrelevant
