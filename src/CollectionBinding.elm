@@ -2,6 +2,10 @@ module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
+import DataID exposing (getItemIdentifier, itemOf)
+import DataManager
+import DataType exposing (DataTypeSet)
+import EqualityConstraint exposing (DataID)
 import Widget exposing (Widget, mapParamsSub, mapParamsUp)
 
 
@@ -57,7 +61,7 @@ statelessWrapper :
 statelessWrapper in2out out2in =
     mapParamsUp
         (\up ->
-            { addItem = \path -> andThen (up.addItem path) << in2out
+            { addItem = \path -> Binding.andThen (up.addItem path) << in2out
             , removeItem = up.removeItem
             }
         )
@@ -65,7 +69,7 @@ statelessWrapper in2out out2in =
             (\sub ->
                 { itemAdded =
                     Sub.map
-                        (andThen (\( path, value ) -> Binding.map (\x -> ( path, x )) (out2in value)))
+                        (Binding.andThen (\( path, value ) -> Binding.map (\x -> ( path, x )) (out2in value)))
                         sub.itemAdded
                 , itemRemoved = sub.itemRemoved
                 }
@@ -79,6 +83,42 @@ applyBinding :
 applyBinding w b =
     mapParamsUp (\() -> { addItem = b.addItem, removeItem = b.removeItem })
         (mapParamsSub (\() -> { itemAdded = b.itemAdded, itemRemoved = b.itemRemoved }) w)
+
+
+type alias Index =
+    Int
+
+
+listBinding : DataTypeSet -> DataID -> CollectionBinding Index msg carriedValue
+listBinding dts boundId =
+    { itemAdded =
+        DataManager.itemAddedSub dts
+            (\( id, maybeObj ) ->
+                case id |> itemOf boundId of
+                    Just i ->
+                        case maybeObj of
+                            Result.Ok obj ->
+                                Ok ( i, obj )
+
+                            Result.Err err ->
+                                Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
+
+                    _ ->
+                        Binding.Irrelevant
+            )
+    , itemRemoved =
+        DataManager.itemRemovedSub
+            (\id ->
+                case id |> itemOf boundId of
+                    Just i ->
+                        Ok i
+
+                    _ ->
+                        Binding.Irrelevant
+            )
+    , addItem = \i m -> Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
+    , removeItem = \i -> Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
+    }
 
 
 
