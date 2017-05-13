@@ -6,6 +6,7 @@ import Data
 import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
 import DataType exposing (DataTypeSet)
+import Html
 import IndexMapping
 import Widget exposing (Widget, mapParamsSub, mapParamsUp)
 
@@ -55,8 +56,9 @@ type alias CollectionBindingAdapter collectionPath innerModel innerCarriedValue 
     -> WidgetWithCollectionBinding collectionPath outerModel outerMsg outerCarriedValue
 
 
-type alias CollectionBindingWrapper collectionPath model msg carriedValue =
-    WidgetWithCollectionBinding collectionPath model msg carriedValue -> Widget () () model msg
+type alias CollectionBindingWrapper collectionPath innerModel innerMsg carriedValue outerModel outerMsg =
+    WidgetWithCollectionBinding collectionPath innerModel innerMsg carriedValue
+    -> Widget () () outerModel outerMsg
 
 
 mapItemAdded :
@@ -144,8 +146,8 @@ type CollectionBindingMsg collectionPath carriedValue
 
 
 intOfStringWrapper :
-    CollectionBindingWrapper collectionPath model msg String
-    -> CollectionBindingWrapper collectionPath model msg Int
+    CollectionBindingWrapper collectionPath model msg String model msg
+    -> CollectionBindingWrapper collectionPath model msg Int model msg
 intOfStringWrapper wrapper w =
     wrapper
         (\id ->
@@ -165,10 +167,16 @@ intOfStringWrapper wrapper w =
                 , subscriptions =
                     \model paramsSubs ->
                         cw.subscriptions model
-                            { itemAdded = \f -> paramsSubs.itemAdded (f << mapItemAdded (Binding.ofResult << String.toInt))
-                            , itemRemoved = paramsSubs.itemRemoved
+                            { itemAdded =
+                                \f ->
+                                    paramsSubs.itemAdded
+                                        (\res ->
+                                            f (mapItemAdded (Binding.ofResult << String.toInt) res)
+                                        )
+                            , itemRemoved =
+                                \f -> paramsSubs.itemRemoved (\res -> f res)
                             }
-                , view = cw.view
+                , view = \model -> Html.map (\msg -> msg) (cw.view model)
                 }
         )
 
