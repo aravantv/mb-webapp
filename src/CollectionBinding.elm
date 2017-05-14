@@ -6,6 +6,7 @@ import Data
 import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
 import DataType exposing (DataTypeSet)
+import Html
 import IndexMapping
 import Widget exposing (Widget, mapParamsSub, mapParamsUp)
 
@@ -144,45 +145,33 @@ type CollectionBindingMsg collectionPath
     | ItemRemoved collectionPath
 
 
-intOfStringWrapper :
-    CollectionBindingWrapper collectionPath ( innerModel, IndexMapping.IndexMapping ) innerMsg String outerModel outerMsg
-    -> CollectionBindingWrapper collectionPath innerModel innerMsg Int outerModel outerMsg
-intOfStringWrapper wrapper w =
-    wrapper
-        (\id ->
-            let
-                cw =
-                    w id
-            in
-                { initModel = ( cw.initModel, IndexMapping.empty )
-                , initMsg = \d -> cw.initMsg d
-                , update =
-                    \msg ( model, _ ) paramsUps ->
-                        let
-                            ( newModel, cmd ) =
-                                cw.update
-                                    msg
-                                    model
-                                    { addItem = \i n -> (paramsUps.addItem i (toString n))
-                                    , removeItem = \i -> (paramsUps.removeItem i)
-                                    }
-                        in
-                            ( ( newModel, IndexMapping.empty ), cmd )
-                , subscriptions =
-                    \( model, _ ) paramsSubs ->
-                        cw.subscriptions model
-                            { itemAdded =
-                                \f ->
-                                    paramsSubs.itemAdded
-                                        (\res ->
-                                            f (mapItemAdded (Binding.ofResult << String.toInt) res)
-                                        )
-                            , itemRemoved =
-                                \f -> paramsSubs.itemRemoved (\res -> f res)
-                            }
-                , view = \( model, _ ) -> (cw.view model)
-                }
-        )
+stringOfIntBindingWrapper :
+    WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
+    -> WidgetWithCollectionBinding collectionPath innerModel innerMsg String
+stringOfIntBindingWrapper w id =
+    let
+        cw =
+            w id
+    in
+        { initModel = cw.initModel
+        , initMsg = \d -> cw.initMsg d
+        , update =
+            \msg model paramsUps ->
+                cw.update
+                    msg
+                    model
+                    { addItem = \i n -> paramsUps.addItem i (toString n)
+                    , removeItem = \i -> paramsUps.removeItem i
+                    }
+        , subscriptions =
+            \model paramsSubs ->
+                cw.subscriptions model
+                    { itemAdded =
+                        \f -> paramsSubs.itemAdded (\res -> f (mapItemAdded (Binding.ofResult << String.toInt) res))
+                    , itemRemoved = paramsSubs.itemRemoved
+                    }
+        , view = cw.view
+        }
 
 
 
