@@ -6,7 +6,6 @@ import Data
 import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
 import DataType exposing (DataTypeSet)
-import Html
 import IndexMapping
 import Widget exposing (Widget, mapParamsSub, mapParamsUp)
 
@@ -139,15 +138,15 @@ listBinding dts boundId =
     }
 
 
-type CollectionBindingMsg collectionPath carriedValue
+type CollectionBindingMsg collectionPath
     = ItemAdded collectionPath
     | ItemAddedButSkipped collectionPath
     | ItemRemoved collectionPath
 
 
 intOfStringWrapper :
-    CollectionBindingWrapper collectionPath model msg String model msg
-    -> CollectionBindingWrapper collectionPath model msg Int model msg
+    CollectionBindingWrapper collectionPath ( innerModel, IndexMapping.IndexMapping ) innerMsg String outerModel outerMsg
+    -> CollectionBindingWrapper collectionPath innerModel innerMsg Int outerModel outerMsg
 intOfStringWrapper wrapper w =
     wrapper
         (\id ->
@@ -155,17 +154,22 @@ intOfStringWrapper wrapper w =
                 cw =
                     w id
             in
-                { initModel = cw.initModel
-                , initMsg = cw.initMsg
+                { initModel = ( cw.initModel, IndexMapping.empty )
+                , initMsg = \d -> cw.initMsg d
                 , update =
-                    \msg model paramsUps ->
-                        cw.update msg
-                            model
-                            { addItem = \i n -> paramsUps.addItem i (toString n)
-                            , removeItem = paramsUps.removeItem
-                            }
+                    \msg ( model, _ ) paramsUps ->
+                        let
+                            ( newModel, cmd ) =
+                                cw.update
+                                    msg
+                                    model
+                                    { addItem = \i n -> (paramsUps.addItem i (toString n))
+                                    , removeItem = \i -> (paramsUps.removeItem i)
+                                    }
+                        in
+                            ( ( newModel, IndexMapping.empty ), cmd )
                 , subscriptions =
-                    \model paramsSubs ->
+                    \( model, _ ) paramsSubs ->
                         cw.subscriptions model
                             { itemAdded =
                                 \f ->
@@ -176,7 +180,7 @@ intOfStringWrapper wrapper w =
                             , itemRemoved =
                                 \f -> paramsSubs.itemRemoved (\res -> f res)
                             }
-                , view = \model -> Html.map (\msg -> msg) (cw.view model)
+                , view = \( model, _ ) -> (cw.view model)
                 }
         )
 
