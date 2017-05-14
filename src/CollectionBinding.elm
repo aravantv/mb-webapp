@@ -147,30 +147,34 @@ type CollectionBindingMsg collectionPath
 
 stringOfIntBindingWrapper :
     WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
-    -> WidgetWithCollectionBinding collectionPath innerModel innerMsg String
+    -> WidgetWithCollectionBinding collectionPath ( innerModel, () ) innerMsg String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
     in
-        { initModel = cw.initModel
+        { initModel = ( cw.initModel, () )
         , initMsg = \d -> cw.initMsg d
         , update =
-            \msg model paramsUps ->
-                cw.update
-                    msg
-                    model
-                    { addItem = \i n -> paramsUps.addItem i (toString n)
-                    , removeItem = \i -> paramsUps.removeItem i
-                    }
+            \msg ( model, () ) paramsUps ->
+                let
+                    ( newModel, cmd ) =
+                        cw.update
+                            msg
+                            model
+                            { addItem = \i n -> paramsUps.addItem i (toString n)
+                            , removeItem = \i -> paramsUps.removeItem i
+                            }
+                in
+                    ( ( newModel, () ), cmd )
         , subscriptions =
-            \model paramsSubs ->
+            \( model, () ) paramsSubs ->
                 cw.subscriptions model
                     { itemAdded =
                         \f -> paramsSubs.itemAdded (\res -> f (mapItemAdded (Binding.ofResult << String.toInt) res))
                     , itemRemoved = paramsSubs.itemRemoved
                     }
-        , view = cw.view
+        , view = \( model, () ) -> cw.view model
         }
 
 
