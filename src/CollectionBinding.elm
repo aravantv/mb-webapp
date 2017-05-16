@@ -187,20 +187,16 @@ stringOfIntBindingWrapper w id =
                             \res ->
                                 case res of
                                     Binding.Ok ( i, s ) ->
-                                        let
-                                            intRes =
-                                                String.toInt s
-                                        in
-                                            case intRes of
-                                                Ok n ->
-                                                    ( info.itemAdded (Binding.Ok ( i, n ))
-                                                    , Nothing
-                                                    )
+                                        case String.toInt s of
+                                            Ok n ->
+                                                ( info.itemAdded (Binding.Ok ( i, n ))
+                                                , Just (ItemAdded i)
+                                                )
 
-                                                Err err ->
-                                                    ( info.itemAdded (Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] })
-                                                    , Nothing
-                                                    )
+                                            Err err ->
+                                                ( info.itemAdded (Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] })
+                                                , Just (ItemAddedButSkipped i)
+                                                )
 
                                     Binding.Err err ->
                                         ( info.itemAdded (Binding.Err err)
@@ -212,7 +208,17 @@ stringOfIntBindingWrapper w id =
                                         , Nothing
                                         )
                         , itemRemoved =
-                            \res -> ( info.itemRemoved res, Nothing )
+                            \res ->
+                                let
+                                    msg =
+                                        case res of
+                                            Binding.Ok i ->
+                                                Just (ItemRemoved i)
+
+                                            _ ->
+                                                Nothing
+                                in
+                                    ( info.itemRemoved res, msg )
                         }
                 in
                     ( Sub.map (\m -> ( m, Nothing )) sub, newInfo )
