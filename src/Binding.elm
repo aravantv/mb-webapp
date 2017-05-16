@@ -1,8 +1,11 @@
 module Binding exposing (..)
 
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
-import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
-import DataManager
+
+
+-- import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
+-- import DataManager
+
 import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
 
 
@@ -76,6 +79,8 @@ type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedVa
     -> WidgetWithBinding outerModel msg outerCarriedValue
 
 
+
+{--
 statelessWrapper :
     (innerCarriedValue -> BindingResult outerCarriedValue)
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
@@ -119,3 +124,4 @@ intOfStringWrapper =
 plus2Wrapper : BindingWrapper model Int model Int msg
 plus2Wrapper =
     statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
+    --}
