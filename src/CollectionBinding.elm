@@ -7,7 +7,7 @@ import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
 import DataType exposing (DataTypeSet)
 import Html
-import IndexMapping
+import IndexMapping exposing (IndexMapping)
 import Widget exposing (Widget, mapParamsSub, mapParamsUp, TopWidget, cmdOfMsg)
 
 
@@ -153,46 +153,26 @@ listBinding dts boundId =
     }
 
 
-type CollectionBindingMsg collectionPath
-    = ItemAdded collectionPath
-    | ItemAddedButSkipped collectionPath
-    | ItemRemoved collectionPath
-
-
 stringOfIntBindingWrapper :
     WidgetWithCollectionBinding Index innerModel innerMsg Int
-    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping.IndexMapping ) ( innerMsg, Maybe (CollectionBindingMsg Index) ) String
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
 
         trivialMsg m =
-            ( m, Nothing )
+            ( m, identity )
     in
         { initModel = ( cw.initModel, IndexMapping.empty )
         , initMsg = \d -> trivialMsg (cw.initMsg d)
         , update =
-            \( msg, bindingMsg ) ( model, idxMap ) ->
+            \( msg, mappingTransformer ) ( model, idxMap ) ->
                 let
                     ( newModel, cmd, info ) =
                         cw.update msg model
-
-                    newIdxMap =
-                        case bindingMsg of
-                            Just (ItemAdded i) ->
-                                IndexMapping.insert idxMap i
-
-                            Just (ItemAddedButSkipped i) ->
-                                IndexMapping.insertButSkip idxMap i
-
-                            Just (ItemRemoved i) ->
-                                IndexMapping.remove idxMap i
-
-                            Nothing ->
-                                idxMap
                 in
-                    ( ( newModel, idxMap ), Cmd.map trivialMsg cmd, mapUpInfo toString info )
+                    ( ( newModel, mappingTransformer idxMap ), Cmd.map trivialMsg cmd, mapUpInfo toString info )
         , subscriptions =
             \( model, _ ) ->
                 let
@@ -207,33 +187,29 @@ stringOfIntBindingWrapper w id =
                                         case String.toInt s of
                                             Ok n ->
                                                 ( info.itemAdded (Binding.Ok ( i, n ))
-                                                , Just (ItemAdded i)
+                                                , \idxMap -> IndexMapping.insert idxMap i
                                                 )
 
                                             Err err ->
                                                 ( info.itemAdded (Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] })
-                                                , Just (ItemAddedButSkipped i)
+                                                , \idxMap -> IndexMapping.insertButSkip idxMap i
                                                 )
 
                                     Binding.Err err ->
-                                        ( info.itemAdded (Binding.Err err)
-                                        , Nothing
-                                        )
+                                        trivialMsg (info.itemAdded (Binding.Err err))
 
                                     Binding.Irrelevant ->
-                                        ( info.itemAdded Binding.Irrelevant
-                                        , Nothing
-                                        )
+                                        trivialMsg (info.itemAdded Binding.Irrelevant)
                         , itemRemoved =
                             \res ->
                                 let
                                     msg =
                                         case res of
                                             Binding.Ok i ->
-                                                Just (ItemRemoved i)
+                                                \idxMap -> IndexMapping.remove idxMap i
 
                                             _ ->
-                                                Nothing
+                                                identity
                                 in
                                     ( info.itemRemoved res, msg )
                         }
