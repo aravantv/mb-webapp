@@ -160,22 +160,39 @@ type CollectionBindingMsg collectionPath
 
 
 stringOfIntBindingWrapper :
-    WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
-    -> WidgetWithCollectionBinding collectionPath ( innerModel, IndexMapping.IndexMapping ) ( innerMsg, Maybe (CollectionBindingMsg collectionPath) ) String
+    WidgetWithCollectionBinding Index innerModel innerMsg Int
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping.IndexMapping ) ( innerMsg, Maybe (CollectionBindingMsg Index) ) String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
+
+        trivialMsg m =
+            ( m, Nothing )
     in
         { initModel = ( cw.initModel, IndexMapping.empty )
-        , initMsg = \d -> ( cw.initMsg d, Nothing )
+        , initMsg = \d -> trivialMsg (cw.initMsg d)
         , update =
-            \( msg, _ ) ( model, mapping ) ->
+            \( msg, bindingMsg ) ( model, idxMap ) ->
                 let
                     ( newModel, cmd, info ) =
                         cw.update msg model
+
+                    newIdxMap =
+                        case bindingMsg of
+                            Just (ItemAdded i) ->
+                                IndexMapping.insert idxMap i
+
+                            Just (ItemAddedButSkipped i) ->
+                                IndexMapping.insertButSkip idxMap i
+
+                            Just (ItemRemoved i) ->
+                                IndexMapping.remove idxMap i
+
+                            Nothing ->
+                                idxMap
                 in
-                    ( ( newModel, mapping ), Cmd.map (\m -> ( m, Nothing )) cmd, mapUpInfo toString info )
+                    ( ( newModel, idxMap ), Cmd.map trivialMsg cmd, mapUpInfo toString info )
         , subscriptions =
             \( model, _ ) ->
                 let
@@ -221,8 +238,8 @@ stringOfIntBindingWrapper w id =
                                     ( info.itemRemoved res, msg )
                         }
                 in
-                    ( Sub.map (\m -> ( m, Nothing )) sub, newInfo )
-        , view = \( model, _ ) -> Html.map (\m -> ( m, Nothing )) (cw.view model)
+                    ( Sub.map trivialMsg sub, newInfo )
+        , view = \( model, _ ) -> Html.map trivialMsg (cw.view model)
         }
 
 
