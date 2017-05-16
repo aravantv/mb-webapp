@@ -161,21 +161,21 @@ type CollectionBindingMsg collectionPath
 
 stringOfIntBindingWrapper :
     WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
-    -> WidgetWithCollectionBinding collectionPath ( innerModel, () ) ( innerMsg, () ) String
+    -> WidgetWithCollectionBinding collectionPath ( innerModel, () ) ( innerMsg, Maybe (CollectionBindingMsg collectionPath) ) String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
     in
         { initModel = ( cw.initModel, () )
-        , initMsg = \d -> ( cw.initMsg d, () )
+        , initMsg = \d -> ( cw.initMsg d, Nothing )
         , update =
-            \( msg, () ) ( model, () ) ->
+            \( msg, _ ) ( model, () ) ->
                 let
                     ( newModel, cmd, info ) =
                         cw.update msg model
                 in
-                    ( ( newModel, () ), Cmd.map (\m -> ( m, () )) cmd, mapUpInfo toString info )
+                    ( ( newModel, () ), Cmd.map (\m -> ( m, Nothing )) cmd, mapUpInfo toString info )
         , subscriptions =
             \( model, () ) ->
                 let
@@ -184,13 +184,13 @@ stringOfIntBindingWrapper w id =
 
                     newInfo =
                         { itemAdded =
-                            \res -> ( info.itemAdded (mapItemAdded (Binding.ofResult << String.toInt) res), () )
+                            \res -> ( info.itemAdded (mapItemAdded (Binding.ofResult << String.toInt) res), Nothing )
                         , itemRemoved =
-                            \res -> ( info.itemRemoved res, () )
+                            \res -> ( info.itemRemoved res, Nothing )
                         }
                 in
-                    ( Sub.map (\m -> ( m, () )) sub, newInfo )
-        , view = \( model, () ) -> Html.map (\m -> ( m, () )) (cw.view model)
+                    ( Sub.map (\m -> ( m, Nothing )) sub, newInfo )
+        , view = \( model, () ) -> Html.map (\m -> ( m, Nothing )) (cw.view model)
         }
 
 
