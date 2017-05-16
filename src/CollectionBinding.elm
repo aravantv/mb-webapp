@@ -184,7 +184,33 @@ stringOfIntBindingWrapper w id =
 
                     newInfo =
                         { itemAdded =
-                            \res -> ( info.itemAdded (mapItemAdded (Binding.ofResult << String.toInt) res), Nothing )
+                            \res ->
+                                case res of
+                                    Binding.Ok ( i, s ) ->
+                                        let
+                                            intRes =
+                                                String.toInt s
+                                        in
+                                            case intRes of
+                                                Ok n ->
+                                                    ( info.itemAdded (Binding.Ok ( i, n ))
+                                                    , Nothing
+                                                    )
+
+                                                Err err ->
+                                                    ( info.itemAdded (Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] })
+                                                    , Nothing
+                                                    )
+
+                                    Binding.Err err ->
+                                        ( info.itemAdded (Binding.Err err)
+                                        , Nothing
+                                        )
+
+                                    Binding.Irrelevant ->
+                                        ( info.itemAdded Binding.Irrelevant
+                                        , Nothing
+                                        )
                         , itemRemoved =
                             \res -> ( info.itemRemoved res, Nothing )
                         }
