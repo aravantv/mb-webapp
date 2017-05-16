@@ -8,47 +8,35 @@ import DataManager
 import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping
-import Widget exposing (Widget, mapParamsSub, mapParamsUp)
+import Widget exposing (Widget, mapParamsSub, mapParamsUp, TopWidget, cmdOfMsg)
 
 
-type alias BindingAddItem collectionPath carriedValue msg =
-    collectionPath -> carriedValue -> BindingResult (Cmd msg)
+type CollectionBindingUpInfo collectionPath carriedValue
+    = AddItem (BindingResult ( collectionPath, carriedValue ))
+    | RemoveItem (BindingResult collectionPath)
 
 
-type alias BindingRemoveItem collectionPath msg =
-    collectionPath -> BindingResult (Cmd msg)
+mapUpInfo :
+    (carriedFromValue -> carriedToValue)
+    -> CollectionBindingUpInfo collectionPath carriedFromValue
+    -> CollectionBindingUpInfo collectionPath carriedToValue
+mapUpInfo f i =
+    case i of
+        AddItem res ->
+            AddItem (Binding.map (\( i, v ) -> ( i, f v )) res)
+
+        RemoveItem res ->
+            RemoveItem res
 
 
-type alias CollectionBindingUpdate collectionPath carriedValue msg =
-    { addItem : BindingAddItem collectionPath carriedValue msg
-    , removeItem : BindingRemoveItem collectionPath msg
-    }
-
-
-type alias BindingItemAdded collectionPath carriedValue msg =
-    (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
-
-
-type alias BindingItemRemoved collectionPath msg =
-    (BindingResult collectionPath -> msg) -> Sub msg
-
-
-type alias CollectionBindingSubscriptions collectionPath carriedValue msg =
-    { itemAdded : BindingItemAdded collectionPath carriedValue msg
-    , itemRemoved : BindingItemRemoved collectionPath msg
-    }
-
-
-type alias CollectionBinding collectionPath msg carriedValue =
-    { addItem : BindingAddItem collectionPath carriedValue msg
-    , removeItem : BindingRemoveItem collectionPath msg
-    , itemAdded : BindingItemAdded collectionPath carriedValue msg
-    , itemRemoved : BindingItemRemoved collectionPath msg
+type alias CollectionBindingSubInfo collectionPath carriedValue msg =
+    { itemAdded : BindingResult ( collectionPath, carriedValue ) -> msg
+    , itemRemoved : BindingResult collectionPath -> msg
     }
 
 
 type alias WidgetWithCollectionBinding collectionPath model msg carriedValue =
-    Widget (CollectionBindingUpdate collectionPath carriedValue msg) (CollectionBindingSubscriptions collectionPath carriedValue msg) model msg
+    Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
 
 
 type alias CollectionBindingAdapter collectionPath innerModel innerCarriedValue innerMsg outerModel outerCarriedValue outerMsg =
@@ -69,39 +57,65 @@ mapItemAdded out2in =
     Binding.andThen (\( i, s ) -> Binding.map (\n -> ( i, n )) (out2in s))
 
 
-statelessWrapper :
-    (innerCarriedValue -> BindingResult outerCarriedValue)
-    -> (outerCarriedValue -> BindingResult innerCarriedValue)
-    -> CollectionBindingAdapter collectionPath model innerCarriedValue msg model outerCarriedValue msg
-statelessWrapper in2out out2in =
-    mapParamsUp
-        (\params ->
-            { addItem = \path -> Binding.andThen (params.addItem path) << in2out
-            , removeItem = params.removeItem
-            }
-        )
-        << mapParamsSub
-            (\params ->
-                { itemAdded = \f -> params.itemAdded (f << mapItemAdded out2in)
-                , itemRemoved = params.itemRemoved
-                }
-            )
-
-
 applyBinding :
     WidgetWithCollectionBinding collectionPath model msg carriedValue
-    -> CollectionBinding collectionPath msg carriedValue
+    -> { addItem : collectionPath -> carriedValue -> Cmd msg
+       , removeItem : collectionPath -> Cmd msg
+       , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
+       , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
+       }
     -> Widget () () model msg
-applyBinding w b =
-    mapParamsUp (\() -> { addItem = b.addItem, removeItem = b.removeItem })
-        (mapParamsSub (\() -> { itemAdded = b.itemAdded, itemRemoved = b.itemRemoved }) w)
+applyBinding w b id =
+    let
+        cw =
+            w id
+    in
+        { initModel = cw.initModel
+        , initMsg = \d -> cw.initMsg d
+        , update =
+            \msg model ->
+                let
+                    ( newModel, cmd, upInfo ) =
+                        cw.update msg model
+
+                    newCmd =
+                        case upInfo of
+                            AddItem (Binding.Ok ( idx, val )) ->
+                                Cmd.batch [ cmd, b.addItem idx val ]
+
+                            AddItem _ ->
+                                cmd
+
+                            RemoveItem (Binding.Ok idx) ->
+                                Cmd.batch [ cmd, b.removeItem idx ]
+
+                            RemoveItem _ ->
+                                cmd
+                in
+                    ( newModel, newCmd, () )
+        , subscriptions =
+            \model ->
+                let
+                    ( sub, mapper ) =
+                        cw.subscriptions model
+                in
+                    ( Sub.batch (sub :: [ b.itemAdded mapper.itemAdded, b.itemRemoved mapper.itemRemoved ]), () )
+        , view = cw.view
+        }
 
 
 type alias Index =
     Int
 
 
-listBinding : DataTypeSet -> DataID -> CollectionBinding Index msg Data.Data
+listBinding :
+    DataTypeSet
+    -> DataID
+    -> { addItem : Index -> Data.Data -> Cmd msg
+       , removeItem : Index -> Cmd msg
+       , itemAdded : (BindingResult ( Index, Data.Data ) -> msg) -> Sub msg
+       , itemRemoved : (BindingResult Index -> msg) -> Sub msg
+       }
 listBinding dts boundId =
     { itemAdded =
         \f ->
@@ -134,8 +148,8 @@ listBinding dts boundId =
                                 Binding.Irrelevant
                         )
                 )
-    , addItem = \i m -> Binding.Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
-    , removeItem = \i -> Binding.Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
+    , addItem = \i m -> DataManager.addItemCmd (getItemIdentifier boundId i) m
+    , removeItem = \i -> DataManager.removeItemCmd (getItemIdentifier boundId i)
     }
 
 
@@ -147,34 +161,34 @@ type CollectionBindingMsg collectionPath
 
 stringOfIntBindingWrapper :
     WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
-    -> WidgetWithCollectionBinding collectionPath ( innerModel, () ) innerMsg String
+    -> WidgetWithCollectionBinding collectionPath innerModel innerMsg String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
     in
-        { initModel = ( cw.initModel, () )
-        , initMsg = \d -> cw.initMsg d
+        { initModel = cw.initModel
+        , initMsg = cw.initMsg
         , update =
-            \msg ( model, () ) paramsUps ->
+            \msg model ->
                 let
-                    ( newModel, cmd ) =
-                        cw.update
-                            msg
-                            model
-                            { addItem = \i n -> paramsUps.addItem i (toString n)
-                            , removeItem = \i -> paramsUps.removeItem i
-                            }
+                    ( newModel, cmd, info ) =
+                        cw.update msg model
                 in
-                    ( ( newModel, () ), cmd )
+                    ( newModel, cmd, mapUpInfo toString info )
         , subscriptions =
-            \( model, () ) paramsSubs ->
-                cw.subscriptions model
-                    { itemAdded =
-                        \f -> paramsSubs.itemAdded (\res -> f (mapItemAdded (Binding.ofResult << String.toInt) res))
-                    , itemRemoved = paramsSubs.itemRemoved
-                    }
-        , view = \( model, () ) -> cw.view model
+            \model ->
+                let
+                    ( sub, info ) =
+                        cw.subscriptions model
+
+                    newInfo =
+                        { itemAdded = info.itemAdded << mapItemAdded (Binding.ofResult << String.toInt)
+                        , itemRemoved = info.itemRemoved
+                        }
+                in
+                    ( sub, newInfo )
+        , view = cw.view
         }
 
 
