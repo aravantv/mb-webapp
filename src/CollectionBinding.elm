@@ -161,23 +161,23 @@ type CollectionBindingMsg collectionPath
 
 stringOfIntBindingWrapper :
     WidgetWithCollectionBinding collectionPath innerModel innerMsg Int
-    -> WidgetWithCollectionBinding collectionPath ( innerModel, () ) ( innerMsg, Maybe (CollectionBindingMsg collectionPath) ) String
+    -> WidgetWithCollectionBinding collectionPath ( innerModel, IndexMapping.IndexMapping ) ( innerMsg, Maybe (CollectionBindingMsg collectionPath) ) String
 stringOfIntBindingWrapper w id =
     let
         cw =
             w id
     in
-        { initModel = ( cw.initModel, () )
+        { initModel = ( cw.initModel, IndexMapping.empty )
         , initMsg = \d -> ( cw.initMsg d, Nothing )
         , update =
-            \( msg, _ ) ( model, () ) ->
+            \( msg, _ ) ( model, mapping ) ->
                 let
                     ( newModel, cmd, info ) =
                         cw.update msg model
                 in
-                    ( ( newModel, () ), Cmd.map (\m -> ( m, Nothing )) cmd, mapUpInfo toString info )
+                    ( ( newModel, mapping ), Cmd.map (\m -> ( m, Nothing )) cmd, mapUpInfo toString info )
         , subscriptions =
-            \( model, () ) ->
+            \( model, _ ) ->
                 let
                     ( sub, info ) =
                         cw.subscriptions model
@@ -190,7 +190,7 @@ stringOfIntBindingWrapper w id =
                         }
                 in
                     ( Sub.map (\m -> ( m, Nothing )) sub, newInfo )
-        , view = \( model, () ) -> Html.map (\m -> ( m, Nothing )) (cw.view model)
+        , view = \( model, _ ) -> Html.map (\m -> ( m, Nothing )) (cw.view model)
         }
 
 
