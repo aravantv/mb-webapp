@@ -79,7 +79,7 @@ statelessWrapper in2out out2in =
 
 
 type alias Binding msg carriedValue =
-    { set : carriedValue -> Cmd msg
+    { set : BindingResult carriedValue -> Cmd msg
     , get : (BindingResult carriedValue -> msg) -> Sub msg
     }
 
@@ -101,14 +101,15 @@ applyBinding w b id =
                     ( newModel, cmd, upInfo ) =
                         cw.update msg model
                 in
-                    ( newModel, Cmd.batch [ cmd, b.set upInfo ] )
+                    ( newModel, Cmd.batch [ cmd, b.set upInfo ], () )
         , subscriptions =
             \model ->
                 let
                     ( sub, mapper ) =
                         cw.subscriptions model
                 in
-                    ( Sub.batch [ sub, b.set mapper ], () )
+                    ( Sub.batch [ sub, b.get mapper ], () )
+        , view = cw.view
         }
 
 
