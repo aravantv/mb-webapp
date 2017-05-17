@@ -1,11 +1,8 @@
 module Binding exposing (..)
 
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
-
-
--- import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
--- import DataManager
-
+import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
+import DataManager
 import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
 
 
@@ -81,11 +78,15 @@ statelessWrapper in2out out2in =
     mapParamsUp (\set -> andThen set << in2out) << mapParamsSub (\get -> Sub.map (andThen out2in) get)
 
 
+type alias Binding msg carriedValue =
+    { set : carriedValue -> Cmd msg
+    , get : (BindingResult carriedValue -> msg) -> Sub msg
+    }
+
+
 applyBinding :
     WidgetWithBinding model msg carriedValue
-    -> { set : carriedValue -> Cmd msg
-       , get : (BindingResult carriedValue -> msg) -> Sub msg
-       }
+    -> Binding msg carriedValue
     -> Widget () () model msg
 applyBinding w b id =
     let
