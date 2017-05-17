@@ -57,13 +57,17 @@ mapItemAdded out2in =
     Binding.andThen (\( i, s ) -> Binding.map (\n -> ( i, n )) (out2in s))
 
 
+type alias CollectionBinding collectionPath msg carriedValue =
+    { addItem : collectionPath -> carriedValue -> Cmd msg
+    , removeItem : collectionPath -> Cmd msg
+    , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
+    , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
+    }
+
+
 applyBinding :
     WidgetWithCollectionBinding collectionPath model msg carriedValue
-    -> { addItem : collectionPath -> carriedValue -> Cmd msg
-       , removeItem : collectionPath -> Cmd msg
-       , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
-       , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
-       }
+    -> CollectionBinding collectionPath msg carriedValue
     -> Widget () () model msg
 applyBinding w b id =
     let
@@ -111,11 +115,7 @@ type alias Index =
 listBinding :
     DataTypeSet
     -> DataID
-    -> { addItem : Index -> Data.Data -> Cmd msg
-       , removeItem : Index -> Cmd msg
-       , itemAdded : (BindingResult ( Index, Data.Data ) -> msg) -> Sub msg
-       , itemRemoved : (BindingResult Index -> msg) -> Sub msg
-       }
+    -> CollectionBinding Index msg Data.Data
 listBinding dts boundId =
     { itemAdded =
         \f ->
