@@ -56,22 +56,16 @@ andThen f res =
             Irrelevant
 
 
-type alias BindingSet carriedValue msg =
-    carriedValue -> BindingResult (Cmd msg)
+type alias BindingUpInfo carriedValue =
+    BindingResult carriedValue
 
 
-type alias BindingGet carriedValue =
-    Sub (BindingResult carriedValue)
-
-
-type alias Binding msg carriedValue =
-    { get : BindingGet carriedValue
-    , set : BindingSet carriedValue msg
-    }
+type alias BindingSubInfo carriedValue msg =
+    BindingResult carriedValue -> msg
 
 
 type alias WidgetWithBinding model msg carriedValue =
-    Widget (BindingSet carriedValue msg) (BindingGet carriedValue) model msg
+    Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
 
 type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedValue msg =
@@ -79,8 +73,6 @@ type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedVa
     -> WidgetWithBinding outerModel msg outerCarriedValue
 
 
-
-{--
 statelessWrapper :
     (innerCarriedValue -> BindingResult outerCarriedValue)
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
@@ -91,10 +83,32 @@ statelessWrapper in2out out2in =
 
 applyBinding :
     WidgetWithBinding model msg carriedValue
-    -> Binding msg carriedValue
+    -> { set : carriedValue -> Cmd msg
+       , get : (BindingResult carriedValue -> msg) -> Sub msg
+       }
     -> Widget () () model msg
-applyBinding w b =
-    mapParamsUp (\() -> b.set) (mapParamsSub (\() -> b.get) w)
+applyBinding w b id =
+    let
+        cw =
+            w id
+    in
+        { initModel = cw.initModel
+        , initMsg = cw.initMsg
+        , update =
+            \msg model ->
+                let
+                    ( newModel, cmd, upInfo ) =
+                        cw.update msg model
+                in
+                    ( newModel, Cmd.batch [ cmd, b.set upInfo ] )
+        , subscriptions =
+            \model ->
+                let
+                    ( sub, mapper ) =
+                        cw.subscriptions model
+                in
+                    ( Sub.batch [ sub, b.set mapper ], () )
+        }
 
 
 textBinding : DataID -> Binding msg String
@@ -124,4 +138,3 @@ intOfStringWrapper =
 plus2Wrapper : BindingWrapper model Int model Int msg
 plus2Wrapper =
     statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
-    --}
