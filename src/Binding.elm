@@ -75,11 +75,11 @@ statelessWrapper :
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
     -> BindingWrapper model innerCarriedValue model outerCarriedValue msg
 statelessWrapper in2out out2in =
-    mapParamsUp (\set -> andThen set << in2out) << mapParamsSub (\get -> Sub.map (andThen out2in) get)
+    mapParamsUp (\upInfo -> andThen in2out upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
 
 type alias Binding msg carriedValue =
-    { set : BindingResult carriedValue -> Cmd msg
+    { set : carriedValue -> Cmd msg
     , get : (BindingResult carriedValue -> msg) -> Sub msg
     }
 
@@ -100,8 +100,16 @@ applyBinding w b id =
                 let
                     ( newModel, cmd, upInfo ) =
                         cw.update msg model
+
+                    newCmd =
+                        case upInfo of
+                            Ok v ->
+                                Cmd.batch [ cmd, b.set v ]
+
+                            _ ->
+                                cmd
                 in
-                    ( newModel, Cmd.batch [ cmd, b.set upInfo ], () )
+                    ( newModel, newCmd, () )
         , subscriptions =
             \model ->
                 let
@@ -116,27 +124,38 @@ applyBinding w b id =
 textBinding : DataID -> Binding msg String
 textBinding boundId =
     { get =
-        DataManager.getStringSub
-            (\( id, s ) ->
-                if id == boundId then
-                    Ok s
-                else
-                    Irrelevant
-            )
-    , set = \s -> Ok <| DataManager.setStringCmd ( boundId, s )
+        \f ->
+            DataManager.getStringSub
+                (\( id, s ) ->
+                    let
+                        res =
+                            if id == boundId then
+                                Ok s
+                            else
+                                Irrelevant
+                    in
+                        f res
+                )
+    , set = \s -> DataManager.setStringCmd ( boundId, s )
     }
 
 
-stringOfIntWrapper : BindingWrapper model Int model String msg
+stringOfIntWrapper :
+    WidgetWithBinding model msg Int
+    -> WidgetWithBinding model msg String
 stringOfIntWrapper =
     statelessWrapper (alwaysOk toString) (ofResult << String.toInt)
 
 
-intOfStringWrapper : BindingWrapper model String model Int msg
+intOfStringWrapper :
+    WidgetWithBinding model msg String
+    -> WidgetWithBinding model msg Int
 intOfStringWrapper =
     statelessWrapper (ofResult << String.toInt) (alwaysOk toString)
 
 
-plus2Wrapper : BindingWrapper model Int model Int msg
+plus2Wrapper :
+    WidgetWithBinding model msg Int
+    -> WidgetWithBinding model msg Int
 plus2Wrapper =
     statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
