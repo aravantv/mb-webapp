@@ -1,14 +1,22 @@
 module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult)
-import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
+import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import Data
 import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
 import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping exposing (IndexMapping)
-import Widget exposing (Widget, mapParamsSub, mapParamsUp, TopWidget, cmdOfMsg)
+import Widget exposing (TopWidget, Widget, cmdOfMsg, mapParamsSub, mapParamsUp)
+
+
+mapItemAdded :
+    (fromValue -> BindingResult toValue)
+    -> BindingResult ( collectionPath, fromValue )
+    -> BindingResult ( collectionPath, toValue )
+mapItemAdded out2in =
+    Binding.andThen (\( i, v ) -> Binding.map (\n -> ( i, n )) (out2in v))
 
 
 type CollectionBindingUpInfo collectionPath carriedValue
@@ -17,13 +25,13 @@ type CollectionBindingUpInfo collectionPath carriedValue
 
 
 mapUpInfo :
-    (carriedFromValue -> carriedToValue)
+    (carriedFromValue -> BindingResult carriedToValue)
     -> CollectionBindingUpInfo collectionPath carriedFromValue
     -> CollectionBindingUpInfo collectionPath carriedToValue
 mapUpInfo f i =
     case i of
         AddItem res ->
-            AddItem (Binding.map (\( i, v ) -> ( i, f v )) res)
+            AddItem (mapItemAdded f res)
 
         RemoveItem res ->
             RemoveItem res
@@ -47,14 +55,6 @@ type alias CollectionBindingAdapter collectionPath innerModel innerCarriedValue 
 type alias CollectionBindingWrapper collectionPath innerModel innerMsg carriedValue outerModel outerMsg =
     WidgetWithCollectionBinding collectionPath innerModel innerMsg carriedValue
     -> Widget () () outerModel outerMsg
-
-
-mapItemAdded :
-    (fromValue -> BindingResult toValue)
-    -> BindingResult ( collectionPath, fromValue )
-    -> BindingResult ( collectionPath, toValue )
-mapItemAdded out2in =
-    Binding.andThen (\( i, s ) -> Binding.map (\n -> ( i, n )) (out2in s))
 
 
 type alias CollectionBinding collectionPath msg carriedValue =
@@ -153,10 +153,12 @@ listBinding dts boundId =
     }
 
 
-stringOfIntBindingWrapper :
-    WidgetWithCollectionBinding Index innerModel innerMsg Int
-    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
-stringOfIntBindingWrapper w id =
+makeCollectionBindingWrapper :
+    (inCarriedValue -> BindingResult outCarriedValue)
+    -> (outCarriedValue -> BindingResult inCarriedValue)
+    -> WidgetWithCollectionBinding Index innerModel innerMsg inCarriedValue
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) outCarriedValue
+makeCollectionBindingWrapper in2out out2in w id =
     let
         cw =
             w id
@@ -172,7 +174,7 @@ stringOfIntBindingWrapper w id =
                     ( newModel, cmd, info ) =
                         cw.update msg model
                 in
-                    ( ( newModel, mappingTransformer idxMap ), Cmd.map trivialMsg cmd, mapUpInfo toString info )
+                    ( ( newModel, mappingTransformer idxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out info )
         , subscriptions =
             \( model, _ ) ->
                 let
@@ -184,14 +186,19 @@ stringOfIntBindingWrapper w id =
                             \res ->
                                 case res of
                                     Binding.Ok ( i, s ) ->
-                                        case String.toInt s of
-                                            Ok n ->
+                                        case out2in s of
+                                            Binding.Ok n ->
                                                 ( info.itemAdded (Binding.Ok ( i, n ))
                                                 , \idxMap -> IndexMapping.insert idxMap i
                                                 )
 
-                                            Err err ->
-                                                ( info.itemAdded (Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] })
+                                            Binding.Err err ->
+                                                ( info.itemAdded (Binding.Err err)
+                                                , \idxMap -> IndexMapping.insertButSkip idxMap i
+                                                )
+
+                                            Binding.Irrelevant ->
+                                                ( info.itemAdded Binding.Irrelevant
                                                 , \idxMap -> IndexMapping.insertButSkip idxMap i
                                                 )
 
@@ -219,230 +226,63 @@ stringOfIntBindingWrapper w id =
         }
 
 
-
-{--
-intOfStringWrapper :
-    CollectionBindingWrapper collectionPath model msg String
-    -> CollectionBindingWrapper collectionPath model msg Int
-intOfStringWrapper wrapper w id =
-    let
-        cw =
-            w id
-    in
-        wrapper
-            { initModel = ( cw.initModel, IndexMapping.empty )
-            , initMsg = cw.initMsg
-            , update =
-                \( wrappedMsg, bindingMsg ) ( model, idxMap ) paramsUps ->
-                    let
-                        ( newModel, cmd ) =
-                            cw.update wrappedMsg
-                                model
-                                { addItem =
-                                    \i n -> paramsUps.addItem i (toString n)
-                                , removeItem = paramsUps.removeItem
-                                }
-
-                        newIdxMap =
-                            case bindingMsg of
-                                Nothing ->
-                                    idxMap
-
-                                Just (ItemAdded idx) ->
-                                    IndexMapping.insert idxMap idx
-
-                                Just (ItemAddedButSkipped idx) ->
-                                    IndexMapping.insertButSkip idxMap idx
-
-                                Just (ItemRemoved idx) ->
-                                    IndexMapping.remove idxMap idx
-                    in
-                        ( ( newModel, newIdxMap ), cmd )
-            , subscriptions =
-                \( model, idxMap ) paramsSubs ->
-                    cw.subscriptions model
-                        { itemAdded = Sub.map (Binding.andThen (\( i, s ) -> Binding.map (\n -> ( i, n )) <| Binding.ofResult (String.toInt s))) paramsSubs.itemAdded
-                        , itemRemoved = paramsSubs.itemRemoved
-                        }
-            , view = cw.view
-            }
-            id
---}
-{--
-type alias GenericCollectionBinding msg relativePath carriedValue =
-    DataID
-    -> { itemAdded : Sub (BindingResult ( relativePath, carriedValue ))
-       , itemRemoved : Sub (BindingResult relativePath)
-       , addItem : relativePath -> carriedValue -> BindingResult (Cmd msg)
-       , removeItem : relativePath -> BindingResult (Cmd msg)
-       , askItemContent : relativePath -> Cmd msg
-       , getChildIdentifier : relativePath -> DataID
-       }
+stringOfIntBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg Int
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
+stringOfIntBindingWrapper =
+    makeCollectionBindingWrapper (Binding.alwaysOk toString) (Binding.ofResult << String.toInt)
 
 
-type alias CollectionBinding msg relativePath =
-    GenericCollectionBinding msg relativePath Data
+intOfStringBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg String
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
+intOfStringBindingWrapper =
+    makeCollectionBindingWrapper (Binding.ofResult << String.toInt) (Binding.alwaysOk toString)
 
 
-type alias ListBinding msg =
-    CollectionBinding msg Index
+stringOfData : Data.Data -> BindingResult String
+stringOfData d =
+    case d of
+        Data.String s ->
+            Binding.Ok s
+
+        _ ->
+            Binding.Err (trivialUnfulfillmentInfo "Not a string")
 
 
-type alias GenericListBinding msg carriedValue =
-    GenericCollectionBinding msg Index carriedValue
+dataOfStringBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg String
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
+dataOfStringBindingWrapper =
+    makeCollectionBindingWrapper (Binding.alwaysOk Data.String) stringOfData
 
 
-type alias GenericListBinder model msg boundModel carriedValue =
-    WidgetWrapper (GenericListBinding msg carriedValue) model msg boundModel
+stringOfDataBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg Data.Data
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
+stringOfDataBindingWrapper =
+    makeCollectionBindingWrapper stringOfData (Binding.alwaysOk Data.String)
 
 
-type alias ListBinder model msg boundModel =
-    GenericListBinder model msg boundModel Data
+intOfData : Data.Data -> BindingResult Int
+intOfData d =
+    case d of
+        Data.Int n ->
+            Binding.Ok n
+
+        _ ->
+            Binding.Err (trivialUnfulfillmentInfo "Not an integer")
 
 
-type alias CollectionBindingTransformer msg relativePath carriedFrom carriedTo =
-    GenericCollectionBinding msg relativePath carriedFrom -> GenericCollectionBinding msg relativePath carriedTo
+dataOfIntBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg Int
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
+dataOfIntBindingWrapper =
+    makeCollectionBindingWrapper (Binding.alwaysOk Data.Int) intOfData
 
 
-type alias ListBindingTransformer msg carriedFrom carriedTo =
-    CollectionBindingTransformer msg Index carriedFrom carriedTo
-
-
-listBinding : DataTypeSet -> ListBinding msg
-listBinding dts =
-    \boundId ->
-        { itemAdded =
-            DataManager.itemAddedSub dts
-                (\( id, maybeObj ) ->
-                    case id |> itemOf boundId of
-                        Just i ->
-                            case maybeObj of
-                                Result.Ok obj ->
-                                    Ok ( i, obj )
-
-                                Result.Err err ->
-                                    Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
-
-                        _ ->
-                            Irrelevant
-                )
-        , itemRemoved =
-            DataManager.itemRemovedSub
-                (\id ->
-                    case id |> itemOf boundId of
-                        Just i ->
-                            Ok i
-
-                        _ ->
-                            Irrelevant
-                )
-        , addItem = \i m -> Ok <| DataManager.addItemCmd (getItemIdentifier boundId i) m
-        , removeItem = \i -> Ok <| DataManager.removeItemCmd (getItemIdentifier boundId i)
-        , askItemContent = \i -> LocalStorage.askContentCmd (getItemIdentifier boundId i)
-        , getChildIdentifier = \i -> getItemIdentifier boundId i
-        }
-
-
-stringToIntListBinding : BinderTransformer model msg boundModel String boundModel Int
-stringToIntListBinding binder widgetBuilder =
-    { itemAdded =
-        Sub.map
-            (\res ->
-                case res of
-                    Ok ( i, s ) ->
-                        case String.toInt s of
-                            Result.Ok n ->
-                                ( Ok ( i, n ), (IndexMapping.insert idxMap i) )
-
-                            Result.Err err ->
-                                ( Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }, ( newStrState, IndexMapping.insertButSkip idxMap i ) )
-
-                    Err err ->
-                        ( Err err, ( newStrState, idxMap ) )
-
-                    Irrelevant ->
-                        ( Irrelevant, ( newStrState, idxMap ) )
-            )
-            concreteBinding.itemAdded
-    , itemRemoved =
-        Sub.map
-            (\( res, newStrState ) ->
-                case res of
-                    Ok i ->
-                        ( res, ( newStrState, IndexMapping.remove idxMap i ) )
-
-                    _ ->
-                        ( res, ( newStrState, idxMap ) )
-            )
-            concreteBinding.itemRemoved
-    , addItem = \i n -> concreteBinding.addItem i (toString n)
-    , removeItem = concreteBinding.removeItem
-    , askItemContent = concreteBinding.askItemContent
-    , getChildIdentifier = concreteBinding.getChildIdentifier
-    }
-
-
-dataToStringListBinding : ListBindingTransformer msg Data String
-dataToStringListBinding binding boundId ( strState, idxMap ) =
-    let
-        concreteBinding =
-            binding boundId strState
-    in
-        { initState = ( concreteBinding.initState, IndexMapping.empty )
-        , itemAdded =
-            Sub.map
-                (\( res, newStrState ) ->
-                    case res of
-                        Ok ( i, Data.String s ) ->
-                            ( Ok ( i, s ), ( newStrState, IndexMapping.insert idxMap i ) )
-
-                        Ok ( i, _ ) ->
-                            ( Err { unfulfillmentDescription = "not a string", fixes = PossibleFixes [] }, ( newStrState, IndexMapping.insertButSkip idxMap i ) )
-
-                        Err err ->
-                            ( Err err, ( newStrState, idxMap ) )
-
-                        Irrelevant ->
-                            ( Irrelevant, ( newStrState, idxMap ) )
-                )
-                concreteBinding.itemAdded
-        , itemRemoved =
-            Sub.map
-                (\( res, newStrState ) ->
-                    case res of
-                        Ok i ->
-                            ( res, ( newStrState, IndexMapping.remove idxMap i ) )
-
-                        _ ->
-                            ( res, ( newStrState, idxMap ) )
-                )
-                concreteBinding.itemRemoved
-        , addItem = \i s -> concreteBinding.addItem i (Data.String s)
-        , removeItem = concreteBinding.removeItem
-        , askItemContent = concreteBinding.askItemContent
-        , getChildIdentifier = concreteBinding.getChildIdentifier
-        }
-
-
-intToDataListBinding : ListBindingTransformer msg Int Data
-intToDataListBinding binding boundId state =
-    let
-        concreteBinding =
-            binding boundId state
-    in
-        { initState = concreteBinding.initState
-        , itemAdded = Sub.map (\( res, state ) -> ( map (\( i, n ) -> ( i, Data.Int n )) res, state )) concreteBinding.itemAdded
-        , itemRemoved = concreteBinding.itemRemoved
-        , addItem =
-            \i d ->
-                case d of
-                    Data.Int n ->
-                        concreteBinding.addItem i n
-
-                    _ ->
-                        Err { unfulfillmentDescription = "not an integer", fixes = PossibleFixes [] }
-        , removeItem = concreteBinding.removeItem
-        , askItemContent = concreteBinding.askItemContent
-        , getChildIdentifier = concreteBinding.getChildIdentifier
-        }
---}
+intOfDataBindingWrapper :
+    WidgetWithCollectionBinding Index innerModel innerMsg Data.Data
+    -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
+intOfDataBindingWrapper =
+    makeCollectionBindingWrapper intOfData (Binding.alwaysOk Data.Int)
