@@ -65,19 +65,6 @@ type alias WidgetWithBinding model msg carriedValue =
     Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
 
-type alias BindingWrapper innerModel innerCarriedValue outerModel outerCarriedValue msg =
-    WidgetWithBinding innerModel msg innerCarriedValue
-    -> WidgetWithBinding outerModel msg outerCarriedValue
-
-
-statelessWrapper :
-    (innerCarriedValue -> BindingResult outerCarriedValue)
-    -> (outerCarriedValue -> BindingResult innerCarriedValue)
-    -> BindingWrapper model innerCarriedValue model outerCarriedValue msg
-statelessWrapper in2out out2in =
-    mapParamsUp (\upInfo -> andThen in2out upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
-
-
 type alias Binding msg carriedValue =
     { set : carriedValue -> Cmd msg
     , get : (BindingResult carriedValue -> msg) -> Sub msg
@@ -140,22 +127,31 @@ textBinding boundId =
     }
 
 
+makeBindingWrapper :
+    (innerCarriedValue -> BindingResult outerCarriedValue)
+    -> (outerCarriedValue -> BindingResult innerCarriedValue)
+    -> WidgetWithBinding model msg innerCarriedValue
+    -> WidgetWithBinding model msg outerCarriedValue
+makeBindingWrapper in2out out2in =
+    mapParamsUp (\upInfo -> andThen in2out upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
+
+
 stringOfIntWrapper :
     WidgetWithBinding model msg Int
     -> WidgetWithBinding model msg String
 stringOfIntWrapper =
-    statelessWrapper (alwaysOk toString) (ofResult << String.toInt)
+    makeBindingWrapper (alwaysOk toString) (ofResult << String.toInt)
 
 
 intOfStringWrapper :
     WidgetWithBinding model msg String
     -> WidgetWithBinding model msg Int
 intOfStringWrapper =
-    statelessWrapper (ofResult << String.toInt) (alwaysOk toString)
+    makeBindingWrapper (ofResult << String.toInt) (alwaysOk toString)
 
 
 plus2Wrapper :
     WidgetWithBinding model msg Int
     -> WidgetWithBinding model msg Int
 plus2Wrapper =
-    statelessWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
+    makeBindingWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
