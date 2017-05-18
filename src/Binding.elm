@@ -1,6 +1,6 @@
 module Binding exposing (..)
 
-import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
+import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
 import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
@@ -24,7 +24,7 @@ ofResult res =
             Ok v
 
         Result.Err err ->
-            Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
+            Err (trivialUnfulfillmentInfo err)
 
 
 map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
