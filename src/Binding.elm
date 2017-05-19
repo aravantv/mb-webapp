@@ -53,12 +53,18 @@ andThen f res =
             Irrelevant
 
 
-type alias BindingUpInfo carriedValue =
-    BindingResult carriedValue
+type BindingUpInfo carriedValue
+    = Set (BindingResult carriedValue)
+    | DoNothing
 
 
 type alias BindingSubInfo carriedValue msg =
     BindingResult carriedValue -> msg
+
+
+doNothing : a -> ( a, Cmd msg, BindingUpInfo carriedValue )
+doNothing x =
+    ( x, Cmd.none, DoNothing )
 
 
 type alias WidgetWithBinding model msg carriedValue =
@@ -90,7 +96,7 @@ applyBinding w b id =
 
                     newCmd =
                         case upInfo of
-                            Ok v ->
+                            Set (Ok v) ->
                                 Cmd.batch [ cmd, b.set v ]
 
                             _ ->
@@ -133,7 +139,21 @@ makeBindingWrapper :
     -> WidgetWithBinding model msg innerCarriedValue
     -> WidgetWithBinding model msg outerCarriedValue
 makeBindingWrapper in2out out2in =
-    mapParamsUp (\upInfo -> andThen in2out upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
+    let
+        in2outUp upInfo =
+            case upInfo of
+                Set v ->
+                    case map in2out v of
+                        Ok res ->
+                            Set res
+
+                        _ ->
+                            DoNothing
+
+                DoNothing ->
+                    DoNothing
+    in
+        mapParamsUp (\upInfo -> in2outUp upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
 
 stringOfIntWrapper :
