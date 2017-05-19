@@ -67,6 +67,11 @@ doNothing x =
     ( x, Cmd.none, DoNothing )
 
 
+set : a -> carriedValue -> ( a, Cmd msg, BindingUpInfo carriedValue )
+set x v =
+    ( x, Cmd.none, Set (Ok v) )
+
+
 type alias WidgetWithBinding model msg carriedValue =
     Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
