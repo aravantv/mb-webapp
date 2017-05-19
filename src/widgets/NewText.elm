@@ -5,7 +5,7 @@ import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget)
+import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget, doNothing)
 
 
 widget : IDecision Msg { widget : Widget () () Model Msg }
@@ -48,7 +48,7 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg, () )
 update msg model =
-    ( transform msg model, Cmd.none, () )
+    doNothing (transform msg model)
 
 
 transform : Msg -> Model -> Model
