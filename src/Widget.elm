@@ -112,6 +112,11 @@ wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
 
 
+doNothing : model -> ( model, Cmd msg, () )
+doNothing m =
+    ( m, Cmd.none, () )
+
+
 cmdOfMsg : msg -> Cmd msg
 cmdOfMsg msg =
     Task.perform identity (Task.succeed msg)
