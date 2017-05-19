@@ -1,11 +1,11 @@
 module Label exposing (..)
 
-import Html exposing (Html, input, label, text)
-import Widget exposing (IDecision, Widget, TopWidget, doNothing)
 import Data exposing (Data(..))
+import Html exposing (Html, input, label, text)
+import Widget exposing (IDecision, TopWidget, Widget)
 
 
-createWidget : String -> Widget Model Msg
+createWidget : String -> Widget () () Model Msg
 createWidget s _ =
     { initModel = s
     , initMsg =
@@ -19,7 +19,7 @@ createWidget s _ =
                         ""
     , update = update
     , view = view
-    , subscriptions = Widget.emptySubscription
+    , subscriptions = \_ -> ( Sub.none, () )
     }
 
 
@@ -39,9 +39,9 @@ type Msg
     = ChangeLabel String
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, () )
 update (ChangeLabel s) model =
-    doNothing s
+    ( s, Cmd.none, () )
 
 
 
