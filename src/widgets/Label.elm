@@ -2,7 +2,7 @@ module Label exposing (..)
 
 import Data exposing (Data(..))
 import Html exposing (Html, input, label, text)
-import Widget exposing (IDecision, TopWidget, Widget)
+import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
 createWidget : String -> Widget () () Model Msg
@@ -40,8 +40,8 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, () )
-update (ChangeLabel s) model =
-    ( s, Cmd.none, () )
+update (ChangeLabel s) _ =
+    doNothing s
 
 
 
