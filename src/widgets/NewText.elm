@@ -1,14 +1,14 @@
 module NewText exposing (..)
 
+import Data exposing (Data(..))
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
-import Data exposing (Data(..))
 import Utils exposing (..)
-import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget, doNothing)
+import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget)
 
 
-widget : IDecision Msg { widget : Widget Model Msg }
+widget : IDecision Msg { widget : Widget () () Model Msg }
 widget =
     { confirmMsg = Confirm
     , widget =
@@ -17,7 +17,7 @@ widget =
             , initMsg = Init
             , update = update
             , view = view
-            , subscriptions = Widget.emptySubscription
+            , subscriptions = \_ -> ( Sub.none, () )
             }
     }
 
@@ -46,9 +46,9 @@ type Msg
     | Init Data
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, () )
 update msg model =
-    doNothing <| transform msg model
+    ( transform msg model, Cmd.none, () )
 
 
 transform : Msg -> Model -> Model
