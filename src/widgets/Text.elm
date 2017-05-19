@@ -8,16 +8,15 @@ import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (ISelectable, Widget, cmdOfMsg, doNothing)
 
 
-createWidget : GenericBinding Msg String -> Widget Model Msg
-createWidget binding id =
+widget : WidgetWithBinding Model Msg String
+widget id =
     { initMsg = initMsg
     , initModel = emptyModel
-    , update = update binding id
+    , update = update id
     , view = view
-    , subscriptions = subscriptions binding id
+    , subscriptions = subscriptions id
     }
 
 
@@ -65,25 +64,17 @@ type Msg
     | NoOp
 
 
-update : GenericBinding Msg String -> DataID -> Msg -> Model -> ( Model, Cmd Msg )
-update binding id msg model =
+update : DataID -> Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
+update id msg model =
     case msg of
         Init s ->
-            update binding id (UIChange s) emptyModel
+            update id (UIChange s) emptyModel
 
         UIChange newContent ->
-            update binding id ConfirmModel { model | content = newContent, error = False }
+            update id ConfirmModel { model | content = newContent, error = False }
 
         ConfirmModel ->
-            case (binding id).set model.content of
-                Binding.Ok cmd ->
-                    ( model, cmd )
-
-                Binding.Err _ ->
-                    ( { model | error = True }, Cmd.none )
-
-                Binding.Irrelevant ->
-                    ( { model | error = False }, Cmd.none )
+            set model model.content
 
         UICancel ->
             case model.initialContent of
@@ -91,7 +82,7 @@ update binding id msg model =
                     doNothing model
 
                 Just initialContent ->
-                    update binding id (UIChange initialContent) model
+                    update id (UIChange initialContent) model
 
         ModelChange chgRes ->
             case chgRes of
@@ -113,8 +104,8 @@ update binding id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : GenericBinding Msg String -> DataID -> Model -> Sub Msg
-subscriptions binding id m =
+subscriptions : DataID -> Model -> ( Sub Msg, BindingSubInfo String Msg )
+subscriptions id m =
     let
         f bindingRes =
             case bindingRes of
@@ -127,7 +118,7 @@ subscriptions binding id m =
                 Binding.Irrelevant ->
                     NoOp
     in
-        Sub.map f (binding id).get
+        ( Sub.none, f )
 
 
 
