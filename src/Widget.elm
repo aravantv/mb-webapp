@@ -112,19 +112,9 @@ wrapUpdateWithCmd update =
     \msg model -> update msg model ! []
 
 
-doNothing : a -> ( a, Cmd msg )
-doNothing x =
-    ( x, Cmd.none )
-
-
 cmdOfMsg : msg -> Cmd msg
 cmdOfMsg msg =
     Task.perform identity (Task.succeed msg)
-
-
-emptySubscription : model -> paramsSubs -> Sub msg
-emptySubscription _ _ =
-    Sub.none
 
 
 type alias Factory widgetModel =
