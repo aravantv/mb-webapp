@@ -12,14 +12,14 @@ import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothi
 
 
 type alias Parameters subModel subMsg =
-    { wrappedWidget : Widget subModel subMsg
+    { wrappedWidget : Widget () () subModel subMsg
     , selector : DataSelector
     }
 
 
 createWidget :
     Parameters subModel subMsg
-    -> Widget (Model subModel) (Msg subMsg)
+    -> Widget () () (Model subModel) (Msg subMsg)
 createWidget params id =
     { initModel = emptyModel params id
     , initMsg = Init
@@ -64,7 +64,7 @@ update :
     -> DataID
     -> Msg subMsg
     -> Model subModel
-    -> ( Model subModel, Cmd (Msg subMsg) )
+    -> ( Model subModel, Cmd (Msg subMsg), () )
 update params id msg model =
     let
         instantiatedWidget =
@@ -73,17 +73,17 @@ update params id msg model =
         case msg of
             DelegateToWidget subMsg ->
                 let
-                    ( updatedModel, cmd ) =
+                    ( updatedModel, cmd, () ) =
                         instantiatedWidget.update subMsg model.wrappedModel
                 in
-                    ( { model | wrappedModel = updatedModel }, Cmd.map DelegateToWidget cmd )
+                    ( { model | wrappedModel = updatedModel }, Cmd.map DelegateToWidget cmd, () )
 
             Init fi ->
                 let
                     initCmd =
                         cmdOfMsg <| DelegateToWidget (instantiatedWidget.initMsg fi)
                 in
-                    ( emptyModel params id, initCmd )
+                    ( emptyModel params id, initCmd, () )
 
             StartDragging p ->
                 doNothing { model | dragStartPosition = Just p }
@@ -104,21 +104,28 @@ update params id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Parameters subModel subMsg -> DataID -> Model subModel -> Sub (Msg subMsg)
+subscriptions : Parameters subModel subMsg -> DataID -> Model subModel -> ( Sub (Msg subMsg), () )
 subscriptions params id model =
     let
         instantiatedWrappedWidget =
             params.wrappedWidget (params.selector id)
 
-        subSub =
-            Sub.map DelegateToWidget <| instantiatedWrappedWidget.subscriptions model.wrappedModel
-    in
-        case model.dragStartPosition of
-            Just startPos ->
-                Sub.batch <| [ subSub, Mouse.moves (\p -> Dragging ( startPos, p )), Mouse.ups (always EndDragging) ]
+        ( subSub, () ) =
+            instantiatedWrappedWidget.subscriptions model.wrappedModel
 
-            Nothing ->
-                subSub
+        subRes =
+            case model.dragStartPosition of
+                Just startPos ->
+                    Sub.batch <|
+                        [ Sub.map DelegateToWidget subSub
+                        , Mouse.moves (\p -> Dragging ( startPos, p ))
+                        , Mouse.ups (always EndDragging)
+                        ]
+
+                Nothing ->
+                    Sub.map DelegateToWidget subSub
+    in
+        ( subRes, () )
 
 
 
