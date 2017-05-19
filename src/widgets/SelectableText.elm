@@ -1,18 +1,18 @@
 module SelectableText exposing (..)
 
-import Binding exposing (Binding, GenericBinding)
+import Binding exposing (Binding, BindingSubInfo, BindingUpInfo(..), BoundWidgetWithBinding, WidgetWithBinding, doNothing)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (BoundWidget, ISelectable, Unbound, Widget, cmdOfMsg, doNothing)
+import Widget exposing (BoundWidget, ISelectable, Unbound, Widget, cmdOfMsg)
 
 
-createWidget : GenericBinding Text.Msg String -> Widget Model Msg
-createWidget binding id =
+widget : WidgetWithBinding Model Msg String
+widget id =
     let
         textWidget =
-            Text.createWidget binding id
+            Text.widget id
     in
         { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
         , initModel = initModel textWidget
@@ -22,12 +22,12 @@ createWidget binding id =
         }
 
 
-createSelectableWidget : GenericBinding Text.Msg String -> ISelectable Model Msg { widget : Widget Model Msg }
-createSelectableWidget binding =
+selectableWidget : ISelectable Model Msg { widget : WidgetWithBinding Model Msg String }
+selectableWidget =
     { isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
-    , widget = createWidget binding
+    , widget = widget
     }
 
 
@@ -41,7 +41,7 @@ type alias Model =
     }
 
 
-initModel : BoundWidget Text.Model Text.Msg -> Model
+initModel : BoundWidgetWithBinding Text.Model Text.Msg String -> Model
 initModel textWidget =
     { textModel = textWidget.initModel, editMode = False }
 
@@ -56,12 +56,12 @@ type Msg
     | UIConfirm
 
 
-update : BoundWidget Text.Model Text.Msg -> Msg -> Model -> ( Model, Cmd Msg )
+update : BoundWidgetWithBinding Text.Model Text.Msg String -> Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
 update textWidget msg model =
     case msg of
         DelegateToTextMsg textMsg ->
             let
-                ( textModel, textCmd ) =
+                ( textModel, textCmd, setInfo ) =
                     textWidget.update textMsg model.textModel
 
                 cmd =
@@ -72,43 +72,47 @@ update textWidget msg model =
             in
                 case textMsg of
                     Text.UICancel ->
-                        ( { textUpdatedModel | editMode = False }, cmd )
+                        ( { textUpdatedModel | editMode = False }, cmd, DoNothing )
 
                     Text.Init _ ->
-                        ( { textUpdatedModel | editMode = False }, cmd )
+                        ( { textUpdatedModel | editMode = False }, cmd, DoNothing )
 
                     Text.UIChange _ ->
                         {--We prevent Text to serialize the change: for a selectable text, this should only be done when confirmed. --}
                         doNothing textUpdatedModel
 
                     _ ->
-                        ( textUpdatedModel, cmd )
+                        ( textUpdatedModel, cmd, setInfo )
 
         UISelect ->
             { model | editMode = True } |> doNothing
 
         UIConfirm ->
             let
-                ( textModel, textCmd ) =
+                ( textModel, textCmd, upInfo ) =
                     textWidget.update Text.ConfirmModel model.textModel
             in
-                ( { model | textModel = textModel, editMode = False }, Cmd.map DelegateToTextMsg textCmd )
+                ( { model | textModel = textModel, editMode = False }, Cmd.map DelegateToTextMsg textCmd, upInfo )
 
 
 
 -- SUBSCRIPTIONS
 
 
-subscriptions : BoundWidget Text.Model Text.Msg -> Model -> Sub Msg
+subscriptions : BoundWidgetWithBinding Text.Model Text.Msg String -> Model -> ( Sub Msg, BindingSubInfo String Msg )
 subscriptions textWidget m =
-    Sub.map DelegateToTextMsg (textWidget.subscriptions m.textModel)
+    let
+        ( sub, subInfo ) =
+            textWidget.subscriptions m.textModel
+    in
+        ( Sub.map DelegateToTextMsg sub, DelegateToTextMsg << subInfo )
 
 
 
 -- VIEW
 
 
-view : BoundWidget Text.Model Text.Msg -> Model -> Html Msg
+view : BoundWidgetWithBinding Text.Model Text.Msg String -> Model -> Html Msg
 view textWidget model =
     if model.editMode then
         span [ onKeyUp [ ( enterKey, UIConfirm ) ] ]
