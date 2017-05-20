@@ -22,6 +22,12 @@ mapItemAdded out2in =
 type CollectionBindingUpInfo collectionPath carriedValue
     = AddItem (BindingResult ( collectionPath, carriedValue ))
     | RemoveItem (BindingResult collectionPath)
+    | DoNothing
+
+
+doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
+doNothing x =
+    ( x, Cmd.none, DoNothing )
 
 
 mapUpInfo :
@@ -35,6 +41,9 @@ mapUpInfo f i =
 
         RemoveItem res ->
             RemoveItem res
+
+        DoNothing ->
+            DoNothing
 
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
@@ -94,6 +103,9 @@ applyBinding w b id =
                                 Cmd.batch [ cmd, b.removeItem idx ]
 
                             RemoveItem _ ->
+                                cmd
+
+                            DoNothing ->
                                 cmd
                 in
                     ( newModel, newCmd, () )
