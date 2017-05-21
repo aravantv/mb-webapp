@@ -44,3 +44,34 @@ get l i =
         List.head (List.drop i l)
     else
         Nothing
+
+
+firstMatch : (t -> Bool) -> List t -> Maybe Int
+firstMatch p l =
+    let
+        firstMatchIndexed l i =
+            case l of
+                [] ->
+                    Nothing
+
+                x :: xs ->
+                    if p x then
+                        Just i
+                    else
+                        firstMatchIndexed xs (i + 1)
+    in
+        firstMatchIndexed l 0
+
+
+unzip3 : List ( a, b, c ) -> ( List a, List b, List c )
+unzip3 l =
+    case l of
+        ( x, y, z ) :: xs ->
+            let
+                ( l1, l2, l3 ) =
+                    unzip3 xs
+            in
+                ( x :: l1, y :: l2, z :: l3 )
+
+        [] ->
+            ( [], [], [] )
