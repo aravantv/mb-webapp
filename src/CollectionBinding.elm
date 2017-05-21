@@ -8,7 +8,7 @@ import DataManager
 import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping exposing (IndexMapping)
-import Widget exposing (TopWidget, Widget, cmdOfMsg, mapParamsSub, mapParamsUp)
+import Widget exposing (TopWidget, Widget, WidgetCloser, cmdOfMsg, mapParamsSub, mapParamsUp)
 
 
 mapItemAdded :
@@ -56,16 +56,6 @@ type alias WidgetWithCollectionBinding collectionPath model msg carriedValue =
     Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
 
 
-type alias CollectionBindingAdapter collectionPath innerModel innerCarriedValue innerMsg outerModel outerCarriedValue outerMsg =
-    WidgetWithCollectionBinding collectionPath innerModel innerMsg innerCarriedValue
-    -> WidgetWithCollectionBinding collectionPath outerModel outerMsg outerCarriedValue
-
-
-type alias CollectionBindingWrapper collectionPath innerModel innerMsg carriedValue outerModel outerMsg =
-    WidgetWithCollectionBinding collectionPath innerModel innerMsg carriedValue
-    -> Widget () () outerModel outerMsg
-
-
 type alias CollectionBinding collectionPath msg carriedValue =
     { addItem : collectionPath -> carriedValue -> Cmd msg
     , removeItem : collectionPath -> Cmd msg
@@ -75,10 +65,9 @@ type alias CollectionBinding collectionPath msg carriedValue =
 
 
 applyBinding :
-    WidgetWithCollectionBinding collectionPath model msg carriedValue
-    -> CollectionBinding collectionPath msg carriedValue
-    -> Widget () () model msg
-applyBinding w b =
+    CollectionBinding collectionPath msg carriedValue
+    -> WidgetCloser (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+applyBinding b w =
     { initModel = w.initModel
     , initMsg = \d -> w.initMsg d
     , update =
