@@ -3,7 +3,6 @@ module Text exposing (..)
 import Binding exposing (..)
 import ConstraintUtils exposing (UnfulfillmentInfo)
 import Data exposing (Data(..))
-import DataID exposing (DataID)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
@@ -11,12 +10,12 @@ import Utils exposing (..)
 
 
 widget : WidgetWithBinding Model Msg String
-widget id =
+widget =
     { initMsg = initMsg
     , initModel = emptyModel
-    , update = update id
+    , update = update
     , view = view
-    , subscriptions = subscriptions id
+    , subscriptions = subscriptions
     }
 
 
@@ -64,14 +63,14 @@ type Msg
     | NoOp
 
 
-update : DataID -> Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
-update id msg model =
+update : Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
+update msg model =
     case msg of
         Init s ->
-            update id (UIChange s) emptyModel
+            update (UIChange s) emptyModel
 
         UIChange newContent ->
-            update id ConfirmModel { model | content = newContent, error = False }
+            update ConfirmModel { model | content = newContent, error = False }
 
         ConfirmModel ->
             set model model.content
@@ -82,7 +81,7 @@ update id msg model =
                     doNothing model
 
                 Just initialContent ->
-                    update id (UIChange initialContent) model
+                    update (UIChange initialContent) model
 
         ModelChange chgRes ->
             case chgRes of
@@ -104,8 +103,8 @@ update id msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : DataID -> Model -> ( Sub Msg, BindingSubInfo String Msg )
-subscriptions id m =
+subscriptions : Model -> ( Sub Msg, BindingSubInfo String Msg )
+subscriptions m =
     let
         f bindingRes =
             case bindingRes of
