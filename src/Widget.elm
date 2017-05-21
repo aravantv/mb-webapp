@@ -6,7 +6,7 @@ import Html exposing (Html)
 import Task
 
 
-type alias BoundWidget upInfo subInfo model msg =
+type alias Widget upInfo subInfo model msg =
     { initModel : model
     , initMsg : Data -> msg
     , update : msg -> model -> ( model, Cmd msg, upInfo )
@@ -19,54 +19,38 @@ mapParamsUp :
     (upInfo1 -> upInfo2)
     -> Widget upInfo1 paramsSub model msg
     -> Widget upInfo2 paramsSub model msg
-mapParamsUp fUp widget id =
-    let
-        cw =
-            widget id
-    in
-        { initModel = cw.initModel
-        , initMsg = cw.initMsg
-        , update =
-            \msg model ->
-                let
-                    ( newModel, cmd, upInfo ) =
-                        cw.update msg model
-                in
-                    ( newModel, cmd, fUp upInfo )
-        , subscriptions = cw.subscriptions
-        , view = cw.view
-        }
+mapParamsUp fUp w =
+    { initModel = w.initModel
+    , initMsg = w.initMsg
+    , update =
+        \msg model ->
+            let
+                ( newModel, cmd, upInfo ) =
+                    w.update msg model
+            in
+                ( newModel, cmd, fUp upInfo )
+    , subscriptions = w.subscriptions
+    , view = w.view
+    }
 
 
 mapParamsSub :
     (subInfo1 -> subInfo2)
     -> Widget paramsUp subInfo1 model msg
     -> Widget paramsUp subInfo2 model msg
-mapParamsSub fSub widget id =
-    let
-        cw =
-            widget id
-    in
-        { initModel = cw.initModel
-        , initMsg = cw.initMsg
-        , update = cw.update
-        , subscriptions =
-            \model ->
-                let
-                    ( sub, subInfo ) =
-                        cw.subscriptions model
-                in
-                    ( sub, fSub subInfo )
-        , view = cw.view
-        }
-
-
-type alias Unbound boundWidget =
-    DataID -> boundWidget
-
-
-type alias Widget upInfo subInfo model msg =
-    Unbound (BoundWidget upInfo subInfo model msg)
+mapParamsSub fSub w =
+    { initModel = w.initModel
+    , initMsg = w.initMsg
+    , update = w.update
+    , subscriptions =
+        \model ->
+            let
+                ( sub, subInfo ) =
+                    w.subscriptions model
+            in
+                ( sub, fSub subInfo )
+    , view = w.view
+    }
 
 
 type alias WidgetTransformer upInfo1 subInfo1 model1 msg1 upInfo2 subInfo2 model2 msg2 =
