@@ -78,46 +78,42 @@ applyBinding :
     WidgetWithCollectionBinding collectionPath model msg carriedValue
     -> CollectionBinding collectionPath msg carriedValue
     -> Widget () () model msg
-applyBinding w b id =
-    let
-        cw =
-            w id
-    in
-        { initModel = cw.initModel
-        , initMsg = \d -> cw.initMsg d
-        , update =
-            \msg model ->
-                let
-                    ( newModel, cmd, upInfo ) =
-                        cw.update msg model
+applyBinding w b =
+    { initModel = w.initModel
+    , initMsg = \d -> w.initMsg d
+    , update =
+        \msg model ->
+            let
+                ( newModel, cmd, upInfo ) =
+                    w.update msg model
 
-                    newCmd =
-                        case upInfo of
-                            AddItem (Binding.Ok ( idx, val )) ->
-                                Cmd.batch [ cmd, b.addItem idx val ]
+                newCmd =
+                    case upInfo of
+                        AddItem (Binding.Ok ( idx, val )) ->
+                            Cmd.batch [ cmd, b.addItem idx val ]
 
-                            AddItem _ ->
-                                cmd
+                        AddItem _ ->
+                            cmd
 
-                            RemoveItem (Binding.Ok idx) ->
-                                Cmd.batch [ cmd, b.removeItem idx ]
+                        RemoveItem (Binding.Ok idx) ->
+                            Cmd.batch [ cmd, b.removeItem idx ]
 
-                            RemoveItem _ ->
-                                cmd
+                        RemoveItem _ ->
+                            cmd
 
-                            DoNothing ->
-                                cmd
-                in
-                    ( newModel, newCmd, () )
-        , subscriptions =
-            \model ->
-                let
-                    ( sub, mapper ) =
-                        cw.subscriptions model
-                in
-                    ( Sub.batch (sub :: [ b.itemAdded mapper.itemAdded, b.itemRemoved mapper.itemRemoved ]), () )
-        , view = cw.view
-        }
+                        DoNothing ->
+                            cmd
+            in
+                ( newModel, newCmd, () )
+    , subscriptions =
+        \model ->
+            let
+                ( sub, mapper ) =
+                    w.subscriptions model
+            in
+                ( Sub.batch (sub :: [ b.itemAdded mapper.itemAdded, b.itemRemoved mapper.itemRemoved ]), () )
+    , view = w.view
+    }
 
 
 type alias Index =
@@ -170,28 +166,25 @@ makeCollectionBindingWrapper :
     -> (outCarriedValue -> BindingResult inCarriedValue)
     -> WidgetWithCollectionBinding Index innerModel innerMsg inCarriedValue
     -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) outCarriedValue
-makeCollectionBindingWrapper in2out out2in w id =
+makeCollectionBindingWrapper in2out out2in w =
     let
-        cw =
-            w id
-
         trivialMsg m =
             ( m, identity )
     in
-        { initModel = ( cw.initModel, IndexMapping.empty )
-        , initMsg = \d -> trivialMsg (cw.initMsg d)
+        { initModel = ( w.initModel, IndexMapping.empty )
+        , initMsg = \d -> trivialMsg (w.initMsg d)
         , update =
             \( msg, mappingTransformer ) ( model, idxMap ) ->
                 let
                     ( newModel, cmd, info ) =
-                        cw.update msg model
+                        w.update msg model
                 in
                     ( ( newModel, mappingTransformer idxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out info )
         , subscriptions =
             \( model, _ ) ->
                 let
                     ( sub, info ) =
-                        cw.subscriptions model
+                        w.subscriptions model
 
                     newInfo =
                         { itemAdded =
@@ -234,7 +227,7 @@ makeCollectionBindingWrapper in2out out2in w id =
                         }
                 in
                     ( Sub.map trivialMsg sub, newInfo )
-        , view = \( model, _ ) -> Html.map trivialMsg (cw.view model)
+        , view = \( model, _ ) -> Html.map trivialMsg (w.view model)
         }
 
 
