@@ -28,7 +28,7 @@ type alias Parameters newItemModel itemModel newItemMsg itemMsg =
 
 createWidget :
     Parameters newItemModel itemModel newItemMsg itemMsg
-    -> WidgetWithCollectionBinding Index (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel) carriedValue
+    -> WidgetWithCollectionBinding Index (Model newItemModel itemModel) (Msg newItemMsg itemMsg itemModel) Data
 createWidget params id =
     { initModel = emptyModel params id
     , initMsg = Init
@@ -42,9 +42,13 @@ createWidget params id =
 -- MODEL
 
 
+type alias Contents itemModel =
+    List ( itemModel, DataID )
+
+
 type alias Model newItemModel itemModel =
     { itemToAdd : newItemModel
-    , contents : List itemModel
+    , contents : Contents itemModel
     }
 
 
@@ -68,7 +72,7 @@ type Msg newItemMsg itemMsg itemModel
     | Remove Index
     | SelectNext Index
     | SelectPrevious Index
-    | BackendAddedItem ( Index, Data )
+    | BackendAddedItem ( Index, Data, DataID )
     | BackendRemovedItem Index
     | NoOp
     | Init Data
@@ -79,7 +83,7 @@ update :
     -> DataID
     -> Msg newItemMsg itemMsg itemModel
     -> Model newItemModel itemModel
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel), CollectionBindingUpInfo Index carriedValue )
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel), CollectionBindingUpInfo Index Data )
 update params id msg model =
     case msg of
         DelegateToNewItemMsg subMsg ->
@@ -114,13 +118,18 @@ update params id msg model =
         SelectPrevious i ->
             update params id (DelegateToItemMsg (i - 1) params.itemWidget.selectMsg) model
 
-        BackendAddedItem ( i, d ) ->
-            case insert model.contents d i of
-                Just newContents ->
-                    doNothing { model | contents = newContents }
+        BackendAddedItem ( i, d, itemID ) ->
+            let
+                addedItemModel =
+                    (params.itemWidget.widget itemID).initModel
+            in
+                doNothing <|
+                    case insert model.contents ( addedItemModel, itemID ) i of
+                        Just newContents ->
+                            { model | contents = newContents }
 
-                Nothing ->
-                    doNothing model
+                        Nothing ->
+                            model
 
         BackendRemovedItem i ->
             doNothing <|
@@ -169,24 +178,24 @@ addItemCmd params id indexToAdd itemToAdd =
 unselectPreviouslySelectedItems :
     Parameters newItemModel itemModel newItemMsg itemMsg
     -> DataID
-    -> List itemModel
+    -> Contents itemModel
     -> Index
     -> itemMsg
-    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+    -> ( Contents itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 unselectPreviouslySelectedItems params id items exceptIndex msg =
     let
-        unselectIfPreviouslySelected j itemModel =
+        unselectIfPreviouslySelected j ( itemModel, itemID ) =
             if params.itemWidget.isSelected itemModel && j /= exceptIndex then
                 let
                     instantiatedWidget =
-                        params.itemWidget.widget (getItemIdentifier id j)
+                        params.itemWidget.widget itemID
 
                     ( newItemModel, cmd, () ) =
                         instantiatedWidget.update params.itemWidget.unselectMsg itemModel
                 in
-                    ( newItemModel, cmd )
+                    ( ( newItemModel, itemID ), cmd )
             else
-                ( itemModel, Cmd.none )
+                ( ( itemModel, itemID ), Cmd.none )
 
         ( unselectedItems, unselectCmds ) =
             List.unzip (List.indexedMap unselectIfPreviouslySelected items)
@@ -200,24 +209,24 @@ unselectPreviouslySelectedItems params id items exceptIndex msg =
 delegateUpdateToItem :
     Parameters newItemModel itemModel newItemMsg itemMsg
     -> DataID
-    -> List itemModel
+    -> Contents itemModel
     -> Index
     -> itemMsg
-    -> ( List itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
+    -> ( Contents itemModel, Cmd (Msg newItemMsg itemMsg itemModel) )
 delegateUpdateToItem params id contents itemIndex itemMsg =
     case get contents itemIndex of
         Nothing ->
             ( contents, Cmd.none )
 
-        Just subModel ->
+        Just ( subModel, itemID ) ->
             let
                 instantiatedWidget =
-                    params.itemWidget.widget (getItemIdentifier id itemIndex)
+                    params.itemWidget.widget itemID
 
                 ( updatedSubModel, cmd, () ) =
                     instantiatedWidget.update itemMsg subModel
             in
-                ( List.take itemIndex contents ++ [ updatedSubModel ] ++ List.drop (itemIndex + 1) contents
+                ( List.take itemIndex contents ++ [ ( updatedSubModel, id ) ] ++ List.drop (itemIndex + 1) contents
                 , Cmd.map (DelegateToItemMsg itemIndex) cmd
                 )
 
@@ -233,10 +242,10 @@ subscriptions :
     -> ( Sub (Msg newItemMsg itemMsg itemModel), CollectionBindingSubInfo Index Data (Msg newItemMsg itemMsg itemModel) )
 subscriptions params id model =
     let
-        itemSub i itemModel =
+        itemSub i ( itemModel, itemID ) =
             let
                 instantiatedWidget =
-                    params.itemWidget.widget ((params.binding id).getChildIdentifier i)
+                    params.itemWidget.widget itemID
 
                 ( subs, () ) =
                     instantiatedWidget.subscriptions itemModel
@@ -275,15 +284,15 @@ view :
     -> Html (Msg newItemMsg itemMsg itemModel)
 view params id model =
     let
-        instantiatedWidget i =
-            params.itemWidget.widget ((params.binding id).getChildIdentifier i)
+        instantiatedWidget itemID =
+            params.itemWidget.widget itemID
 
-        delegateViewToItem i m =
+        delegateViewToItem i ( m, itemID ) =
             li []
                 [ span
                     {--We need to use key down here because browsers have their own interpretation of this key combination. --}
                     [ onKeyDown [ ( tabKey, SelectNext i ), ( shiftCode tabKey, SelectPrevious i ) ] ]
-                    [ Html.map (DelegateToItemMsg i) <| (instantiatedWidget i).view m
+                    [ Html.map (DelegateToItemMsg i) <| (instantiatedWidget itemID).view m
                     , button [ onClick <| Remove i ] [ text "-" ]
                     ]
                 ]
