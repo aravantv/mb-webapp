@@ -3,7 +3,7 @@ module Binding exposing (..)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
+import Widget exposing (ISelectable, Index, Widget, WidgetCloser, WidgetTransformer, mapParamsSub, mapParamsUp)
 
 
 type BindingResult resType
@@ -83,10 +83,9 @@ type alias Binding msg carriedValue =
 
 
 applyBinding :
-    WidgetWithBinding model msg carriedValue
-    -> Binding msg carriedValue
-    -> Widget () () model msg
-applyBinding w b =
+    Binding msg carriedValue
+    -> WidgetCloser (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+applyBinding b w =
     { initModel = w.initModel
     , initMsg = w.initMsg
     , update =
