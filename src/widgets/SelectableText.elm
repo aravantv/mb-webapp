@@ -1,25 +1,21 @@
 module SelectableText exposing (..)
 
-import Binding exposing (Binding, BindingSubInfo, BindingUpInfo(..), BoundWidgetWithBinding, WidgetWithBinding, doNothing)
+import Binding exposing (Binding, BindingSubInfo, BindingUpInfo(..), WidgetWithBinding, doNothing)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (BoundWidget, ISelectable, Unbound, Widget, cmdOfMsg)
+import Widget exposing (ISelectable, Widget, cmdOfMsg)
 
 
 widget : WidgetWithBinding Model Msg String
-widget id =
-    let
-        textWidget =
-            Text.widget id
-    in
-        { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
-        , initModel = initModel textWidget
-        , update = update textWidget
-        , view = view textWidget
-        , subscriptions = subscriptions textWidget
-        }
+widget =
+    { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
+    , initModel = initModel Text.widget
+    , update = update Text.widget
+    , view = view Text.widget
+    , subscriptions = subscriptions Text.widget
+    }
 
 
 selectableWidget : ISelectable Model Msg { widget : WidgetWithBinding Model Msg String }
@@ -41,7 +37,7 @@ type alias Model =
     }
 
 
-initModel : BoundWidgetWithBinding Text.Model Text.Msg String -> Model
+initModel : WidgetWithBinding Text.Model Text.Msg String -> Model
 initModel textWidget =
     { textModel = textWidget.initModel, editMode = False }
 
@@ -56,7 +52,7 @@ type Msg
     | UIConfirm
 
 
-update : BoundWidgetWithBinding Text.Model Text.Msg String -> Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
+update : WidgetWithBinding Text.Model Text.Msg String -> Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
 update textWidget msg model =
     case msg of
         DelegateToTextMsg textMsg ->
@@ -99,7 +95,7 @@ update textWidget msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : BoundWidgetWithBinding Text.Model Text.Msg String -> Model -> ( Sub Msg, BindingSubInfo String Msg )
+subscriptions : WidgetWithBinding Text.Model Text.Msg String -> Model -> ( Sub Msg, BindingSubInfo String Msg )
 subscriptions textWidget m =
     let
         ( sub, subInfo ) =
@@ -112,7 +108,7 @@ subscriptions textWidget m =
 -- VIEW
 
 
-view : BoundWidgetWithBinding Text.Model Text.Msg String -> Model -> Html Msg
+view : WidgetWithBinding Text.Model Text.Msg String -> Model -> Html Msg
 view textWidget model =
     if model.editMode then
         span [ onKeyUp [ ( enterKey, UIConfirm ) ] ]
