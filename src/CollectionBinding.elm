@@ -47,7 +47,7 @@ mapUpInfo f i =
 
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
-    { itemAdded : BindingResult ( collectionPath, carriedValue ) -> msg
+    { itemAdded : BindingResult ( collectionPath, carriedValue, DataID ) -> msg
     , itemRemoved : BindingResult collectionPath -> msg
     }
 
@@ -69,7 +69,7 @@ type alias CollectionBindingWrapper collectionPath innerModel innerMsg carriedVa
 type alias CollectionBinding collectionPath msg carriedValue =
     { addItem : collectionPath -> carriedValue -> Cmd msg
     , removeItem : collectionPath -> Cmd msg
-    , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
+    , itemAdded : (BindingResult ( collectionPath, carriedValue, DataID ) -> msg) -> Sub msg
     , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
     }
 
@@ -138,7 +138,7 @@ listBinding dts boundId =
                             Just i ->
                                 case maybeObj of
                                     Result.Ok obj ->
-                                        Binding.Ok ( i, obj )
+                                        Binding.Ok ( i, obj, [ DataType.Field "FIXME-HERE SHOULD BE A DATAID" ] )
 
                                     Result.Err err ->
                                         Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
@@ -197,10 +197,10 @@ makeCollectionBindingWrapper in2out out2in w id =
                         { itemAdded =
                             \res ->
                                 case res of
-                                    Binding.Ok ( i, s ) ->
+                                    Binding.Ok ( i, s, id ) ->
                                         case out2in s of
                                             Binding.Ok n ->
-                                                ( info.itemAdded (Binding.Ok ( i, n ))
+                                                ( info.itemAdded (Binding.Ok ( i, n, id ))
                                                 , \idxMap -> IndexMapping.insert idxMap i
                                                 )
 
