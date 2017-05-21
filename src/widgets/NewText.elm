@@ -5,20 +5,19 @@ import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
-import Widget exposing (BoundWidget, IDecision, TopWidget, Unbound, Widget, doNothing)
+import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
 widget : IDecision Msg { widget : Widget () () Model Msg }
 widget =
     { confirmMsg = Confirm
     , widget =
-        \_ ->
-            { initModel = emptyModel
-            , initMsg = Init
-            , update = update
-            , view = view
-            , subscriptions = \_ -> ( Sub.none, () )
-            }
+        { initModel = emptyModel
+        , initMsg = Init
+        , update = update
+        , view = view
+        , subscriptions = \_ -> ( Sub.none, () )
+        }
     }
 
 
