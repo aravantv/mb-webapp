@@ -6,9 +6,6 @@ import Html exposing (Html)
 import Task
 
 
-{-| note: all effects are functions taking a path as parameter, but the in the top-widget,
-the one given to Html.program, these are not present anymore
--}
 type alias BoundWidget upInfo subInfo model msg =
     { initModel : model
     , initMsg : Data -> msg
