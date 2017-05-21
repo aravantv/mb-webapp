@@ -3,7 +3,7 @@ module Binding exposing (..)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import Widget exposing (BoundWidget, ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
+import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
 
 
 type BindingResult resType
@@ -76,10 +76,6 @@ type alias WidgetWithBinding model msg carriedValue =
     Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
 
-type alias BoundWidgetWithBinding model msg carriedValue =
-    BoundWidget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
-
-
 type alias Binding msg carriedValue =
     { set : carriedValue -> Cmd msg
     , get : (BindingResult carriedValue -> msg) -> Sub msg
@@ -90,37 +86,33 @@ applyBinding :
     WidgetWithBinding model msg carriedValue
     -> Binding msg carriedValue
     -> Widget () () model msg
-applyBinding w b id =
-    let
-        cw =
-            w id
-    in
-        { initModel = cw.initModel
-        , initMsg = cw.initMsg
-        , update =
-            \msg model ->
-                let
-                    ( newModel, cmd, upInfo ) =
-                        cw.update msg model
+applyBinding w b =
+    { initModel = w.initModel
+    , initMsg = w.initMsg
+    , update =
+        \msg model ->
+            let
+                ( newModel, cmd, upInfo ) =
+                    w.update msg model
 
-                    newCmd =
-                        case upInfo of
-                            Set (Ok v) ->
-                                Cmd.batch [ cmd, b.set v ]
+                newCmd =
+                    case upInfo of
+                        Set (Ok v) ->
+                            Cmd.batch [ cmd, b.set v ]
 
-                            _ ->
-                                cmd
-                in
-                    ( newModel, newCmd, () )
-        , subscriptions =
-            \model ->
-                let
-                    ( sub, mapper ) =
-                        cw.subscriptions model
-                in
-                    ( Sub.batch [ sub, b.get mapper ], () )
-        , view = cw.view
-        }
+                        _ ->
+                            cmd
+            in
+                ( newModel, newCmd, () )
+    , subscriptions =
+        \model ->
+            let
+                ( sub, mapper ) =
+                    w.subscriptions model
+            in
+                ( Sub.batch [ sub, b.get mapper ], () )
+    , view = w.view
+    }
 
 
 textBinding : DataID -> Binding msg String
