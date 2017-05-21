@@ -6,7 +6,7 @@ import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
 createWidget : String -> Widget () () Model Msg
-createWidget s _ =
+createWidget s =
     { initModel = s
     , initMsg =
         \m ->
