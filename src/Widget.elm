@@ -7,8 +7,7 @@ import Task
 
 
 type alias Widget upInfo subInfo model msg =
-    { initModel : model
-    , initMsg : Data -> msg
+    { init : ( model, Cmd msg )
     , update : msg -> model -> ( model, Cmd msg, upInfo )
     , subscriptions : model -> ( Sub msg, subInfo )
     , view : model -> Html msg
@@ -20,8 +19,7 @@ mapParamsUp :
     -> Widget upInfo1 paramsSub model msg
     -> Widget upInfo2 paramsSub model msg
 mapParamsUp fUp w =
-    { initModel = w.initModel
-    , initMsg = w.initMsg
+    { init = w.init
     , update =
         \msg model ->
             let
@@ -39,8 +37,7 @@ mapParamsSub :
     -> Widget paramsUp subInfo1 model msg
     -> Widget paramsUp subInfo2 model msg
 mapParamsSub fSub w =
-    { initModel = w.initModel
-    , initMsg = w.initMsg
+    { init = w.init
     , update = w.update
     , subscriptions =
         \model ->
