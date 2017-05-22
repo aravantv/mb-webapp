@@ -8,7 +8,7 @@ import DataManager
 import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping exposing (IndexMapping)
-import Widget exposing (TopWidget, Widget, WidgetCloser, cmdOfMsg, mapParamsSub, mapParamsUp)
+import Widget exposing (TopWidget, Widget, cmdOfMsg, mapParamsSub, mapParamsUp)
 
 
 mapItemAdded :
