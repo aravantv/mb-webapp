@@ -66,7 +66,8 @@ type alias CollectionBinding collectionPath msg carriedValue =
 
 applyBinding :
     CollectionBinding collectionPath msg carriedValue
-    -> WidgetCloser (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+    -> Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+    -> Widget () () model msg
 applyBinding b w =
     { initModel = w.initModel
     , initMsg = \d -> w.initMsg d
