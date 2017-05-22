@@ -69,8 +69,7 @@ applyBinding :
     -> Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
     -> Widget () () model msg
 applyBinding b w =
-    { initModel = w.initModel
-    , initMsg = \d -> w.initMsg d
+    { init = w.init
     , update =
         \msg model ->
             let
@@ -158,11 +157,13 @@ makeCollectionBindingWrapper :
     -> WidgetWithCollectionBinding Index ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) outCarriedValue
 makeCollectionBindingWrapper in2out out2in w =
     let
+        ( w_init, w_cmd ) =
+            w.init
+
         trivialMsg m =
             ( m, identity )
     in
-        { initModel = ( w.initModel, IndexMapping.empty )
-        , initMsg = \d -> trivialMsg (w.initMsg d)
+        { init = ( ( w_init, IndexMapping.empty ), Cmd.map trivialMsg w_cmd )
         , update =
             \( msg, mappingTransformer ) ( model, idxMap ) ->
                 let
