@@ -10,8 +10,7 @@ import Widget exposing (ISelectable, Widget, cmdOfMsg)
 
 widget : WidgetWithBinding Model Msg String
 widget =
-    { initMsg = \m -> DelegateToTextMsg (Text.initMsg m)
-    , initModel = initModel Text.widget
+    { init = init Text.widget
     , update = update Text.widget
     , view = view Text.widget
     , subscriptions = subscriptions Text.widget
@@ -37,9 +36,13 @@ type alias Model =
     }
 
 
-initModel : WidgetWithBinding Text.Model Text.Msg String -> Model
-initModel textWidget =
-    { textModel = textWidget.initModel, editMode = False }
+init : WidgetWithBinding Text.Model Text.Msg String -> ( Model, Cmd Msg )
+init textWidget =
+    let
+        ( textInitModel, textInitCmd ) =
+            textWidget.init
+    in
+        ( { textModel = textInitModel, editMode = False }, Cmd.map DelegateToTextMsg textInitCmd )
 
 
 
