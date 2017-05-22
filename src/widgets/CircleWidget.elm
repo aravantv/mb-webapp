@@ -2,8 +2,6 @@ module CircleWidget exposing (..)
 
 import Html exposing (..)
 import Json.Decode
-import DataID exposing (DataID, DataSelector)
-import Data exposing (Data)
 import Mouse
 import Svg exposing (clipPath, svg)
 import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeWidth, transform, width)
@@ -12,20 +10,17 @@ import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothi
 
 
 type alias Parameters subModel subMsg =
-    { wrappedWidget : Widget () () subModel subMsg
-    , selector : DataSelector
-    }
+    Widget () () subModel subMsg
 
 
 createWidget :
     Parameters subModel subMsg
     -> Widget () () (Model subModel) (Msg subMsg)
-createWidget params id =
-    { initModel = emptyModel params id
-    , initMsg = Init
-    , update = update params id
-    , subscriptions = subscriptions params id
-    , view = view params id
+createWidget params =
+    { init = emptyModel params
+    , update = update params
+    , subscriptions = subscriptions params
+    , view = view params
     }
 
 
@@ -42,9 +37,20 @@ type alias Model subModel =
     }
 
 
-emptyModel : Parameters subModel subMsg -> DataID -> Model subModel
-emptyModel params id =
-    { wrappedModel = (params.wrappedWidget id).initModel, cx = 100, cy = 100, r = 50, dragStartPosition = Nothing }
+emptyModel : Parameters subModel subMsg -> ( Model subModel, Cmd (Msg subMsg) )
+emptyModel wrappedWidget =
+    let
+        ( initModel, initCmd ) =
+            wrappedWidget.init
+    in
+        ( { wrappedModel = initModel
+          , cx = 100
+          , cy = 100
+          , r = 50
+          , dragStartPosition = Nothing
+          }
+        , Cmd.map DelegateToWidget initCmd
+        )
 
 
 
@@ -53,7 +59,6 @@ emptyModel params id =
 
 type Msg subMsg
     = DelegateToWidget subMsg
-    | Init Data
     | StartDragging Mouse.Position
     | Dragging ( Mouse.Position, Mouse.Position )
     | EndDragging
@@ -61,57 +66,42 @@ type Msg subMsg
 
 update :
     Parameters subModel subMsg
-    -> DataID
     -> Msg subMsg
     -> Model subModel
     -> ( Model subModel, Cmd (Msg subMsg), () )
-update params id msg model =
-    let
-        instantiatedWidget =
-            params.wrappedWidget (params.selector id)
-    in
-        case msg of
-            DelegateToWidget subMsg ->
-                let
-                    ( updatedModel, cmd, () ) =
-                        instantiatedWidget.update subMsg model.wrappedModel
-                in
-                    ( { model | wrappedModel = updatedModel }, Cmd.map DelegateToWidget cmd, () )
+update wrappedWidget msg model =
+    case msg of
+        DelegateToWidget subMsg ->
+            let
+                ( updatedModel, cmd, () ) =
+                    wrappedWidget.update subMsg model.wrappedModel
+            in
+                ( { model | wrappedModel = updatedModel }, Cmd.map DelegateToWidget cmd, () )
 
-            Init fi ->
-                let
-                    initCmd =
-                        cmdOfMsg <| DelegateToWidget (instantiatedWidget.initMsg fi)
-                in
-                    ( emptyModel params id, initCmd, () )
+        StartDragging p ->
+            doNothing { model | dragStartPosition = Just p }
 
-            StartDragging p ->
-                doNothing { model | dragStartPosition = Just p }
+        Dragging ( previousPos, newPos ) ->
+            doNothing
+                { model
+                    | dragStartPosition = Just newPos
+                    , cx = model.cx + newPos.x - previousPos.x
+                    , cy = model.cy + newPos.y - previousPos.y
+                }
 
-            Dragging ( previousPos, newPos ) ->
-                doNothing
-                    { model
-                        | dragStartPosition = Just newPos
-                        , cx = model.cx + newPos.x - previousPos.x
-                        , cy = model.cy + newPos.y - previousPos.y
-                    }
-
-            EndDragging ->
-                doNothing { model | dragStartPosition = Nothing }
+        EndDragging ->
+            doNothing { model | dragStartPosition = Nothing }
 
 
 
 -- SUBSCRIPTIONS
 
 
-subscriptions : Parameters subModel subMsg -> DataID -> Model subModel -> ( Sub (Msg subMsg), () )
-subscriptions params id model =
+subscriptions : Parameters subModel subMsg -> Model subModel -> ( Sub (Msg subMsg), () )
+subscriptions wrappedWidget model =
     let
-        instantiatedWrappedWidget =
-            params.wrappedWidget (params.selector id)
-
         ( subSub, () ) =
-            instantiatedWrappedWidget.subscriptions model.wrappedModel
+            wrappedWidget.subscriptions model.wrappedModel
 
         subRes =
             case model.dragStartPosition of
@@ -132,8 +122,8 @@ subscriptions params id model =
 -- VIEW
 
 
-view : Parameters subModel subMsg -> DataID -> Model subModel -> Html (Msg subMsg)
-view params id model =
+view : Parameters subModel subMsg -> Model subModel -> Html (Msg subMsg)
+view wrappedWidget model =
     let
         rect attrs =
             Svg.rect ([ rx "5", ry "5", height (toString model.r) ] ++ attrs) []
@@ -153,6 +143,6 @@ view params id model =
                     , Svg.Attributes.y "3"
                     , Svg.Attributes.clipPath "url(#id)"
                     ]
-                    [ Html.map DelegateToWidget <| (params.wrappedWidget (params.selector id)).view model.wrappedModel ]
+                    [ Html.map DelegateToWidget <| wrappedWidget.view model.wrappedModel ]
                 ]
             ]
