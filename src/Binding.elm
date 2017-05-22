@@ -87,8 +87,7 @@ applyBinding :
     -> Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
     -> Widget () () model msg
 applyBinding b w =
-    { initModel = w.initModel
-    , initMsg = w.initMsg
+    { init = w.init
     , update =
         \msg model ->
             let
