@@ -1,22 +1,12 @@
 module Label exposing (..)
 
-import Data exposing (Data(..))
 import Html exposing (Html, input, label, text)
 import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
 createWidget : String -> Widget () () Model Msg
 createWidget s =
-    { initModel = s
-    , initMsg =
-        \m ->
-            ChangeLabel <|
-                case m of
-                    String s ->
-                        s
-
-                    _ ->
-                        ""
+    { init = ( s, Cmd.none )
     , update = update
     , view = view
     , subscriptions = \_ -> ( Sub.none, () )
