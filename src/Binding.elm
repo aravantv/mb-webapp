@@ -84,7 +84,8 @@ type alias Binding msg carriedValue =
 
 applyBinding :
     Binding msg carriedValue
-    -> WidgetCloser (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+    -> Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+    -> Widget () () model msg
 applyBinding b w =
     { initModel = w.initModel
     , initMsg = w.initMsg
