@@ -1,6 +1,5 @@
 module NewText exposing (..)
 
-import Data exposing (Data(..))
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
@@ -12,8 +11,7 @@ widget : IDecision Msg { widget : Widget () () Model Msg }
 widget =
     { confirmMsg = Confirm
     , widget =
-        { initModel = emptyModel
-        , initMsg = Init
+        { init = ( emptyModel, Cmd.none )
         , update = update
         , view = view
         , subscriptions = \_ -> ( Sub.none, () )
@@ -42,7 +40,6 @@ type Msg
     = Change String
     | Confirm
     | Cancel
-    | Init Data
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, () )
@@ -61,14 +58,6 @@ transform msg model =
 
         Cancel ->
             ""
-
-        Init m ->
-            case m of
-                String s ->
-                    s
-
-                _ ->
-                    ""
 
 
 
