@@ -2,7 +2,6 @@ module Text exposing (..)
 
 import Binding exposing (..)
 import ConstraintUtils exposing (UnfulfillmentInfo)
-import Data exposing (Data(..))
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
@@ -11,22 +10,11 @@ import Utils exposing (..)
 
 widget : WidgetWithBinding Model Msg String
 widget =
-    { initMsg = initMsg
-    , initModel = emptyModel
+    { init = ( emptyModel, Cmd.none )
     , update = update
     , view = view
     , subscriptions = subscriptions
     }
-
-
-initMsg : Data -> Msg
-initMsg m =
-    case m of
-        String s ->
-            Init s
-
-        _ ->
-            NoOp
 
 
 
