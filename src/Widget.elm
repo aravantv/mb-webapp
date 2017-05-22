@@ -105,7 +105,3 @@ cmdOfMsg msg =
 
 type alias Factory widgetModel =
     widgetModel -> Data
-
-
-type alias WidgetCloser upInfo subInfo model msg =
-    Widget upInfo subInfo model msg -> Widget () () model msg
