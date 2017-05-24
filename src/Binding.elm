@@ -3,7 +3,7 @@ module Binding exposing (..)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import Widget exposing (ISelectable, Index, Widget, WidgetTransformer, mapParamsSub, mapParamsUp)
+import Widget exposing (ISelectable, Index, Widget, mapParamsInit, mapParamsSub, mapParamsUp)
 
 
 type BindingResult resType
@@ -72,8 +72,8 @@ set x v =
     ( x, Cmd.none, Set (Ok v) )
 
 
-type alias WidgetWithBinding model msg carriedValue =
-    Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+type alias BoundWidget model msg carriedValue =
+    Widget (BindingResult carriedValue) (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
 
 type alias Binding msg carriedValue =
@@ -84,10 +84,10 @@ type alias Binding msg carriedValue =
 
 applyBinding :
     Binding msg carriedValue
-    -> Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
-    -> Widget () () model msg
+    -> BoundWidget model msg carriedValue
+    -> Widget carriedValue () () model msg
 applyBinding b w =
-    { init = w.init
+    { init = \v -> w.init (Ok v)
     , update =
         \msg model ->
             let
@@ -136,8 +136,8 @@ textBinding boundId =
 makeBindingWrapper :
     (innerCarriedValue -> BindingResult outerCarriedValue)
     -> (outerCarriedValue -> BindingResult innerCarriedValue)
-    -> WidgetWithBinding model msg innerCarriedValue
-    -> WidgetWithBinding model msg outerCarriedValue
+    -> BoundWidget model msg innerCarriedValue
+    -> BoundWidget model msg outerCarriedValue
 makeBindingWrapper in2out out2in =
     let
         in2outUp upInfo =
@@ -153,25 +153,25 @@ makeBindingWrapper in2out out2in =
                 DoNothing ->
                     DoNothing
     in
-        mapParamsUp (\upInfo -> in2outUp upInfo) << mapParamsSub (\subInfo -> subInfo << andThen out2in)
+        mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in) << mapParamsInit (andThen out2in)
 
 
 stringOfIntWrapper :
-    WidgetWithBinding model msg Int
-    -> WidgetWithBinding model msg String
+    BoundWidget model msg Int
+    -> BoundWidget model msg String
 stringOfIntWrapper =
     makeBindingWrapper (alwaysOk toString) (ofResult << String.toInt)
 
 
 intOfStringWrapper :
-    WidgetWithBinding model msg String
-    -> WidgetWithBinding model msg Int
+    BoundWidget model msg String
+    -> BoundWidget model msg Int
 intOfStringWrapper =
     makeBindingWrapper (ofResult << String.toInt) (alwaysOk toString)
 
 
 plus2Wrapper :
-    WidgetWithBinding model msg Int
-    -> WidgetWithBinding model msg Int
+    BoundWidget model msg Int
+    -> BoundWidget model msg Int
 plus2Wrapper =
     makeBindingWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
