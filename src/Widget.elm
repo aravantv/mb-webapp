@@ -14,6 +14,18 @@ type alias Widget paramsInit paramsUp paramsSub model msg =
     }
 
 
+mapParamsInit :
+    (paramsInit2 -> paramsInit1)
+    -> Widget paramsInit1 paramsUp paramsSub model msg
+    -> Widget paramsInit2 paramsUp paramsSub model msg
+mapParamsInit fInit w =
+    { init = \paramsInit -> w.init (fInit paramsInit)
+    , update = w.update
+    , subscriptions = w.subscriptions
+    , view = w.view
+    }
+
+
 mapParamsUp :
     (paramsUp1 -> paramsUp2)
     -> Widget paramsInit paramsUp1 paramsSub model msg
