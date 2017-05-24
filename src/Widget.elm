@@ -6,18 +6,18 @@ import Html exposing (Html)
 import Task
 
 
-type alias Widget upInfo subInfo model msg =
-    { init : ( model, Cmd msg )
-    , update : msg -> model -> ( model, Cmd msg, upInfo )
-    , subscriptions : model -> ( Sub msg, subInfo )
+type alias Widget paramsInit paramsUp paramsSub model msg =
+    { init : paramsInit -> ( model, Cmd msg )
+    , update : msg -> model -> ( model, Cmd msg, paramsUp )
+    , subscriptions : model -> ( Sub msg, paramsSub )
     , view : model -> Html msg
     }
 
 
 mapParamsUp :
-    (upInfo1 -> upInfo2)
-    -> Widget upInfo1 paramsSub model msg
-    -> Widget upInfo2 paramsSub model msg
+    (paramsUp1 -> paramsUp2)
+    -> Widget paramsInit paramsUp1 paramsSub model msg
+    -> Widget paramsInit paramsUp2 paramsSub model msg
 mapParamsUp fUp w =
     { init = w.init
     , update =
@@ -33,9 +33,9 @@ mapParamsUp fUp w =
 
 
 mapParamsSub :
-    (subInfo1 -> subInfo2)
-    -> Widget paramsUp subInfo1 model msg
-    -> Widget paramsUp subInfo2 model msg
+    (paramsSub1 -> paramsSub2)
+    -> Widget paramsInit paramsUp paramsSub1 model msg
+    -> Widget paramsInit paramsUp paramsSub2 model msg
 mapParamsSub fSub w =
     { init = w.init
     , update = w.update
@@ -48,10 +48,6 @@ mapParamsSub fSub w =
                 ( sub, fSub subInfo )
     , view = w.view
     }
-
-
-type alias WidgetTransformer upInfo1 subInfo1 model1 msg1 upInfo2 subInfo2 model2 msg2 =
-    Widget upInfo1 subInfo1 model1 msg1 -> Widget upInfo2 subInfo2 model2 msg2
 
 
 type alias TopWidget model msg =
