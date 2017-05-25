@@ -8,7 +8,7 @@ import DataManager
 import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping exposing (IndexMapping)
-import Widget exposing (TopWidget, Widget, cmdOfMsg, mapParamsSub, mapParamsUp)
+import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
 
 
 mapItemAdded :
@@ -53,7 +53,7 @@ type alias CollectionBindingSubInfo collectionPath carriedValue msg =
 
 
 type alias BoundListWidget model msg carriedValue =
-    Widget (BindingResult (List carriedValue)) (CollectionBindingUpInfo Index carriedValue) (CollectionBindingSubInfo Index carriedValue msg) model msg
+    Widget (CollectionBindingUpInfo Index carriedValue) (CollectionBindingSubInfo Index carriedValue msg) model msg
 
 
 type alias CollectionBinding collectionPath msg carriedValue =
@@ -67,9 +67,9 @@ type alias CollectionBinding collectionPath msg carriedValue =
 applyListBinding :
     CollectionBinding Index msg carriedValue
     -> BoundListWidget model msg carriedValue
-    -> Widget (List carriedValue) () () model msg
+    -> Widget () () model msg
 applyListBinding b w =
-    { init = \l -> w.init (Binding.Ok l)
+    { init = w.init
     , update =
         \msg model ->
             let
@@ -160,21 +160,7 @@ makeCollectionBindingWrapper in2out out2in w =
         trivialMsg m =
             ( m, identity )
     in
-        { init =
-            \lRes ->
-                let
-                    filter x =
-                        case out2in x of
-                            Binding.Ok v ->
-                                Just v
-
-                            _ ->
-                                Nothing
-
-                    ( w_init, w_cmd ) =
-                        w.init (Binding.andThen (alwaysOk (List.filterMap filter)) lRes)
-                in
-                    ( ( w_init, IndexMapping.empty ), Cmd.map trivialMsg w_cmd )
+        { init = ( ( modelOf w.init, IndexMapping.empty ), Cmd.map trivialMsg (cmdOf w.init) )
         , update =
             \( msg, mappingTransformer ) ( model, idxMap ) ->
                 let
