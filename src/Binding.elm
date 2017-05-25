@@ -55,7 +55,7 @@ andThen f res =
 
 type BindingUpInfo carriedValue
     = Set (BindingResult carriedValue)
-    | Get
+    | Ask
     | DoNothing
 
 
@@ -80,6 +80,7 @@ type alias BoundWidget model msg carriedValue =
 type alias Binding msg carriedValue =
     { set : carriedValue -> Cmd msg
     , get : (BindingResult carriedValue -> msg) -> Sub msg
+    , ask : Cmd msg
     }
 
 
@@ -99,6 +100,9 @@ applyBinding b w =
                     case upInfo of
                         Set (Ok v) ->
                             Cmd.batch [ cmd, b.set v ]
+
+                        Ask ->
+                            Cmd.batch [ cmd, b.ask ]
 
                         _ ->
                             cmd
@@ -131,6 +135,7 @@ textBinding boundId =
                         f res
                 )
     , set = \s -> DataManager.setStringCmd ( boundId, s )
+    , ask = DataManager.askDataCmd boundId
     }
 
 
@@ -154,8 +159,8 @@ makeBindingWrapper in2out out2in =
                 DoNothing ->
                     DoNothing
 
-                Get ->
-                    Get
+                Ask ->
+                    Ask
     in
         mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
