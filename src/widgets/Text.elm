@@ -2,7 +2,6 @@ module Text exposing (..)
 
 import Binding exposing (..)
 import ConstraintUtils exposing (UnfulfillmentInfo)
-import DataID exposing (DataID)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
