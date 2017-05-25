@@ -73,12 +73,12 @@ itemAddedSub dts msgBuilder =
         itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
 
 
-port askContentCmdPort : StoragePath -> Cmd msg
+port askDataCmdPort : StoragePath -> Cmd msg
 
 
-askContentCmd : DataID -> Cmd msg
-askContentCmd p =
-    askContentCmdPort (storagePathOfWidgetPath p)
+askDataCmd : DataID -> Cmd msg
+askDataCmd p =
+    askDataCmdPort (storagePathOfWidgetPath p)
 
 
 port itemRemovedSubPort : (StoragePath -> msg) -> Sub msg
