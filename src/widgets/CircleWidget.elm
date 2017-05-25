@@ -6,18 +6,18 @@ import Mouse
 import Svg exposing (clipPath, svg)
 import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, stroke, strokeWidth, transform, width)
 import Svg.Events
-import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothing)
+import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOf, cmdOfMsg, doNothing, modelOf)
 
 
 type alias Parameters subModel subMsg =
-    Widget () () () subModel subMsg
+    Widget () () subModel subMsg
 
 
 createWidget :
     Parameters subModel subMsg
-    -> Widget () () () (Model subModel) (Msg subMsg)
+    -> Widget () () (Model subModel) (Msg subMsg)
 createWidget params =
-    { init = \() -> emptyModel params
+    { init = init params
     , update = update params
     , subscriptions = subscriptions params
     , view = view params
@@ -37,20 +37,16 @@ type alias Model subModel =
     }
 
 
-emptyModel : Parameters subModel subMsg -> ( Model subModel, Cmd (Msg subMsg) )
-emptyModel wrappedWidget =
-    let
-        ( initModel, initCmd ) =
-            wrappedWidget.init ()
-    in
-        ( { wrappedModel = initModel
-          , cx = 100
-          , cy = 100
-          , r = 50
-          , dragStartPosition = Nothing
-          }
-        , Cmd.map DelegateToWidget initCmd
-        )
+init : Parameters subModel subMsg -> ( Model subModel, Cmd (Msg subMsg) )
+init wrappedWidget =
+    ( { wrappedModel = modelOf wrappedWidget.init
+      , cx = 100
+      , cy = 100
+      , r = 50
+      , dragStartPosition = Nothing
+      }
+    , Cmd.map DelegateToWidget (cmdOf wrappedWidget.init)
+    )
 
 
 
