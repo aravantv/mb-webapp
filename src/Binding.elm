@@ -3,7 +3,7 @@ module Binding exposing (..)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import Widget exposing (ISelectable, Index, Widget, mapParamsInit, mapParamsSub, mapParamsUp)
+import Widget exposing (ISelectable, Index, Widget, mapParamsSub, mapParamsUp)
 
 
 type BindingResult resType
@@ -73,7 +73,7 @@ set x v =
 
 
 type alias BoundWidget model msg carriedValue =
-    Widget (BindingResult carriedValue) (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+    Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
 
 
 type alias Binding msg carriedValue =
@@ -85,9 +85,9 @@ type alias Binding msg carriedValue =
 applyBinding :
     Binding msg carriedValue
     -> BoundWidget model msg carriedValue
-    -> Widget carriedValue () () model msg
+    -> Widget () () model msg
 applyBinding b w =
-    { init = \v -> w.init (Ok v)
+    { init = w.init
     , update =
         \msg model ->
             let
@@ -153,7 +153,7 @@ makeBindingWrapper in2out out2in =
                 DoNothing ->
                     DoNothing
     in
-        mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in) << mapParamsInit (andThen out2in)
+        mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
 
 stringOfIntWrapper :
