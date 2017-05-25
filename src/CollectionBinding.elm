@@ -52,8 +52,12 @@ type alias CollectionBindingSubInfo collectionPath carriedValue msg =
     }
 
 
+type alias BoundCollectionWidget collectionPath model msg carriedValue =
+    Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+
+
 type alias BoundListWidget model msg carriedValue =
-    Widget (CollectionBindingUpInfo Index carriedValue) (CollectionBindingSubInfo Index carriedValue msg) model msg
+    BoundCollectionWidget Index model msg carriedValue
 
 
 type alias CollectionBinding collectionPath msg carriedValue =
@@ -66,8 +70,8 @@ type alias CollectionBinding collectionPath msg carriedValue =
 
 
 applyListBinding :
-    CollectionBinding Index msg carriedValue
-    -> BoundListWidget model msg carriedValue
+    CollectionBinding collectionPath msg carriedValue
+    -> BoundCollectionWidget collectionPath model msg carriedValue
     -> Widget () () model msg
 applyListBinding b w =
     { init = ( modelOf w.init, Cmd.batch [ cmdOf w.init, b.ask ] )
@@ -152,12 +156,12 @@ listBinding dts boundId =
     }
 
 
-makeCollectionBindingWrapper :
+makeListBindingWrapper :
     (inCarriedValue -> BindingResult outCarriedValue)
     -> (outCarriedValue -> BindingResult inCarriedValue)
     -> BoundListWidget innerModel innerMsg inCarriedValue
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) outCarriedValue
-makeCollectionBindingWrapper in2out out2in w =
+makeListBindingWrapper in2out out2in w =
     let
         trivialMsg m =
             ( m, identity )
@@ -225,14 +229,14 @@ stringOfIntBindingWrapper :
     BoundListWidget innerModel innerMsg Int
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
 stringOfIntBindingWrapper =
-    makeCollectionBindingWrapper (Binding.alwaysOk toString) (Binding.ofResult << String.toInt)
+    makeListBindingWrapper (Binding.alwaysOk toString) (Binding.ofResult << String.toInt)
 
 
 intOfStringBindingWrapper :
     BoundListWidget innerModel innerMsg String
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
 intOfStringBindingWrapper =
-    makeCollectionBindingWrapper (Binding.ofResult << String.toInt) (Binding.alwaysOk toString)
+    makeListBindingWrapper (Binding.ofResult << String.toInt) (Binding.alwaysOk toString)
 
 
 stringOfData : Data.Data -> BindingResult String
@@ -249,14 +253,14 @@ dataOfStringBindingWrapper :
     BoundListWidget innerModel innerMsg String
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
 dataOfStringBindingWrapper =
-    makeCollectionBindingWrapper (Binding.alwaysOk Data.String) stringOfData
+    makeListBindingWrapper (Binding.alwaysOk Data.String) stringOfData
 
 
 stringOfDataBindingWrapper :
     BoundListWidget innerModel innerMsg Data.Data
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
 stringOfDataBindingWrapper =
-    makeCollectionBindingWrapper stringOfData (Binding.alwaysOk Data.String)
+    makeListBindingWrapper stringOfData (Binding.alwaysOk Data.String)
 
 
 intOfData : Data.Data -> BindingResult Int
@@ -273,11 +277,11 @@ dataOfIntBindingWrapper :
     BoundListWidget innerModel innerMsg Int
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
 dataOfIntBindingWrapper =
-    makeCollectionBindingWrapper (Binding.alwaysOk Data.Int) intOfData
+    makeListBindingWrapper (Binding.alwaysOk Data.Int) intOfData
 
 
 intOfDataBindingWrapper :
     BoundListWidget innerModel innerMsg Data.Data
     -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
 intOfDataBindingWrapper =
-    makeCollectionBindingWrapper intOfData (Binding.alwaysOk Data.Int)
+    makeListBindingWrapper intOfData (Binding.alwaysOk Data.Int)
