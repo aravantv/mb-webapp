@@ -6,7 +6,7 @@ port module LocalStorage
         , itemRemovedSub
         , addItemCmd
         , removeItemCmd
-        , askContentCmd
+        , askDataCmd
         )
 
 import Data exposing (Object, Data)
