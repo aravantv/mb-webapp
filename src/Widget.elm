@@ -6,30 +6,18 @@ import Html exposing (Html)
 import Task
 
 
-type alias Widget paramsInit paramsUp paramsSub model msg =
-    { init : paramsInit -> ( model, Cmd msg )
+type alias Widget paramsUp paramsSub model msg =
+    { init : ( model, Cmd msg )
     , update : msg -> model -> ( model, Cmd msg, paramsUp )
     , subscriptions : model -> ( Sub msg, paramsSub )
     , view : model -> Html msg
     }
 
 
-mapParamsInit :
-    (paramsInit2 -> paramsInit1)
-    -> Widget paramsInit1 paramsUp paramsSub model msg
-    -> Widget paramsInit2 paramsUp paramsSub model msg
-mapParamsInit fInit w =
-    { init = \paramsInit -> w.init (fInit paramsInit)
-    , update = w.update
-    , subscriptions = w.subscriptions
-    , view = w.view
-    }
-
-
 mapParamsUp :
     (paramsUp1 -> paramsUp2)
-    -> Widget paramsInit paramsUp1 paramsSub model msg
-    -> Widget paramsInit paramsUp2 paramsSub model msg
+    -> Widget paramsUp1 paramsSub model msg
+    -> Widget paramsUp2 paramsSub model msg
 mapParamsUp fUp w =
     { init = w.init
     , update =
@@ -46,8 +34,8 @@ mapParamsUp fUp w =
 
 mapParamsSub :
     (paramsSub1 -> paramsSub2)
-    -> Widget paramsInit paramsUp paramsSub1 model msg
-    -> Widget paramsInit paramsUp paramsSub2 model msg
+    -> Widget paramsUp paramsSub1 model msg
+    -> Widget paramsUp paramsSub2 model msg
 mapParamsSub fSub w =
     { init = w.init
     , update = w.update
