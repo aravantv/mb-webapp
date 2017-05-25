@@ -1,7 +1,7 @@
 module GroupWidget exposing (..)
 
 import Html exposing (..)
-import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg)
+import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOf, cmdOfMsg, modelOf)
 
 
 type DivOrSpan
@@ -10,17 +10,17 @@ type DivOrSpan
 
 
 type alias Parameters subModel1 msg1 subModel2 msg2 =
-    { wrappedWidget1 : Widget () () () subModel1 msg1
-    , wrappedWidget2 : Widget () () () subModel2 msg2
+    { wrappedWidget1 : Widget () () subModel1 msg1
+    , wrappedWidget2 : Widget () () subModel2 msg2
     , divOrSpan : DivOrSpan
     }
 
 
 createWidget :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> Widget () () () (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
+    -> Widget () () (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
 createWidget params =
-    { init = \() -> emptyModel params
+    { init = emptyModel params
     , update = update params
     , subscriptions = subscriptions params
     , view = view params
@@ -41,16 +41,14 @@ emptyModel :
     Parameters subModel1 subMsg1 subModel2 subMsg2
     -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
 emptyModel params =
-    let
-        ( model1, cmd1 ) =
-            params.wrappedWidget1.init ()
-
-        ( model2, cmd2 ) =
-            params.wrappedWidget2.init ()
-    in
-        ( { wrappedModel1 = model1, wrappedModel2 = model2 }
-        , Cmd.batch [ Cmd.map DelegateToWidget1 cmd1, Cmd.map DelegateToWidget2 cmd2 ]
-        )
+    ( { wrappedModel1 = modelOf params.wrappedWidget1.init
+      , wrappedModel2 = modelOf params.wrappedWidget2.init
+      }
+    , Cmd.batch
+        [ Cmd.map DelegateToWidget1 (cmdOf params.wrappedWidget1.init)
+        , Cmd.map DelegateToWidget2 (cmdOf params.wrappedWidget2.init)
+        ]
+    )
 
 
 
