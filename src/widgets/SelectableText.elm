@@ -5,7 +5,7 @@ import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
 import Utils exposing (enterKey, onKeyUp)
-import Widget exposing (ISelectable, Widget, cmdOfMsg)
+import Widget exposing (ISelectable, Widget, cmdOf, cmdOfMsg, modelOf)
 
 
 widget : BoundWidget Model Msg String
@@ -36,13 +36,11 @@ type alias Model =
     }
 
 
-init : BoundWidget Text.Model Text.Msg String -> BindingResult String -> ( Model, Cmd Msg )
-init textWidget res =
-    let
-        ( textInitModel, textInitCmd ) =
-            textWidget.init res
-    in
-        ( { textModel = textInitModel, editMode = False }, Cmd.map DelegateToTextMsg textInitCmd )
+init : BoundWidget Text.Model Text.Msg String -> ( Model, Cmd Msg )
+init textWidget =
+    ( { textModel = modelOf textWidget.init, editMode = False }
+    , Cmd.map DelegateToTextMsg (cmdOf textWidget.init)
+    )
 
 
 
