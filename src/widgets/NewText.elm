@@ -7,11 +7,11 @@ import Utils exposing (..)
 import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
-widget : IDecision Msg { widget : Widget () () Model Msg }
-widget =
+createWidget : String -> IDecision Msg { widget : Widget () () Model Msg }
+createWidget initValue =
     { confirmMsg = Confirm
     , widget =
-        { init = ( "", Cmd.none )
+        { init = ( initValue, Cmd.none )
         , update = update
         , view = view
         , subscriptions = \_ -> ( Sub.none, () )
