@@ -3,7 +3,7 @@ module Binding exposing (..)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
 import DataManager
-import Widget exposing (ISelectable, Index, Widget, mapParamsSub, mapParamsUp)
+import Widget exposing (ISelectable, Index, Widget, cmdOf, mapParamsSub, mapParamsUp, modelOf)
 
 
 type BindingResult resType
@@ -55,7 +55,6 @@ andThen f res =
 
 type BindingUpInfo carriedValue
     = Set (BindingResult carriedValue)
-    | Ask
     | DoNothing
 
 
@@ -89,7 +88,7 @@ applyBinding :
     -> BoundWidget model msg carriedValue
     -> Widget () () model msg
 applyBinding b w =
-    { init = w.init
+    { init = ( modelOf w.init, Cmd.batch [ cmdOf w.init, b.ask ] )
     , update =
         \msg model ->
             let
@@ -100,9 +99,6 @@ applyBinding b w =
                     case upInfo of
                         Set (Ok v) ->
                             Cmd.batch [ cmd, b.set v ]
-
-                        Ask ->
-                            Cmd.batch [ cmd, b.ask ]
 
                         _ ->
                             cmd
@@ -158,9 +154,6 @@ makeBindingWrapper in2out out2in =
 
                 DoNothing ->
                     DoNothing
-
-                Ask ->
-                    Ask
     in
         mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
