@@ -1,6 +1,5 @@
 module GroupWidget exposing (..)
 
-import Data exposing (Data)
 import Html exposing (..)
 import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg)
 
@@ -11,18 +10,17 @@ type DivOrSpan
 
 
 type alias Parameters subModel1 msg1 subModel2 msg2 =
-    { wrappedWidget1 : Widget () () subModel1 msg1
-    , wrappedWidget2 : Widget () () subModel2 msg2
+    { wrappedWidget1 : Widget () () () subModel1 msg1
+    , wrappedWidget2 : Widget () () () subModel2 msg2
     , divOrSpan : DivOrSpan
     }
 
 
 createWidget :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> Widget () () (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
+    -> Widget () () () (Model subModel1 subModel2) (Msg subMsg1 subMsg2)
 createWidget params =
-    { initModel = emptyModel params
-    , initMsg = \m -> Init ( m, m )
+    { init = \() -> emptyModel params
     , update = update params
     , subscriptions = subscriptions params
     , view = view params
@@ -41,11 +39,18 @@ type alias Model subModel1 subModel2 =
 
 emptyModel :
     Parameters subModel1 subMsg1 subModel2 subMsg2
-    -> Model subModel1 subModel2
+    -> ( Model subModel1 subModel2, Cmd (Msg subMsg1 subMsg2) )
 emptyModel params =
-    { wrappedModel1 = params.wrappedWidget1.initModel
-    , wrappedModel2 = params.wrappedWidget2.initModel
-    }
+    let
+        ( model1, cmd1 ) =
+            params.wrappedWidget1.init ()
+
+        ( model2, cmd2 ) =
+            params.wrappedWidget2.init ()
+    in
+        ( { wrappedModel1 = model1, wrappedModel2 = model2 }
+        , Cmd.batch [ Cmd.map DelegateToWidget1 cmd1, Cmd.map DelegateToWidget2 cmd2 ]
+        )
 
 
 
@@ -55,7 +60,6 @@ emptyModel params =
 type Msg subMsg1 subMsg2
     = DelegateToWidget1 subMsg1
     | DelegateToWidget2 subMsg2
-    | Init ( Data, Data )
 
 
 update :
@@ -78,16 +82,6 @@ update params msg model =
                     params.wrappedWidget2.update subMsg model.wrappedModel2
             in
                 ( { model | wrappedModel2 = updatedModel2 }, Cmd.map DelegateToWidget2 cmd, () )
-
-        Init ( fi1, fi2 ) ->
-            let
-                initCmd1 =
-                    cmdOfMsg <| DelegateToWidget1 (params.wrappedWidget1.initMsg fi1)
-
-                initCmd2 =
-                    cmdOfMsg <| DelegateToWidget2 (params.wrappedWidget2.initMsg fi2)
-            in
-                ( emptyModel params, Cmd.batch [ initCmd1, initCmd2 ], () )
 
 
 
