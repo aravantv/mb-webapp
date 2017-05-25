@@ -23,6 +23,7 @@ type CollectionBindingUpInfo collectionPath carriedValue
     = AddItem (BindingResult ( collectionPath, carriedValue ))
     | RemoveItem (BindingResult collectionPath)
     | DoNothing
+    | Ask
 
 
 doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
@@ -45,6 +46,9 @@ mapUpInfo f i =
         DoNothing ->
             DoNothing
 
+        Ask ->
+            Ask
+
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
     { itemAdded : BindingResult ( collectionPath, carriedValue, DataID ) -> msg
@@ -61,6 +65,7 @@ type alias CollectionBinding collectionPath msg carriedValue =
     , removeItem : collectionPath -> Cmd msg
     , itemAdded : (BindingResult ( collectionPath, carriedValue, DataID ) -> msg) -> Sub msg
     , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
+    , ask : Cmd msg
     }
 
 
@@ -92,6 +97,9 @@ applyListBinding b w =
 
                         DoNothing ->
                             cmd
+
+                        Ask ->
+                            Cmd.batch [ cmd, b.ask ]
             in
                 ( newModel, newCmd, () )
     , subscriptions =
@@ -147,6 +155,7 @@ listBinding dts boundId =
                 )
     , addItem = \i m -> DataManager.addItemCmd (getItemIdentifier boundId i) m
     , removeItem = \i -> DataManager.removeItemCmd (getItemIdentifier boundId i)
+    , ask = DataManager.askDataCmd boundId
     }
 
 
