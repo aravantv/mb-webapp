@@ -74,7 +74,7 @@ type Msg newItemMsg itemMsg itemModel
     | Remove Index
     | SelectNext Index
     | SelectPrevious Index
-    | BackendAddedItem ( Index, Data, DataID )
+    | BackendAddedItem ( Index, DataID )
     | BackendRemovedItem Index
     | NoOp
 
@@ -121,7 +121,7 @@ update params msg model =
                 in
                     ( { model | itemToAdd = updatedItemToAdd }, Cmd.map DelegateToNewItemMsg cmd, DoNothing )
 
-        BackendAddedItem ( i, d, itemID ) ->
+        BackendAddedItem ( i, itemID ) ->
             let
                 ( addedItemModel, addedItemCmd ) =
                     (params.itemWidget.makeWidget itemID).init
@@ -222,8 +222,8 @@ subscriptions params model =
         , { itemAdded =
                 \res ->
                     case res of
-                        Binding.Ok v ->
-                            BackendAddedItem v
+                        Binding.Ok ( p, _, id ) ->
+                            BackendAddedItem ( p, id )
 
                         _ ->
                             NoOp
