@@ -23,7 +23,6 @@ type CollectionBindingUpInfo collectionPath carriedValue
     = AddItem (BindingResult ( collectionPath, carriedValue ))
     | RemoveItem (BindingResult collectionPath)
     | DoNothing
-    | Ask
 
 
 doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
@@ -45,9 +44,6 @@ mapUpInfo f i =
 
         DoNothing ->
             DoNothing
-
-        Ask ->
-            Ask
 
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
@@ -74,7 +70,7 @@ applyListBinding :
     -> BoundListWidget model msg carriedValue
     -> Widget () () model msg
 applyListBinding b w =
-    { init = w.init
+    { init = ( modelOf w.init, Cmd.batch [ cmdOf w.init, b.ask ] )
     , update =
         \msg model ->
             let
@@ -97,9 +93,6 @@ applyListBinding b w =
 
                         DoNothing ->
                             cmd
-
-                        Ask ->
-                            Cmd.batch [ cmd, b.ask ]
             in
                 ( newModel, newCmd, () )
     , subscriptions =
