@@ -55,6 +55,7 @@ andThen f res =
 
 type BindingUpInfo carriedValue
     = Set (BindingResult carriedValue)
+    | Get
     | DoNothing
 
 
@@ -152,6 +153,9 @@ makeBindingWrapper in2out out2in =
 
                 DoNothing ->
                     DoNothing
+
+                Get ->
+                    Get
     in
         mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in)
 
