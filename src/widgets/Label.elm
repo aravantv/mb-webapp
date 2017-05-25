@@ -4,9 +4,9 @@ import Html exposing (Html, input, label, text)
 import Widget exposing (IDecision, TopWidget, Widget, doNothing)
 
 
-createWidget : String -> Widget () () Model Msg
-createWidget s =
-    { init = ( s, Cmd.none )
+widget : Widget String () () Model Msg
+widget =
+    { init = \s -> ( s, Cmd.none )
     , update = update
     , view = view
     , subscriptions = \_ -> ( Sub.none, () )
