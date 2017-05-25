@@ -10,14 +10,14 @@ import Widget exposing (IDecision, ISelectable, Index, Widget, cmdOfMsg, doNothi
 
 
 type alias Parameters subModel subMsg =
-    Widget () () subModel subMsg
+    Widget () () () subModel subMsg
 
 
 createWidget :
     Parameters subModel subMsg
-    -> Widget () () (Model subModel) (Msg subMsg)
+    -> Widget () () () (Model subModel) (Msg subMsg)
 createWidget params =
-    { init = emptyModel params
+    { init = \() -> emptyModel params
     , update = update params
     , subscriptions = subscriptions params
     , view = view params
@@ -41,7 +41,7 @@ emptyModel : Parameters subModel subMsg -> ( Model subModel, Cmd (Msg subMsg) )
 emptyModel wrappedWidget =
     let
         ( initModel, initCmd ) =
-            wrappedWidget.init
+            wrappedWidget.init ()
     in
         ( { wrappedModel = initModel
           , cx = 100
