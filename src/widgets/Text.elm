@@ -8,9 +8,9 @@ import Html.Events exposing (onDoubleClick, onInput)
 import Utils exposing (..)
 
 
-widget : WidgetWithBinding Model Msg String
+widget : BoundWidget Model Msg String
 widget =
-    { init = ( emptyModel, Cmd.none )
+    { init = \s -> ( emptyModel s, Cmd.none )
     , update = update
     , view = view
     , subscriptions = subscriptions
@@ -28,9 +28,14 @@ type alias Model =
     }
 
 
-emptyModel : Model
-emptyModel =
-    { initialContent = Nothing, content = "", error = False }
+emptyModel : BindingResult String -> Model
+emptyModel res =
+    case res of
+        Binding.Ok s ->
+            { initialContent = Just s, content = "", error = False }
+
+        _ ->
+            { initialContent = Nothing, content = "", error = True }
 
 
 getContent : Model -> String
@@ -47,16 +52,12 @@ type Msg
     | UICancel
     | ConfirmModel
     | ModelChange (Result UnfulfillmentInfo String)
-    | Init String
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
 update msg model =
     case msg of
-        Init s ->
-            update (UIChange s) emptyModel
-
         UIChange newContent ->
             update ConfirmModel { model | content = newContent, error = False }
 
