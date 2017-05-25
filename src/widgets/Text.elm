@@ -2,6 +2,7 @@ module Text exposing (..)
 
 import Binding exposing (..)
 import ConstraintUtils exposing (UnfulfillmentInfo)
+import DataID exposing (DataID)
 import Html exposing (Html, input, label, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onDoubleClick, onInput)
@@ -10,7 +11,7 @@ import Utils exposing (..)
 
 widget : BoundWidget Model Msg String
 widget =
-    { init = \s -> ( emptyModel s, Cmd.none )
+    { init = ( emptyModel, Cmd.none )
     , update = update
     , view = view
     , subscriptions = subscriptions
@@ -28,14 +29,9 @@ type alias Model =
     }
 
 
-emptyModel : BindingResult String -> Model
-emptyModel res =
-    case res of
-        Binding.Ok s ->
-            { initialContent = Just s, content = "", error = False }
-
-        _ ->
-            { initialContent = Nothing, content = "", error = True }
+emptyModel : Model
+emptyModel =
+    { initialContent = Nothing, content = "", error = False }
 
 
 getContent : Model -> String
