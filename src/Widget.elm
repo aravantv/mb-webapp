@@ -14,6 +14,16 @@ type alias Widget paramsUp paramsSub model msg =
     }
 
 
+modelOf : ( model, rest ) -> model
+modelOf ( m, _ ) =
+    m
+
+
+cmdOf : ( rest, Cmd msg ) -> Cmd msg
+cmdOf ( _, c ) =
+    c
+
+
 mapParamsUp :
     (paramsUp1 -> paramsUp2)
     -> Widget paramsUp1 paramsSub model msg
