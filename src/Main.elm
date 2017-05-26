@@ -102,7 +102,9 @@ formExampleWidget =
 formExampleWidget =
     GroupWidget.createWidget
         { divOrSpan = Div
-        , wrappedWidget1 = Label.createWidget "Entrée:"
+        , wrappedWidget1 =
+            CircleWidget.createWidget <|
+                Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
         , wrappedWidget2 = Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
         }
 
