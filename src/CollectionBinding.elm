@@ -5,7 +5,6 @@ import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillm
 import Data
 import DataID exposing (DataID, getItemIdentifier, itemOf)
 import DataManager
-import DataType exposing (DataTypeSet)
 import Html
 import IndexMapping exposing (IndexMapping)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
@@ -115,13 +114,12 @@ type alias Index =
 
 
 listBinding :
-    DataTypeSet
-    -> DataID
+    DataID
     -> CollectionBinding Index msg Data.Data
-listBinding dts boundId =
+listBinding boundId =
     { itemAdded =
         \f ->
-            DataManager.itemAddedSub dts
+            DataManager.itemAddedSub
                 (\( id, maybeObj ) ->
                     f
                         (case id |> itemOf boundId of
