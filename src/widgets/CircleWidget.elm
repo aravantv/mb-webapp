@@ -42,7 +42,7 @@ init wrappedWidget =
     ( { wrappedModel = modelOf wrappedWidget.init
       , cx = 100
       , cy = 100
-      , r = 50
+      , r = 100
       , dragStartPosition = Nothing
       }
     , Cmd.map DelegateToWidget (cmdOf wrappedWidget.init)
