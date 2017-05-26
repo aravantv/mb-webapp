@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Binding exposing (textBinding)
+import Binding exposing (intOfStringWrapper, minus2Wrapper, stringOfIntWrapper, textBinding)
 import CircleWidget
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
@@ -104,8 +104,19 @@ formExampleWidget =
         { divOrSpan = Div
         , wrappedWidget1 =
             CircleWidget.createWidget <|
-                Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
-        , wrappedWidget2 = Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
+                GroupWidget.createWidget
+                    { divOrSpan = Div
+                    , wrappedWidget1 = Label.createWidget "n+2:"
+                    , wrappedWidget2 =
+                        Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) <|
+                            (stringOfIntWrapper << minus2Wrapper << intOfStringWrapper) Text.widget
+                    }
+        , wrappedWidget2 =
+            GroupWidget.createWidget
+                { divOrSpan = Div
+                , wrappedWidget1 = Label.createWidget "n:"
+                , wrappedWidget2 = Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
+                }
         }
 
 
