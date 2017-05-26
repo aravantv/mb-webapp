@@ -107,46 +107,6 @@ idOfClassRef =
     identity
 
 
-classDefOfClassRef : DataTypeSet -> ClassRef -> Maybe ClassDef
-classDefOfClassRef mm ref =
-    let
-        id =
-            idOfClassRef ref
-    in
-        Maybe.map (\c -> { id = id, class = c }) (Dict.get id mm)
-
-
 classRefDecoder : Json.Decode.Decoder ClassRef
 classRefDecoder =
     Json.Decode.string
-
-
-type GenericField
-    = Field String
-    | Index Int
-
-
-stringOfGenericField : GenericField -> String
-stringOfGenericField f =
-    case f of
-        Field s ->
-            s
-
-        Index i ->
-            toString i
-
-
-genericFieldOfString : String -> GenericField
-genericFieldOfString s =
-    case String.toInt s of
-        Ok n ->
-            Index n
-
-        Err _ ->
-            Field s
-
-
-{-| Paths are provided as a list of string: the root is the *last* element.
--}
-type alias Path =
-    List GenericField
