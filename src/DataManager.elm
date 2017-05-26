@@ -2,7 +2,6 @@ module DataManager exposing (..)
 
 import Data exposing (Data(..))
 import DataID exposing (DataID)
-import DataType exposing (DataTypeSet)
 import LocalStorage
 
 
@@ -16,9 +15,9 @@ setStringCmd ( id, s ) =
     LocalStorage.setStringCmd ( id, s )
 
 
-itemAddedSub : DataTypeSet -> (( DataID, Result String Data ) -> msg) -> Sub msg
-itemAddedSub dts f =
-    LocalStorage.itemAddedSub dts f
+itemAddedSub : (( DataID, Result String Data ) -> msg) -> Sub msg
+itemAddedSub f =
+    LocalStorage.itemAddedSub f
 
 
 itemRemovedSub : (DataID -> msg) -> Sub msg
