@@ -172,8 +172,8 @@ intOfStringWrapper =
     makeBindingWrapper (ofResult << String.toInt) (alwaysOk toString)
 
 
-plus2Wrapper :
+minus2Wrapper :
     BoundWidget model msg Int
     -> BoundWidget model msg Int
-plus2Wrapper =
+minus2Wrapper =
     makeBindingWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
