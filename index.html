@@ -76,7 +76,7 @@
 
     sendValueAtPath(state, []);
 
-    mbwebapp.ports.askContentCmdPort.subscribe(function (args) {
+    mbwebapp.ports.askDataCmdPort.subscribe(function (args) {
         sendValueAtPath(state, args);
     })
 
@@ -94,7 +94,8 @@
         insertValue(path, value, state);
         localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
 
-        console.log("sending : " + path + " and " + value)
+        console.log("sending : " + path + " and:")
+        console.log(value)
         mbwebapp.ports.itemAddedSubPort.send(args);
     });
 
