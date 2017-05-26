@@ -17,12 +17,14 @@ widget =
     }
 
 
-selectableWidget : ISelectable Model Msg { widget : BoundWidget Model Msg String }
-selectableWidget =
+createWidget :
+    (BoundWidget Model Msg String -> BoundWidget model msg carriedValue)
+    -> ISelectable Model Msg { widget : BoundWidget model msg carriedValue }
+createWidget f =
     { isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
-    , widget = widget
+    , widget = f widget
     }
 
 
