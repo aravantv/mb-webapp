@@ -9,9 +9,8 @@ port module LocalStorage
         , askDataCmd
         )
 
-import Data exposing (Object, Data)
-import DataID exposing (DataID)
-import DataType exposing (ClassRef, DataType, DataTypeSet, genericFieldOfString, stringOfGenericField)
+import Data exposing (Data, Object)
+import DataID exposing (DataID, genericFieldOfString, stringOfGenericField)
 import Json.Decode
 import Json.Encode
 import Platform.Sub
@@ -64,11 +63,11 @@ setStringCmd ( p, s ) =
 port itemAddedSubPort : (( StoragePath, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : DataTypeSet -> (( DataID, Result String Data ) -> c) -> Sub c
-itemAddedSub dts msgBuilder =
+itemAddedSub : (( DataID, Result String Data ) -> c) -> Sub c
+itemAddedSub msgBuilder =
     let
         objOfJson json =
-            Json.Decode.decodeValue (Data.dataDecoder dts) json
+            Json.Decode.decodeValue Data.dataDecoder json
     in
         itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
 
