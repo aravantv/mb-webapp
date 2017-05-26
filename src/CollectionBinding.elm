@@ -128,7 +128,7 @@ listBinding dts boundId =
                             Just i ->
                                 case maybeObj of
                                     Result.Ok obj ->
-                                        Binding.Ok ( i, obj, [ DataType.Field "FIXME-HERE SHOULD BE A DATAID" ] )
+                                        Binding.Ok ( i, obj, id )
 
                                     Result.Err err ->
                                         Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
