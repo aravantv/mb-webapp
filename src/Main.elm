@@ -2,7 +2,6 @@ module Main exposing (..)
 
 import Binding exposing (textBinding)
 import CircleWidget
-import Data exposing (Data(..))
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
 import Label
@@ -31,8 +30,7 @@ metamodel =
 
 
 -- WIDGET
-
-
+{--
 listExampleWidget =
     GroupWidget.createWidget
         { divOrSpan = Div
@@ -43,8 +41,7 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.dataTypeSet
-                        , newItemWidget = NewText.widget
+                        { newItemWidget = NewText.createWidget ""
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = String
                         }
@@ -58,7 +55,7 @@ listExampleWidget =
                 , selector1 = identity
                 , wrappedWidget2 =
                     SelectableList.createWidget
-                        { binding = Binding.listBinding metamodel.dataTypeSet
+                        { binding = (Binding.dataToStringListBinding >> Binding.stringToIntListBinding >> Binding.intToDataListBinding) (Binding.listBinding metamodel.dataTypeSet)
                         , newItemWidget = NewText.widget
                         , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
                         , factory = String
@@ -67,8 +64,8 @@ listExampleWidget =
                 }
         , selector2 = identity
         }
-
-
+--}
+{--
 formExampleWidget =
     GroupWidget.createWidget
         { divOrSpan = Div
@@ -77,9 +74,12 @@ formExampleWidget =
                 { divOrSpan = Span
                 , wrappedWidget1 =
                     CircleWidget.createWidget
-                        { wrappedWidget = SelectableText.createWidget Binding.textBinding, selector = identity }
+                        { wrappedWidget =
+                            SelectableText.widget Binding.textBinding
+                        , selector = identity
+                        }
                 , selector1 = identity
-                , wrappedWidget2 = Text.createWidget Binding.textBinding
+                , wrappedWidget2 = Text.widget Binding.textBinding
                 , selector2 = identity
                 }
         , selector1 = identity
@@ -88,11 +88,19 @@ formExampleWidget =
                 { divOrSpan = Span
                 , wrappedWidget1 = Label.createWidget "Number+2:"
                 , selector1 = identity
-                , wrappedWidget2 = Text.createWidget (Binding.intToStringTransformer Binding.plus2Binding textBinding)
+                , wrappedWidget2 =
+                    Text.widget
+                    -- (Binding.stringTransformerOfIntTransformer Binding.plus2Binding textBinding)
                 , selector2 = identity
                 }
         , selector2 = identity
         }
+
+--}
+
+
+formExampleWidget =
+    Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
 
 
 main =
@@ -100,8 +108,4 @@ main =
         widget =
             formExampleWidget
     in
-        TimeTravel.program <|
-            makeTopWidget
-                widget
-                -- ICI donner le metamodel aussi et celui-ci serait ensuite transmis aux sous-bindings?
-                [ DataType.Field "todos" ]
+        TimeTravel.program (makeTopWidget widget)
