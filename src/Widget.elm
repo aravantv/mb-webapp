@@ -1,7 +1,6 @@
 module Widget exposing (..)
 
 import Data exposing (Data)
-import DataID exposing (DataID)
 import Html exposing (Html)
 import Task
 
@@ -61,12 +60,32 @@ mapParamsSub fSub w =
 
 
 type alias TopWidget model msg =
-    DataID
-    -> { init : ( model, Cmd msg )
-       , update : msg -> model -> ( model, Cmd msg )
-       , subscriptions : model -> Sub msg
-       , view : model -> Html msg
-       }
+    { init : ( model, Cmd msg )
+    , update : msg -> model -> ( model, Cmd msg )
+    , subscriptions : model -> Sub msg
+    , view : model -> Html msg
+    }
+
+
+makeTopWidget : Widget () () model msg -> TopWidget model msg
+makeTopWidget w =
+    { init = w.init
+    , update =
+        \msg model ->
+            let
+                ( newModel, cmd, () ) =
+                    w.update msg model
+            in
+                ( newModel, cmd )
+    , subscriptions =
+        \model ->
+            let
+                ( subs, () ) =
+                    w.subscriptions model
+            in
+                subs
+    , view = w.view
+    }
 
 
 
