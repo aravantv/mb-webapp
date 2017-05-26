@@ -100,7 +100,11 @@ formExampleWidget =
 
 
 formExampleWidget =
-    Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
+    GroupWidget.createWidget
+        { divOrSpan = Div
+        , wrappedWidget1 = Label.createWidget "Entrée:"
+        , wrappedWidget2 = Binding.applyBinding (Binding.textBinding [ DataType.Field "todos" ]) Text.widget
+        }
 
 
 main =
