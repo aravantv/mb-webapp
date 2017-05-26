@@ -19,12 +19,12 @@ widget =
 
 createSelectableWidget :
     (BoundWidget Model Msg String -> a -> Widget () () model msg)
-    -> ISelectable Model Msg { createWidget : a -> Widget () () model msg }
+    -> ISelectable Model Msg { makeWidget : a -> Widget () () model msg }
 createSelectableWidget f =
     { isSelected = .editMode
     , selectMsg = UISelect
     , unselectMsg = UIConfirm
-    , createWidget = f widget
+    , makeWidget = f widget
     }
 
 
