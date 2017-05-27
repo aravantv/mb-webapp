@@ -6,6 +6,10 @@ import Html.Events exposing (keyCode, on)
 import Json.Decode exposing (andThen, map2, fail, succeed)
 
 
+type alias Index =
+    Int
+
+
 shiftKey : Json.Decode.Decoder Bool
 shiftKey =
     Json.Decode.field "shiftKey" Json.Decode.bool
