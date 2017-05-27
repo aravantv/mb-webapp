@@ -12,6 +12,7 @@ port module LocalStorage
 import Data exposing (Data, Object)
 import DataID exposing (DataID, genericFieldOfString, stringOfGenericField)
 import Json.Decode
+import Utils exposing (Index)
 import Json.Encode
 import Platform.Sub
 
@@ -90,12 +91,12 @@ itemRemovedSub msgBuilder =
 
 {-| addItemCmd literally adds an item: it inserts an element at the given path but does not fill it in with any value!
 -}
-port addItemCmdPort : ( StoragePath, Json.Encode.Value ) -> Cmd msg
+port addItemCmdPort : ( StoragePath, Index, Json.Encode.Value ) -> Cmd msg
 
 
-addItemCmd : DataID -> Data -> Cmd msg
-addItemCmd p d =
-    addItemCmdPort ( storagePathOfWidgetPath p, Data.jsonOfData d )
+addItemCmd : DataID -> Index -> Data -> Cmd mssg
+addItemCmd p i d =
+    addItemCmdPort ( storagePathOfWidgetPath p, i, Data.jsonOfData d )
 
 
 port removeItemCmdPort : StoragePath -> Cmd msg
