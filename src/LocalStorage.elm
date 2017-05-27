@@ -89,8 +89,6 @@ itemRemovedSub msgBuilder =
     itemRemovedSubPort (msgBuilder << widgetPathOfStoragePath)
 
 
-{-| addItemCmd literally adds an item: it inserts an element at the given path but does not fill it in with any value!
--}
 port addItemCmdPort : ( StoragePath, Index, Json.Encode.Value ) -> Cmd msg
 
 
