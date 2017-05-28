@@ -119,7 +119,7 @@ textBinding boundId =
     { get =
         \f ->
             DataManager.getStringSub
-                (\( id, s ) ->
+                (\id s ->
                     let
                         res =
                             if id == boundId then
@@ -129,7 +129,7 @@ textBinding boundId =
                     in
                         f res
                 )
-    , set = \s -> DataManager.setStringCmd ( boundId, s )
+    , set = \s -> DataManager.setStringCmd boundId s
     , ask = DataManager.askDataCmd boundId
     }
 
