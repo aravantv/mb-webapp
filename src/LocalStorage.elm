@@ -7,61 +7,59 @@ port module LocalStorage
         , addItemCmd
         , removeItemCmd
         , askDataCmd
+        , DataID
         )
 
 import Data exposing (Data, Object)
-import DataID exposing (DataID, genericFieldOfString, stringOfGenericField)
 import Json.Decode
 import Utils exposing (Index)
 import Json.Encode
 import Platform.Sub
 
 
-{-| Storage paths are different than widget paths: they are ordered more intuitively,
-  i.e., the root is the *first* element. That requires reverting before calling the port though.
--}
-type alias StoragePath =
-    List String
-
-
-fieldOfIndex : Int -> String
-fieldOfIndex i =
-    toString i
-
-
-type alias JsonString =
+type alias DataID =
     String
 
 
-{-| Just reverts a path
--}
-storagePathOfWidgetPath : DataID -> StoragePath
-storagePathOfWidgetPath p =
-    List.reverse (List.map stringOfGenericField p)
+port getDataSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-widgetPathOfStoragePath : StoragePath -> DataID
-widgetPathOfStoragePath sp =
-    List.reverse (List.map genericFieldOfString sp)
+getDataSub : (( DataID, Result String Data ) -> a) -> Sub a
+getDataSub msgBuilder =
+    let
+        objOfJson json =
+            Json.Decode.decodeValue Data.dataDecoder json
+    in
+        getDataSubPort (\( id, json ) -> msgBuilder ( id, objOfJson json ))
 
 
-port getStringSubPort : (( StoragePath, JsonString ) -> msg) -> Sub msg
-
-
-getStringSub : (( DataID, JsonString ) -> a) -> Sub a
+getStringSub : (( DataID, String ) -> a) -> Sub a
 getStringSub msgBuilder =
-    getStringSubPort (\( p, s ) -> msgBuilder ( widgetPathOfStoragePath p, s ))
+    getDataSub
+        (\( id, res ) ->
+            case res of
+                Ok (Data.String s) ->
+                    msgBuilder ( id, s )
+
+                _ ->
+                    msgBuilder ( id, "FIXME: proper handling of Ids which actually do not contain strings" )
+        )
 
 
-port setStringCmdPort : ( StoragePath, String ) -> Cmd msg
+port setDataCmdPort : ( DataID, Json.Encode.Value ) -> Cmd msg
+
+
+setDataCmd : ( DataID, Data ) -> Cmd msg
+setDataCmd ( id, d ) =
+    setDataCmdPort ( id, Data.jsonOfData d )
 
 
 setStringCmd : ( DataID, String ) -> Cmd msg
-setStringCmd ( p, s ) =
-    setStringCmdPort ( storagePathOfWidgetPath p, s )
+setStringCmd ( id, s ) =
+    setDataCmd ( id, Data.String s )
 
 
-port itemAddedSubPort : (( StoragePath, Json.Encode.Value ) -> msg) -> Sub msg
+port itemAddedSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
 
 
 itemAddedSub : (( DataID, Result String Data ) -> c) -> Sub c
@@ -70,36 +68,36 @@ itemAddedSub msgBuilder =
         objOfJson json =
             Json.Decode.decodeValue Data.dataDecoder json
     in
-        itemAddedSubPort (\( sp, json ) -> msgBuilder ( widgetPathOfStoragePath sp, objOfJson json ))
+        itemAddedSubPort (\( sp, json ) -> msgBuilder ( sp, objOfJson json ))
 
 
-port askDataCmdPort : StoragePath -> Cmd msg
+port askDataCmdPort : DataID -> Cmd msg
 
 
 askDataCmd : DataID -> Cmd msg
-askDataCmd p =
-    askDataCmdPort (storagePathOfWidgetPath p)
+askDataCmd =
+    askDataCmdPort
 
 
-port itemRemovedSubPort : (StoragePath -> msg) -> Sub msg
+port itemRemovedSubPort : (DataID -> msg) -> Sub msg
 
 
 itemRemovedSub : (DataID -> c) -> Sub c
 itemRemovedSub msgBuilder =
-    itemRemovedSubPort (msgBuilder << widgetPathOfStoragePath)
+    itemRemovedSubPort msgBuilder
 
 
-port addItemCmdPort : ( StoragePath, Index, Json.Encode.Value ) -> Cmd msg
+port addItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
 
 
 addItemCmd : DataID -> Index -> Data -> Cmd mssg
-addItemCmd p i d =
-    addItemCmdPort ( storagePathOfWidgetPath p, i, Data.jsonOfData d )
+addItemCmd id i d =
+    addItemCmdPort ( id, i, Data.jsonOfData d )
 
 
-port removeItemCmdPort : StoragePath -> Cmd msg
+port removeItemCmdPort : ( DataID, Index ) -> Cmd msg
 
 
-removeItemCmd : DataID -> Cmd msg
-removeItemCmd =
-    removeItemCmdPort << storagePathOfWidgetPath
+removeItemCmd : DataID -> Index -> Cmd msg
+removeItemCmd id i =
+    removeItemCmdPort ( id, i )
