@@ -9,6 +9,16 @@ type alias DataID =
     LocalStorage.DataID
 
 
+getDataSub : (DataID -> Result String Data -> msg) -> Sub msg
+getDataSub f =
+    LocalStorage.getDataSub f
+
+
+setDataCmd : DataID -> Data -> Cmd msg
+setDataCmd id s =
+    LocalStorage.setDataCmd id s
+
+
 getStringSub : (DataID -> String -> msg) -> Sub msg
 getStringSub f =
     LocalStorage.getStringSub f
