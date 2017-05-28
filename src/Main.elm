@@ -4,7 +4,6 @@ import Binding exposing (applyBinding, intOfStringWrapper, minus2Wrapper, string
 import CircleWidget
 import CollectionBinding exposing (applyListBinding, listBinding)
 import Data
-import DataID exposing (DataID)
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
 import Label
@@ -70,7 +69,7 @@ listExampleWidget =
         { divOrSpan = Div
         , wrappedWidget1 = Label.createWidget "List of stuff:"
         , wrappedWidget2 =
-            applyListBinding (listBinding [ DataID.Field "todos" ]) <|
+            applyListBinding (listBinding "org.vincent.aravantinos.todos") <|
                 SelectableList.createWidget
                     { newItemWidget = NewText.createWidget ""
                     , itemWidget = SelectableText.createSelectableWidget (\w id -> applyBinding (textBinding id) w)
@@ -88,7 +87,7 @@ formExampleWidget =
                     { divOrSpan = Div
                     , wrappedWidget1 = Label.createWidget "n+2:"
                     , wrappedWidget2 =
-                        (applyBinding (textBinding [ DataID.Field "todos" ])
+                        (applyBinding (textBinding "org.vincent.aravantinos.text")
                             << stringOfIntWrapper
                             << minus2Wrapper
                             << intOfStringWrapper
@@ -99,7 +98,7 @@ formExampleWidget =
             GroupWidget.createWidget
                 { divOrSpan = Div
                 , wrappedWidget1 = Label.createWidget "n:"
-                , wrappedWidget2 = applyBinding (textBinding [ DataID.Field "todos" ]) SelectableText.widget
+                , wrappedWidget2 = applyBinding (textBinding "org.vincent.aravantinos.text") SelectableText.widget
                 }
         }
 
