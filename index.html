@@ -109,10 +109,10 @@
       var id = args[0]
       var index = args[1]
       var valueAtId = JSON.parse(localStorage.getItem(id))
-      if (typeof obj !== 'object' || !(Array.isArray(obj))) {
+      if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
         console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
       } else {
-        localStorage.setItem(id, JSON.stringify(obj.splice(index,1)))
+        localStorage.setItem(id, JSON.stringify(valueAtId.splice(index,1)))
       }
       mbwebapp.ports.itemRemovedSubPort.send([id, index]);
     });
