@@ -77,6 +77,7 @@
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
+      console.log("asked: " + id)
       mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(id)])
     })
 
@@ -107,7 +108,7 @@
     mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
       var id = args[0]
       var index = args[1]
-      var valueAtId = Json.parse(localStorage.getItem(id))
+      var valueAtId = JSON.parse(localStorage.getItem(id))
       if (typeof obj !== 'object' || !(Array.isArray(obj))) {
         console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
       } else {
