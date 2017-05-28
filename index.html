@@ -100,7 +100,7 @@
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           localStorage.setItem(id, JSON.stringify(obj.splice(index,0,valueId))
         }
-        mbwebapp.ports.itemAddedSubPort.send([id, value]);
+        mbwebapp.ports.itemAddedSubPort.send([id, index, value]);
     });
 
     mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
