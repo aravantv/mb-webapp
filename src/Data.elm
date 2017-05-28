@@ -59,10 +59,7 @@ dataDecoder =
 
 type AttributeValue
     = SingleData (Maybe Data)
-    | StringList (List String)
-    | IntList (List Int)
-    | BoolList (List Bool)
-    | ObjectRefList (List Object)
+    | MultipleData (List Data)
 
 
 jsonOfAttributeValue : AttributeValue -> Json.Encode.Value
@@ -78,25 +75,13 @@ jsonOfAttributeValue attributeValue =
             SingleData (Just d) ->
                 jsonOfData d
 
-            StringList l ->
-                encodeList Json.Encode.string l
-
-            IntList l ->
-                encodeList Json.Encode.int l
-
-            BoolList l ->
-                encodeList Json.Encode.bool l
-
-            ObjectRefList l ->
-                encodeList jsonOfObject l
+            MultipleData l ->
+                encodeList jsonOfData l
 
 
 attributeDecoder : Dec.Decoder AttributeValue
 attributeDecoder =
     Dec.oneOf
         [ Dec.map SingleData <| Dec.nullable dataDecoder
-        , Dec.map StringList <| Dec.list Dec.string
-        , Dec.map IntList <| Dec.list Dec.int
-        , Dec.map BoolList <| Dec.list Dec.bool
-        , Dec.map ObjectRefList <| Dec.list (objectDecoder ())
+        , Dec.map MultipleData <| Dec.list dataDecoder
         ]
