@@ -126,13 +126,15 @@ update params msg model =
                 ( addedItemModel, addedItemCmd ) =
                     (params.itemWidget.makeWidget itemID).init
             in
-                doNothing <|
-                    case insert model.contents { model = addedItemModel, id = itemID } i of
-                        Just newContents ->
-                            { model | contents = newContents }
+                ( case insert model.contents { model = addedItemModel, id = itemID } i of
+                    Just newContents ->
+                        { model | contents = newContents }
 
-                        Nothing ->
-                            model
+                    Nothing ->
+                        model
+                , Cmd.map (\m -> DelegateToItemMsg ( i, m )) addedItemCmd
+                , DoNothing
+                )
 
         BackendRemovedItem i ->
             doNothing <|
