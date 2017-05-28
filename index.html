@@ -37,7 +37,7 @@
     }
 
     function createNewID() {
-      'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
         return v.toString(16);
       });
@@ -90,15 +90,16 @@
     mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
         var id = args[0]
         var index = args[1]
-        var valueAtId = Json.parse(localStorage.getItem(id))
-        if (typeof obj !== 'object' || !(Array.isArray(obj))) {
+        var valueAtId = JSON.parse(localStorage.getItem(id))
+        if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
           console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
         } else {
           var value = args[2]
           var shallowValue = flattenObject(value)
           var valueId = createNewID()
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
-          localStorage.setItem(id, JSON.stringify(obj.splice(index,0,valueId)))
+          valueAtId.splice(index, 0, valueId)
+          localStorage.setItem(id, JSON.stringify(valueAtId))
           mbwebapp.ports.itemAddedSubPort.send([id, index, value, valueId]);
         }
     });
