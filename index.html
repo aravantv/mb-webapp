@@ -12,97 +12,107 @@
 </body>
 
 <script type="text/javascript">
-    // Applies the function [f] deep in [obj]. [f] takes as input an object and a field on this object.
-    function applyDeep(path, obj, deepObjectShouldBeArray, f) {
-        var sanitizedPath = path.slice();
-        sanitizedPath.splice(0, 0, "root");
-        var result = obj;
-        for (var i = 0, n = sanitizedPath.length; i < n && result !== undefined; i++) {
-            var field = sanitizedPath[i];
-            if (i === n - 1) {
-                f(result, field);
-            } else {
-                if (typeof result[field] !== 'object') {
-                  if (i === n - 2 && deepObjectShouldBeArray) {
-                    result[field] = [];
-                  } else {
-                    result[field] = {};
-                  }
-                }
-                result = result[field];
-            }
+
+    function reconstituteObject(id) {
+      var serializedShallowObject = localStorage.getItem(id);
+      var shallowObject = serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report';
+      if (typeof shallowObject === 'string') {
+        return shallowObject
+      } else if (typeof shallowObject === 'number') {
+        return shallowObject
+      } else if (typeof shallowObject === 'boolean') {
+        return shallowObject
+      } else if (typeof shallowObject === 'object') {
+        if (Array.isArray shallowObject) {
+          return shallowObject.map(function(x) {
+            return reconstituteObject(x)
+          })
+        } else {
+          Object.keys(shallowObject).forEach(function(key) {
+             shallowObject[key] = reconstituteObject(key)
+          });
+          return shallowObject
         }
+      }
     }
 
-    function setValue(path, val, obj) {
-        applyDeep(path, obj, false, function (o, f) { o[f] = val; });
+    function createNewID() {
+      'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+        return v.toString(16);
+      });
     }
 
-    // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
-    function insertValue(path, val, obj) {
-        applyDeep(path, obj, true, function (o, i) {
-          // In case the object is empty, we need to initialize to ensure it is an array
-          if (JSON.stringify(o) === JSON.stringify({})) {
-            o[i] = val;
-          } else {
-            o.splice(i, 0, val);
-          }
-        });
+    function flattenObject(obj) {
+      if (typeof obj === 'string') {
+        return obj
+      } else if (typeof obj === 'number') {
+        return obj
+      } else if (typeof obj === 'boolean') {
+        return obj
+      } else if (typeof obj === 'object') {
+        if (Array.isArray obj) {
+          var result = []
+          obj.forEach(function(x) {
+            var shallowX = flattenObject(x)
+            var xId = createNewID()
+            localStorage.setItem(xId, JSON.stringify(shallowX))
+            result.push(xId)
+          })
+        } else {
+          var result = {}
+          Object.keys(obj).forEach(function(key) {
+            var shallowObjKey = flattenObject(obj[key])
+            var keyId = createNewID()
+            localStorage.setItem(keyId, JSON.stringify(shallowObjKey))
+            result[key] = keyId
+          })
+          return result
+        }
+      }
     }
 
-    // [path] must have the form x.x.x.n where x.x.x points to an array and n is a number
-    function removeValue(path, obj) {
-        applyDeep(path, obj, true, function (o, i) { o.splice(i, 1); });
-    }
+    var serializedState = localStorage.getItem('MBWebappRoot')
+    var state = serializedState ? JSON.parse(serializedState) : {}
+    var mbwebapp = Elm.Main.fullscreen()
 
-    function sendValueAtPath(obj, path) {
-      applyDeep(path, obj, false,
-        function (o,f) {
-          if (typeof o[f] === 'string') {
-            mbwebapp.ports.getStringSubPort.send([path, o[f]]);
-          } else if (Array.isArray(o[f])) {
-            o[f].forEach(function(elt, i) {
-              var elementPath = path.slice();
-              elementPath.splice(0, 0, i.toString());
-              mbwebapp.ports.itemAddedSubPort.send([elementPath, elt]);
-            });
-          }
-        });
-    }
-
-    var serializedState = localStorage.getItem('localStorageResourceMBWebapp');
-    var state = serializedState ? JSON.parse(serializedState) : {};
-    var mbwebapp = Elm.Main.fullscreen();
-
-    sendValueAtPath(state, []);
-
-    mbwebapp.ports.askDataCmdPort.subscribe(function (args) {
-        sendValueAtPath(state, args);
+    mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
+      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(arg)])
     })
 
-    mbwebapp.ports.setStringCmdPort.subscribe(function (args) {
-        var path = args[0]
+    mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
+        var id = args[0]
         var value = args[1]
-        setValue(path, value, state);
-        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.getStringSubPort.send(args);
-    })
-
-    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
-        var path = args[0]
-        var value = args[1]
-        insertValue(path, value, state);
-        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-
-        console.log("sending : " + path + " and:")
-        console.log(value)
-        mbwebapp.ports.itemAddedSubPort.send(args);
+        localStorage.setItem(id, JSON.stringify(flattenObject(value)))
+        mbwebapp.ports.getDataSubPort.send([id, value])
     });
 
-    mbwebapp.ports.removeItemCmdPort.subscribe(function (path) {
-        removeValue(path, state);
-        localStorage.setItem('localStorageResourceMBWebapp', JSON.stringify(state));
-        mbwebapp.ports.itemRemovedSubPort.send(path);
+    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
+        var id = args[0]
+        var index = args[1]
+        var valueAtId = Json.parse(localStorage.getItem(id))
+        if (typeof obj !== 'object' || !(Array.isArray obj)) {
+          console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
+        } else {
+          var value = args[2]
+          var shallowValue = flattenObject(value)
+          var valueId = createNewID()
+          localStorage.setItem(valueId, JSON.stringify(shallowValue))
+          localStorage.setItem(id, JSON.stringify(obj.splice(index,0,valueId))
+        }
+        mbwebapp.ports.itemAddedSubPort.send([id, value]);
+    });
+
+    mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
+      var id = args[0]
+      var index = args[1]
+      var valueAtId = Json.parse(localStorage.getItem(id))
+      if (typeof obj !== 'object' || !(Array.isArray obj)) {
+        console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
+      } else {
+        localStorage.setItem(id, JSON.stringify(obj.splice(index,1))
+      }
+      mbwebapp.ports.itemRemovedSubPort.send([id, index]);
     });
 </script>
 
