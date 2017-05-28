@@ -23,7 +23,7 @@
       } else if (typeof shallowObject === 'boolean') {
         return shallowObject
       } else if (typeof shallowObject === 'object') {
-        if (Array.isArray shallowObject) {
+        if (Array.isArray(shallowObject)) {
           return shallowObject.map(function(x) {
             return reconstituteObject(x)
           })
@@ -51,7 +51,7 @@
       } else if (typeof obj === 'boolean') {
         return obj
       } else if (typeof obj === 'object') {
-        if (Array.isArray obj) {
+        if (Array.isArray(obj)) {
           var result = []
           obj.forEach(function(x) {
             var shallowX = flattenObject(x)
@@ -77,7 +77,7 @@
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
-      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(arg)])
+      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(id)])
     })
 
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
@@ -91,14 +91,14 @@
         var id = args[0]
         var index = args[1]
         var valueAtId = Json.parse(localStorage.getItem(id))
-        if (typeof obj !== 'object' || !(Array.isArray obj)) {
+        if (typeof obj !== 'object' || !(Array.isArray(obj))) {
           console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
         } else {
           var value = args[2]
           var shallowValue = flattenObject(value)
           var valueId = createNewID()
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
-          localStorage.setItem(id, JSON.stringify(obj.splice(index,0,valueId))
+          localStorage.setItem(id, JSON.stringify(obj.splice(index,0,valueId)))
           mbwebapp.ports.itemAddedSubPort.send([id, index, value, valueId]);
         }
     });
@@ -107,10 +107,10 @@
       var id = args[0]
       var index = args[1]
       var valueAtId = Json.parse(localStorage.getItem(id))
-      if (typeof obj !== 'object' || !(Array.isArray obj)) {
+      if (typeof obj !== 'object' || !(Array.isArray(obj))) {
         console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")");
       } else {
-        localStorage.setItem(id, JSON.stringify(obj.splice(index,1))
+        localStorage.setItem(id, JSON.stringify(obj.splice(index,1)))
       }
       mbwebapp.ports.itemRemovedSubPort.send([id, index]);
     });
