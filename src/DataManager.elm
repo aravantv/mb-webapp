@@ -9,22 +9,22 @@ type alias DataID =
     LocalStorage.DataID
 
 
-getStringSub : (( DataID, String ) -> msg) -> Sub msg
+getStringSub : (DataID -> String -> msg) -> Sub msg
 getStringSub f =
     LocalStorage.getStringSub f
 
 
-setStringCmd : ( DataID, String ) -> Cmd msg
-setStringCmd ( id, s ) =
-    LocalStorage.setStringCmd ( id, s )
+setStringCmd : DataID -> String -> Cmd msg
+setStringCmd id s =
+    LocalStorage.setStringCmd id s
 
 
-itemAddedSub : (( DataID, Result String Data ) -> msg) -> Sub msg
+itemAddedSub : (DataID -> Index -> Result String Data -> msg) -> Sub msg
 itemAddedSub f =
     LocalStorage.itemAddedSub f
 
 
-itemRemovedSub : (DataID -> msg) -> Sub msg
+itemRemovedSub : (DataID -> Index -> msg) -> Sub msg
 itemRemovedSub f =
     LocalStorage.itemRemovedSub f
 
