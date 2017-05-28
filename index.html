@@ -12,30 +12,6 @@
 </body>
 
 <script type="text/javascript">
-
-    function reconstituteObject(id) {
-      var serializedShallowObject = localStorage.getItem(id)
-      var shallowObject = serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
-      if (typeof shallowObject === 'string') {
-        return shallowObject
-      } else if (typeof shallowObject === 'number') {
-        return shallowObject
-      } else if (typeof shallowObject === 'boolean') {
-        return shallowObject
-      } else if (typeof shallowObject === 'object') {
-        if (Array.isArray(shallowObject)) {
-          return shallowObject.map(function(x) {
-            return reconstituteObject(x)
-          })
-        } else {
-          Object.keys(shallowObject).forEach(function(key) {
-             shallowObject[key] = reconstituteObject(key)
-          });
-          return shallowObject
-        }
-      }
-    }
-
     function createNewID() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8)
@@ -77,7 +53,9 @@
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
-      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(id)])
+      var serializedShallowObject = localStorage.getItem(id)
+      var shallowObject = serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
+      mbwebapp.ports.getDataSubPort.send([id, shallowObject])
     })
 
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
