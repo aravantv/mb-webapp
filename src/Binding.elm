@@ -1,8 +1,7 @@
 module Binding exposing (..)
 
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
-import DataID exposing (DataID, getItemIdentifier, isItemOf, itemOf)
-import DataManager
+import DataManager exposing (DataID)
 import Widget exposing (ISelectable, Index, Widget, cmdOf, mapParamsSub, mapParamsUp, modelOf)
 
 
