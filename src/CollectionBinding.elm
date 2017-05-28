@@ -2,9 +2,9 @@ module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult, alwaysOk)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
-import Data
+import Data exposing (AttributeValue(..))
 import DataManager exposing (DataID)
-import Html
+import Html exposing (sub)
 import IndexMapping exposing (IndexMapping)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
 
@@ -68,43 +68,69 @@ type alias CollectionBinding collectionPath msg carriedValue =
 
 
 applyListBinding :
-    CollectionBinding collectionPath msg carriedValue
-    -> BoundCollectionWidget collectionPath model msg carriedValue
-    -> Widget () () model msg
+    CollectionBinding Index msg carriedValue
+    -> BoundCollectionWidget Index model msg carriedValue
+    -> Widget () () model (List msg)
 applyListBinding b w =
-    { init = ( modelOf w.init, Cmd.batch [ cmdOf w.init, b.ask ] )
+    { init = ( modelOf w.init, Cmd.map (\m -> [ m ]) <| Cmd.batch [ cmdOf w.init, b.ask ] )
     , update =
-        \msg model ->
+        \msgs model ->
             let
-                ( newModel, cmd, upInfo ) =
-                    w.update msg model
+                updateOneMsg msg ( modelAcc, cmdAcc ) =
+                    let
+                        ( newModel, cmd, upInfo ) =
+                            w.update msg modelAcc
 
-                newCmd =
-                    case upInfo of
-                        AddItem (Binding.Ok ( idx, val )) ->
-                            Cmd.batch [ cmd, b.addItem idx val ]
+                        newCmd =
+                            case upInfo of
+                                AddItem (Binding.Ok ( idx, val )) ->
+                                    Cmd.batch [ cmd, b.addItem idx val ]
 
-                        AddItem _ ->
-                            cmd
+                                AddItem _ ->
+                                    cmd
 
-                        RemoveItem (Binding.Ok idx) ->
-                            Cmd.batch [ cmd, b.removeItem idx ]
+                                RemoveItem (Binding.Ok idx) ->
+                                    Cmd.batch [ cmd, b.removeItem idx ]
 
-                        RemoveItem _ ->
-                            cmd
+                                RemoveItem _ ->
+                                    cmd
 
-                        DoNothing ->
-                            cmd
+                                DoNothing ->
+                                    cmd
+                    in
+                        ( newModel, newCmd :: cmdAcc )
+
+                ( updatedModel, allCmds ) =
+                    List.foldl updateOneMsg ( model, [] ) msgs
             in
-                ( newModel, newCmd, () )
+                ( updatedModel, Cmd.map (\m -> [ m ]) <| Cmd.batch allCmds, () )
     , subscriptions =
         \model ->
             let
                 ( sub, mapper ) =
                     w.subscriptions model
+
+                embedSub sub =
+                    Sub.map (\m -> [ m ]) sub
+
+                fullListRetrieval id attrVal =
+                    case attrVal of
+                        Ok (MultipleData ids) ->
+                            List.indexedMap (\i id -> mapper.itemAdded <| Binding.Ok ( i, Data.String "FIXME", id )) ids
+
+                        _ ->
+                            []
             in
-                ( Sub.batch (sub :: [ b.itemAdded mapper.itemAdded, b.itemRemoved mapper.itemRemoved ]), () )
-    , view = w.view
+                ( Sub.batch
+                    (embedSub sub
+                        :: [ embedSub (b.itemAdded mapper.itemAdded)
+                           , embedSub (b.itemRemoved mapper.itemRemoved)
+                           , DataManager.getDataSub fullListRetrieval
+                           ]
+                    )
+                , ()
+                )
+    , view = \model -> Html.map (\m -> [ m ]) (w.view model)
     }
 
 
