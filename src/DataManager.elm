@@ -1,8 +1,12 @@
 module DataManager exposing (..)
 
 import Data exposing (Data(..))
-import DataID exposing (DataID)
 import LocalStorage
+import Utils exposing (Index)
+
+
+type alias DataID =
+    LocalStorage.DataID
 
 
 getStringSub : (( DataID, String ) -> msg) -> Sub msg
@@ -25,14 +29,14 @@ itemRemovedSub f =
     LocalStorage.itemRemovedSub f
 
 
-addItemCmd : DataID -> Data -> Cmd msg
-addItemCmd id d =
-    LocalStorage.addItemCmd id d
+addItemCmd : DataID -> Index -> Data -> Cmd msg
+addItemCmd id i d =
+    LocalStorage.addItemCmd id i d
 
 
-removeItemCmd : DataID -> Cmd msg
-removeItemCmd id =
-    LocalStorage.removeItemCmd id
+removeItemCmd : DataID -> Index -> Cmd msg
+removeItemCmd id i =
+    LocalStorage.removeItemCmd id i
 
 
 askDataCmd : DataID -> Cmd msg
