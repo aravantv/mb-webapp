@@ -12,11 +12,11 @@ port module LocalStorage
         , DataID
         )
 
-import Data exposing (Data, Object)
+import Data exposing (AttributeValue, Data, Object)
 import Json.Decode
-import Utils exposing (Index)
 import Json.Encode
 import Platform.Sub
+import Utils exposing (Index)
 
 
 type alias DataID =
@@ -26,11 +26,11 @@ type alias DataID =
 port getDataSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-getDataSub : (DataID -> Result String Data -> a) -> Sub a
+getDataSub : (DataID -> Result String AttributeValue -> a) -> Sub a
 getDataSub msgBuilder =
     let
         objOfJson json =
-            Json.Decode.decodeValue Data.dataDecoder json
+            Json.Decode.decodeValue Data.attributeDecoder json
     in
         getDataSubPort (\( id, json ) -> msgBuilder id (objOfJson json))
 
@@ -40,7 +40,7 @@ getStringSub msgBuilder =
     getDataSub
         (\id res ->
             case res of
-                Ok (Data.String s) ->
+                Ok (Data.SingleData (Just (Data.String s))) ->
                     msgBuilder id s
 
                 _ ->

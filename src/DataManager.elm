@@ -1,6 +1,6 @@
 module DataManager exposing (..)
 
-import Data exposing (Data(..))
+import Data exposing (AttributeValue, Data(..))
 import LocalStorage
 import Utils exposing (Index)
 
@@ -9,7 +9,7 @@ type alias DataID =
     LocalStorage.DataID
 
 
-getDataSub : (DataID -> Result String Data -> msg) -> Sub msg
+getDataSub : (DataID -> Result String AttributeValue -> msg) -> Sub msg
 getDataSub f =
     LocalStorage.getDataSub f
 
