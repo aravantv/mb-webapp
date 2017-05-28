@@ -24,51 +24,51 @@ type alias DataID =
 port getDataSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-getDataSub : (( DataID, Result String Data ) -> a) -> Sub a
+getDataSub : (DataID -> Result String Data -> a) -> Sub a
 getDataSub msgBuilder =
     let
         objOfJson json =
             Json.Decode.decodeValue Data.dataDecoder json
     in
-        getDataSubPort (\( id, json ) -> msgBuilder ( id, objOfJson json ))
+        getDataSubPort (\( id, json ) -> msgBuilder id (objOfJson json))
 
 
-getStringSub : (( DataID, String ) -> a) -> Sub a
+getStringSub : (DataID -> String -> a) -> Sub a
 getStringSub msgBuilder =
     getDataSub
-        (\( id, res ) ->
+        (\id res ->
             case res of
                 Ok (Data.String s) ->
-                    msgBuilder ( id, s )
+                    msgBuilder id s
 
                 _ ->
-                    msgBuilder ( id, "FIXME: proper handling of Ids which actually do not contain strings" )
+                    msgBuilder id "FIXME: proper handling of Ids which actually do not contain strings"
         )
 
 
 port setDataCmdPort : ( DataID, Json.Encode.Value ) -> Cmd msg
 
 
-setDataCmd : ( DataID, Data ) -> Cmd msg
-setDataCmd ( id, d ) =
+setDataCmd : DataID -> Data -> Cmd msg
+setDataCmd id d =
     setDataCmdPort ( id, Data.jsonOfData d )
 
 
-setStringCmd : ( DataID, String ) -> Cmd msg
-setStringCmd ( id, s ) =
-    setDataCmd ( id, Data.String s )
+setStringCmd : DataID -> String -> Cmd msg
+setStringCmd id s =
+    setDataCmd id (Data.String s)
 
 
-port itemAddedSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
+port itemAddedSubPort : (( DataID, Index, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : (( DataID, Result String Data ) -> c) -> Sub c
+itemAddedSub : (DataID -> Index -> Result String Data -> c) -> Sub c
 itemAddedSub msgBuilder =
     let
         objOfJson json =
             Json.Decode.decodeValue Data.dataDecoder json
     in
-        itemAddedSubPort (\( sp, json ) -> msgBuilder ( sp, objOfJson json ))
+        itemAddedSubPort (\( sp, i, json ) -> msgBuilder sp i (objOfJson json))
 
 
 port askDataCmdPort : DataID -> Cmd msg
@@ -79,12 +79,12 @@ askDataCmd =
     askDataCmdPort
 
 
-port itemRemovedSubPort : (DataID -> msg) -> Sub msg
+port itemRemovedSubPort : (( DataID, Index ) -> msg) -> Sub msg
 
 
-itemRemovedSub : (DataID -> c) -> Sub c
+itemRemovedSub : (DataID -> Index -> c) -> Sub c
 itemRemovedSub msgBuilder =
-    itemRemovedSubPort msgBuilder
+    itemRemovedSubPort (\( id, i ) -> msgBuilder id i)
 
 
 port addItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
