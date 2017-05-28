@@ -3,8 +3,7 @@ module CollectionBinding exposing (..)
 import Binding exposing (BindingResult, alwaysOk)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import Data
-import DataID exposing (DataID, getItemIdentifier, itemOf)
-import DataManager
+import DataManager exposing (DataID)
 import Html
 import IndexMapping exposing (IndexMapping)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
@@ -120,36 +119,32 @@ listBinding boundId =
     { itemAdded =
         \f ->
             DataManager.itemAddedSub
-                (\( id, maybeObj ) ->
+                (\collectionID i maybeObj addedEltID ->
                     f
-                        (case id |> itemOf boundId of
-                            Just i ->
-                                case maybeObj of
-                                    Result.Ok obj ->
-                                        Binding.Ok ( i, obj, id )
+                        (if collectionID == boundId then
+                            case maybeObj of
+                                Result.Ok obj ->
+                                    Binding.Ok ( i, obj, addedEltID )
 
-                                    Result.Err err ->
-                                        Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
-
-                            _ ->
-                                Binding.Irrelevant
+                                Result.Err err ->
+                                    Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
+                         else
+                            Binding.Irrelevant
                         )
                 )
     , itemRemoved =
         \f ->
             DataManager.itemRemovedSub
-                (\id ->
+                (\collectionID i ->
                     f
-                        (case id |> itemOf boundId of
-                            Just i ->
-                                Binding.Ok i
-
-                            _ ->
-                                Binding.Irrelevant
+                        (if collectionID == boundId then
+                            Binding.Ok i
+                         else
+                            Binding.Irrelevant
                         )
                 )
-    , addItem = \i m -> DataManager.addItemCmd (getItemIdentifier boundId i) m
-    , removeItem = \i -> DataManager.removeItemCmd (getItemIdentifier boundId i)
+    , addItem = \i m -> DataManager.addItemCmd boundId i m
+    , removeItem = \i -> DataManager.removeItemCmd boundId i
     , ask = DataManager.askDataCmd boundId
     }
 
