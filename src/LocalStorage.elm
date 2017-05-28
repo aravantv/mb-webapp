@@ -1,6 +1,8 @@
 port module LocalStorage
     exposing
-        ( getStringSub
+        ( getDataSub
+        , setDataCmd
+        , getStringSub
         , setStringCmd
         , itemAddedSub
         , itemRemovedSub
