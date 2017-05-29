@@ -117,7 +117,8 @@
       if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
         console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")")
       } else {
-        localStorage.setItem(id, JSON.stringify(valueAtId.splice(index,1)))
+        valueAtId.splice(index,1)
+        localStorage.setItem(id, JSON.stringify(valueAtId))
       }
       mbwebapp.ports.itemRemovedSubPort.send([id, index])
     })
