@@ -66,14 +66,30 @@ listExampleWidget =
 listExampleWidget =
     GroupWidget.createWidget
         { divOrSpan = Div
-        , wrappedWidget1 = Label.createWidget "List of stuff:"
+        , wrappedWidget1 =
+            GroupWidget.createWidget
+                { divOrSpan = Div
+                , wrappedWidget1 = Label.createWidget "List of stuff:"
+                , wrappedWidget2 =
+                    applyListBinding (listBinding "org.vincent.aravantinos.todos") <|
+                        SelectableList.createWidget
+                            { newItemWidget = NewText.createWidget ""
+                            , itemWidget = SelectableText.createSelectableWidget (\w id -> applyBinding (textBinding id) w)
+                            , factory = Data.String
+                            }
+                }
         , wrappedWidget2 =
-            applyListBinding (listBinding "org.vincent.aravantinos.todos") <|
-                SelectableList.createWidget
-                    { newItemWidget = NewText.createWidget ""
-                    , itemWidget = SelectableText.createSelectableWidget (\w id -> applyBinding (textBinding id) w)
-                    , factory = Data.String
-                    }
+            GroupWidget.createWidget
+                { divOrSpan = Div
+                , wrappedWidget1 = Label.createWidget "Only numbers:"
+                , wrappedWidget2 =
+                    applyListBinding (listBinding "org.vincent.aravantinos.todos") <|
+                        SelectableList.createWidget
+                            { newItemWidget = NewText.createWidget ""
+                            , itemWidget = SelectableText.createSelectableWidget (\w id -> applyBinding (textBinding id) w)
+                            , factory = Data.String
+                            }
+                }
         }
 
 
