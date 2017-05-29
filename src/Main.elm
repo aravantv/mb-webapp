@@ -10,9 +10,8 @@ import Label
 import NewText
 import SelectableList
 import SelectableText
-import Text
 import TimeTravel.Html as TimeTravel
-import Widget exposing (ISelectable, Index, makeTopWidget)
+import Widget exposing (ISelectable, Index, TopWidget, makeTopWidget)
 
 
 -- METAMODEL
