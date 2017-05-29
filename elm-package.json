@@ -1,0 +1,20 @@
+{
+    "version": "0.0.1",
+    "summary": "Architecture for model-based development of web applications",
+    "repository": "https://github.com/aravantv/mb-webapp.git",
+    "license": "MIT",
+    "source-directories": [
+        "nesting",
+        "src",
+        "src/widgets"
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "5.0.0 <= v < 6.0.0",
+        "elm-lang/html": "2.0.0 <= v < 3.0.0",
+        "elm-lang/svg": "2.0.0 <= v < 3.0.0",
+        "elm-lang/mouse": "1.0.0 <= v < 2.0.0",
+        "jinjor/elm-time-travel": "2.0.0 <= v < 3.0.0"
+    },
+    "elm-version": "0.18.0 <= v < 0.19.0"
+}

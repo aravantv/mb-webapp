@@ -1,15 +1,120 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>MetaModel Editor</title>
-    <!-- Not present in the tutorial. Just for basic styling. -->
-    <link rel="stylesheet" href="css/base.css" />
-    <script src="libs/jquery.min.js"></script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script src="build/index.js">
-    </script>
-  </body>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Elm • Model-based Web App</title>
+    <script type="text/javascript" src="main.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+</body>
+
+<script type="text/javascript">
+
+    function reconstituteObject(id) {
+      var serializedShallowObject = localStorage.getItem(id)
+      var shallowObject = serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
+      if (typeof shallowObject === 'string') {
+        return shallowObject
+      } else if (typeof shallowObject === 'number') {
+        return shallowObject
+      } else if (typeof shallowObject === 'boolean') {
+        return shallowObject
+      } else if (typeof shallowObject === 'object') {
+        if (Array.isArray(shallowObject)) {
+          return shallowObject.map(function(x) {
+            return reconstituteObject(x)
+          })
+        } else {
+          Object.keys(shallowObject).forEach(function(key) {
+             shallowObject[key] = reconstituteObject(key)
+          });
+          return shallowObject
+        }
+      }
+    }
+
+    function createNewID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8)
+        return v.toString(16)
+      });
+    }
+
+    function flattenObject(obj) {
+      if (typeof obj === 'string') {
+        return obj
+      } else if (typeof obj === 'number') {
+        return obj
+      } else if (typeof obj === 'boolean') {
+        return obj
+      } else if (typeof obj === 'object') {
+        if (Array.isArray(obj)) {
+          var result = []
+          obj.forEach(function(x) {
+            var shallowX = flattenObject(x)
+            var xId = createNewID()
+            localStorage.setItem(xId, JSON.stringify(shallowX))
+            result.push(xId)
+          })
+        } else {
+          var result = {}
+          Object.keys(obj).forEach(function(key) {
+            var shallowObjKey = flattenObject(obj[key])
+            var keyId = createNewID()
+            localStorage.setItem(keyId, JSON.stringify(shallowObjKey))
+            result[key] = keyId
+          })
+          return result
+        }
+      }
+    }
+
+    var serializedState = localStorage.getItem('MBWebappRoot')
+    var state = serializedState ? JSON.parse(serializedState) : {}
+    var mbwebapp = Elm.Main.fullscreen()
+
+    mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
+      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(id)])
+    })
+
+    mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
+        var id = args[0]
+        var value = args[1]
+        localStorage.setItem(id, JSON.stringify(flattenObject(value)))
+        mbwebapp.ports.getDataSubPort.send([id, value])
+    })
+
+    mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
+        var id = args[0]
+        var index = args[1]
+        var valueAtId = JSON.parse(localStorage.getItem(id))
+        if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
+          console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")")
+        } else {
+          var value = args[2]
+          var shallowValue = flattenObject(value)
+          var valueId = createNewID()
+          localStorage.setItem(valueId, JSON.stringify(shallowValue))
+          valueAtId.splice(index, 0, valueId)
+          localStorage.setItem(id, JSON.stringify(valueAtId))
+          mbwebapp.ports.itemAddedSubPort.send([id, index, value, valueId])
+        }
+    })
+
+    mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
+      var id = args[0]
+      var index = args[1]
+      var valueAtId = JSON.parse(localStorage.getItem(id))
+      if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
+        console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")")
+      } else {
+        localStorage.setItem(id, JSON.stringify(valueAtId.splice(index,1)))
+      }
+      mbwebapp.ports.itemRemovedSubPort.send([id, index])
+    })
+</script>
+
 </html>
