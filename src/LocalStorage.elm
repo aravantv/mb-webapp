@@ -23,22 +23,29 @@ type alias DataID =
     String
 
 
-port getDataSubPort : (( DataID, Json.Encode.Value ) -> msg) -> Sub msg
+port getDataSubPort : (( DataID, Json.Encode.Value, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-getDataSub : (DataID -> Result String AttributeValue -> a) -> Sub a
+{-| [getDataSub] takes three parameters:
+ 1. id of the data
+ 2. shallow representation of the data (e.g., for a list, the list of UUIDs)
+ 3. deep representation of the data (e.g., for a list, the list of recursively resolved UUIDs)
+
+ If the data is of atomic type (int, string or bool) then 2 and 3 are the same.
+-}
+getDataSub : (DataID -> Result String AttributeValue -> Result String AttributeValue -> a) -> Sub a
 getDataSub msgBuilder =
     let
         objOfJson json =
             Json.Decode.decodeValue Data.attributeDecoder json
     in
-        getDataSubPort (\( id, json ) -> msgBuilder id (objOfJson json))
+        getDataSubPort (\( id, shallowJson, deepJson ) -> msgBuilder id (objOfJson shallowJson) (objOfJson deepJson))
 
 
 getStringSub : (DataID -> String -> a) -> Sub a
 getStringSub msgBuilder =
     getDataSub
-        (\id res ->
+        (\id _ res ->
             case res of
                 Ok (Data.SingleData (Just (Data.String s))) ->
                     msgBuilder id s
