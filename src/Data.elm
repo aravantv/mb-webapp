@@ -19,9 +19,9 @@ jsonOfObject obj =
         Json.Encode.object attrs
 
 
-objectDecoder : () -> Decoder Object
-objectDecoder () =
-    Dec.dict attributeDecoder
+objectDecoder : Decoder Object
+objectDecoder =
+    Dec.dict <| Dec.lazy (\_ -> attributeDecoder)
 
 
 type Data
@@ -53,7 +53,7 @@ dataDecoder =
         [ Dec.map String Dec.string
         , Dec.map Int Dec.int
         , Dec.map Bool Dec.bool
-        , Dec.map ObjectRef (objectDecoder ())
+        , Dec.map ObjectRef <| Dec.lazy (\_ -> objectDecoder)
         ]
 
 
@@ -82,6 +82,6 @@ jsonOfAttributeValue attributeValue =
 attributeDecoder : Dec.Decoder AttributeValue
 attributeDecoder =
     Dec.oneOf
-        [ Dec.map SingleData <| Dec.nullable dataDecoder
-        , Dec.map MultipleData <| Dec.list dataDecoder
+        [ Dec.map SingleData <| Dec.nullable <| Dec.lazy (\_ -> dataDecoder)
+        , Dec.map MultipleData <| Dec.list <| Dec.lazy (\_ -> dataDecoder)
         ]
