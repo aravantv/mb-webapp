@@ -13,7 +13,7 @@
 
 <script type="text/javascript">
 
-    function shallowObject(id) {
+    function getShallowObject(id) {
       var serializedShallowObject = localStorage.getItem(id)
       return serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
     }
@@ -27,12 +27,14 @@
         return shallowObject
       } else if (typeof shallowObject === 'object') {
         if (Array.isArray(shallowObject)) {
-          return shallowObject.map(function(x) {
-            return reconstituteObject(x)
+          var result = []
+          shallowObject.forEach(function(x) {
+            result.push(reconstituteObject(getShallowObject(x)))
           })
+          return result
         } else {
           Object.keys(shallowObject).forEach(function(key) {
-             shallowObject[key] = reconstituteObject(key)
+             shallowObject[key] = reconstituteObject(getShallowObject(key))
           });
           return shallowObject
         }
@@ -80,7 +82,7 @@
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
-      var shallowObj = shallowObject(id)
+      var shallowObj = getShallowObject(id)
       mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj)])
     })
 
