@@ -67,89 +67,112 @@ type alias CollectionBinding collectionPath msg carriedValue =
     }
 
 
+type Msg subMsg
+    = Init (List subMsg)
+    | Delegate subMsg
+    | Nop
+
+
 applyListBinding :
     CollectionBinding Index msg Data
     -> BoundCollectionWidget Index model msg Data
-    -> Widget () () model (List msg)
+    -> Widget () () model (Msg msg)
 applyListBinding b w =
-    { init = ( modelOf w.init, Cmd.map (\m -> [ m ]) <| Cmd.batch [ cmdOf w.init, b.ask ] )
-    , update =
-        \msgs model ->
+    let
+        ( newInitModel, newInitCmd ) =
+            ( modelOf w.init, Cmd.map Delegate <| Cmd.batch [ cmdOf w.init, b.ask ] )
+
+        updateOneMsg msg ( modelAcc, cmdAcc ) =
             let
-                updateOneMsg msg ( modelAcc, cmdAcc ) =
-                    let
-                        ( newModel, cmd, upInfo ) =
-                            w.update msg modelAcc
+                ( newModel, cmd, upInfo ) =
+                    w.update msg modelAcc
 
-                        newCmd =
-                            case upInfo of
-                                AddItem (Binding.Ok ( idx, val )) ->
-                                    Cmd.batch [ cmd, b.addItem idx val ]
+                newCmd =
+                    case upInfo of
+                        AddItem (Binding.Ok ( idx, val )) ->
+                            Cmd.batch [ cmd, b.addItem idx val ]
 
-                                AddItem _ ->
-                                    cmd
+                        AddItem _ ->
+                            cmd
 
-                                RemoveItem (Binding.Ok idx) ->
-                                    Cmd.batch [ cmd, b.removeItem idx ]
+                        RemoveItem (Binding.Ok idx) ->
+                            Cmd.batch [ cmd, b.removeItem idx ]
 
-                                RemoveItem _ ->
-                                    cmd
+                        RemoveItem _ ->
+                            cmd
 
-                                DoNothing ->
-                                    cmd
-                    in
-                        ( newModel, newCmd :: cmdAcc )
-
-                ( updatedModel, allCmds ) =
-                    List.foldl updateOneMsg ( model, [] ) msgs
+                        DoNothing ->
+                            cmd
             in
-                ( updatedModel, Cmd.map (\m -> [ m ]) <| Cmd.batch allCmds, () )
-    , subscriptions =
-        \model ->
-            let
-                ( sub, mapper ) =
-                    w.subscriptions model
+                ( newModel, newCmd :: cmdAcc )
+    in
+        { init = ( newInitModel, newInitCmd )
+        , update =
+            \msg model ->
+                case msg of
+                    Nop ->
+                        ( model, Cmd.none, () )
 
-                embedSub sub =
-                    Sub.map (\m -> [ m ]) sub
+                    Delegate subMsg ->
+                        let
+                            ( newModel, cmds ) =
+                                updateOneMsg subMsg ( model, [] )
+                        in
+                            ( newModel, Cmd.map Delegate (Cmd.batch cmds), () )
 
-                fullListRetrieval id shallowVal attrVal =
-                    case ( shallowVal, attrVal ) of
-                        ( Ok (MultipleData idsAsAttrs), Ok (MultipleData datas) ) ->
-                            let
-                                ids =
-                                    List.filterMap
-                                        (\d ->
-                                            case d of
-                                                Data.String s ->
-                                                    Just s
+                    Init msgs ->
+                        let
+                            ( updatedModel, allCmds ) =
+                                List.foldl updateOneMsg ( newInitModel, [] ) msgs
+                        in
+                            ( updatedModel, Cmd.map Delegate <| Cmd.batch (cmdOf w.init :: allCmds), () )
+        , subscriptions =
+            \model ->
+                let
+                    ( sub, mapper ) =
+                        w.subscriptions model
 
-                                                _ ->
-                                                    Nothing
-                                        )
-                                        idsAsAttrs
+                    embedSub sub =
+                        Sub.map Delegate sub
 
-                                id2data =
-                                    List.map2 (\x y -> ( x, y )) ids datas
-                            in
-                                List.indexedMap
-                                    (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id ))
-                                    id2data
+                    fullListRetrieval id shallowVal attrVal =
+                        case ( shallowVal, attrVal ) of
+                            ( Ok (MultipleData idsAsAttrs), Ok (MultipleData datas) ) ->
+                                let
+                                    ids =
+                                        List.filterMap
+                                            (\d ->
+                                                case d of
+                                                    Data.String s ->
+                                                        Just s
 
-                        _ ->
-                            []
-            in
-                ( Sub.batch
-                    (embedSub sub
-                        :: [ embedSub (b.itemAdded mapper.itemAdded)
-                           , embedSub (b.itemRemoved mapper.itemRemoved)
-                           , DataManager.getDataSub fullListRetrieval
-                           ]
+                                                    _ ->
+                                                        Nothing
+                                            )
+                                            idsAsAttrs
+
+                                    id2data =
+                                        List.map2 (\x y -> ( x, y )) ids datas
+                                in
+                                    Init <|
+                                        List.indexedMap
+                                            (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id ))
+                                            id2data
+
+                            _ ->
+                                Nop
+                in
+                    ( Sub.batch
+                        (embedSub sub
+                            :: [ embedSub (b.itemAdded mapper.itemAdded)
+                               , embedSub (b.itemRemoved mapper.itemRemoved)
+                               , DataManager.getDataSub fullListRetrieval
+                               ]
+                        )
+                    , ()
                     )
-                , ()
-                )
-    , view = \model -> Html.map (\m -> [ m ]) (w.view model)
-    }
+        , view = \model -> Html.map Delegate (w.view model)
+        }
 
 
 type alias Index =
