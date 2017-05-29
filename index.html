@@ -89,8 +89,9 @@
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
         var id = args[0]
         var value = args[1]
-        localStorage.setItem(id, JSON.stringify(flattenObject(value)))
-        mbwebapp.ports.getDataSubPort.send([id, value])
+        shallowValue = flattenObject(value)
+        localStorage.setItem(id, JSON.stringify(shallowValue))
+        mbwebapp.ports.getDataSubPort.send([id, shallowValue, value])
     })
 
     mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
