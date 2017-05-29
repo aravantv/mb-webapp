@@ -13,9 +13,12 @@
 
 <script type="text/javascript">
 
-    function reconstituteObject(id) {
+    function shallowObject(id) {
       var serializedShallowObject = localStorage.getItem(id)
-      var shallowObject = serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
+      return serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
+    }
+
+    function reconstituteObject(shallowObject) {
       if (typeof shallowObject === 'string') {
         return shallowObject
       } else if (typeof shallowObject === 'number') {
@@ -77,7 +80,8 @@
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
-      mbwebapp.ports.getDataSubPort.send([id, reconstituteObject(id)])
+      var shallowObj = shallowObject(id)
+      mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj)])
     })
 
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
