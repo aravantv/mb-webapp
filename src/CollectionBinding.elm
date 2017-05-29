@@ -2,7 +2,7 @@ module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult, alwaysOk)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
-import Data exposing (AttributeValue(..))
+import Data exposing (AttributeValue(..), Data)
 import DataManager exposing (DataID)
 import Html exposing (sub)
 import IndexMapping exposing (IndexMapping)
@@ -68,8 +68,8 @@ type alias CollectionBinding collectionPath msg carriedValue =
 
 
 applyListBinding :
-    CollectionBinding Index msg carriedValue
-    -> BoundCollectionWidget Index model msg carriedValue
+    CollectionBinding Index msg Data
+    -> BoundCollectionWidget Index model msg Data
     -> Widget () () model (List msg)
 applyListBinding b w =
     { init = ( modelOf w.init, Cmd.map (\m -> [ m ]) <| Cmd.batch [ cmdOf w.init, b.ask ] )
@@ -113,10 +113,28 @@ applyListBinding b w =
                 embedSub sub =
                     Sub.map (\m -> [ m ]) sub
 
-                fullListRetrieval id attrVal =
-                    case attrVal of
-                        Ok (MultipleData ids) ->
-                            List.indexedMap (\i id -> mapper.itemAdded <| Binding.Ok ( i, Data.String "FIXME", id )) ids
+                fullListRetrieval id shallowVal attrVal =
+                    case ( shallowVal, attrVal ) of
+                        ( Ok (MultipleData idsAsAttrs), Ok (MultipleData datas) ) ->
+                            let
+                                ids =
+                                    List.filterMap
+                                        (\d ->
+                                            case d of
+                                                Data.String s ->
+                                                    Just s
+
+                                                _ ->
+                                                    Nothing
+                                        )
+                                        idsAsAttrs
+
+                                id2data =
+                                    List.map2 (\x y -> ( x, y )) ids datas
+                            in
+                                List.indexedMap
+                                    (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id ))
+                                    id2data
 
                         _ ->
                             []
