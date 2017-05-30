@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Binding exposing (applyBinding, intOfStringWrapper, minus2Wrapper, stringOfIntWrapper, textBinding)
 import CircleWidget
-import CollectionBinding exposing (applyListBinding, listBinding)
+import CollectionBinding exposing (applyListBinding, dataOfIntBindingWrapper, dataOfStringBindingWrapper, intOfDataBindingWrapper, intOfStringBindingWrapper, listBinding, stringOfDataBindingWrapper, stringOfIntBindingWrapper)
 import Data
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
@@ -83,7 +83,13 @@ listExampleWidget =
                 { divOrSpan = Div
                 , wrappedWidget1 = Label.createWidget "Only numbers:"
                 , wrappedWidget2 =
-                    applyListBinding (listBinding "org.vincent.aravantinos.todos") <|
+                    (applyListBinding (listBinding "org.vincent.aravantinos.todos")
+                        << dataOfStringBindingWrapper
+                        << stringOfIntBindingWrapper
+                        << intOfStringBindingWrapper
+                        << stringOfDataBindingWrapper
+                    )
+                    <|
                         SelectableList.createWidget
                             { newItemWidget = NewText.createWidget ""
                             , itemWidget = SelectableText.createSelectableWidget (\w id -> applyBinding (textBinding id) w)
