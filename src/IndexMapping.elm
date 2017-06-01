@@ -67,16 +67,3 @@ get m i =
                 Just k
             else
                 get m2 i
-
-
-retrieve : IndexMapping -> Index -> Maybe Index
-retrieve m i =
-    case m of
-        [] ->
-            Nothing
-
-        ( j, k ) :: m2 ->
-            if k == i then
-                Just j
-            else
-                get m2 i
