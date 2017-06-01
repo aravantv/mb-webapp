@@ -31,36 +31,6 @@ metamodel =
 
 
 -- WIDGET
-{--
-listExampleWidget =
-    GroupWidget.createWidget
-        { divOrSpan = Div
-        , wrappedWidget1 =
-            GroupWidget.createWidget
-                { divOrSpan = Div
-                , wrappedWidget1 = Label.createWidget "List of stuff:"
-                , wrappedWidget2 =
-                    SelectableList.createWidget
-                        { newItemWidget = NewText.createWidget ""
-                        , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , factory = String
-                        }
-                }
-        , wrappedWidget2 =
-            GroupWidget.createWidget
-                { divOrSpan = Div
-                , wrappedWidget1 = Label.createWidget "Only numbers:"
-                , wrappedWidget2 =
-                    SelectableList.createWidget
-                        {
-                        -- binding = (Binding.dataToStringListBinding >> Binding.stringToIntListBinding >> Binding.intToDataListBinding) (Binding.listBinding metamodel.dataTypeSet)
-                         newItemWidget = NewText.widget
-                        , itemWidget = SelectableText.createSelectableWidget Binding.textBinding
-                        , factory = String
-                        }
-                }
-        }
---}
 
 
 listExampleWidget =
