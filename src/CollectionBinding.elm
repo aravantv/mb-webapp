@@ -155,9 +155,7 @@ applyListBinding b w =
                                         List.map2 (\x y -> ( x, y )) ids datas
                                 in
                                     Init <|
-                                        List.indexedMap
-                                            (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id ))
-                                            id2data
+                                        List.indexedMap (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id )) id2data
 
                             _ ->
                                 Nop
@@ -216,24 +214,31 @@ listBinding boundId =
     }
 
 
+type alias WrappedBoundListWidget model msg carriedValue =
+    BoundListWidget ( model, IndexMapping ) (IndexMapping -> ( msg, IndexMapping )) carriedValue
+
+
 makeListBindingWrapper :
     (inCarriedValue -> BindingResult outCarriedValue)
     -> (outCarriedValue -> BindingResult inCarriedValue)
     -> BoundListWidget innerModel innerMsg inCarriedValue
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) outCarriedValue
+    -> WrappedBoundListWidget innerModel innerMsg outCarriedValue
 makeListBindingWrapper in2out out2in w =
     let
         trivialMsg m =
-            ( m, identity )
+            \idxMap -> ( m, idxMap )
     in
         { init = ( ( modelOf w.init, IndexMapping.empty ), Cmd.map trivialMsg (cmdOf w.init) )
         , update =
-            \( msg, mappingTransformer ) ( model, idxMap ) ->
+            \msg ( model, idxMap ) ->
                 let
+                    ( subMsg, newIdxMap ) =
+                        msg idxMap
+
                     ( newModel, cmd, info ) =
-                        w.update msg model
+                        w.update subMsg model
                 in
-                    ( ( newModel, mappingTransformer idxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out info )
+                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out info )
         , subscriptions =
             \( model, _ ) ->
                 let
@@ -247,19 +252,32 @@ makeListBindingWrapper in2out out2in w =
                                     Binding.Ok ( i, s, id ) ->
                                         case out2in s of
                                             Binding.Ok n ->
-                                                ( info.itemAdded (Binding.Ok ( i, n, id ))
-                                                , \idxMap -> IndexMapping.insert idxMap i
-                                                )
+                                                \idxMap ->
+                                                    let
+                                                        newIdxMap =
+                                                            IndexMapping.insert idxMap i
+
+                                                        res =
+                                                            case IndexMapping.get newIdxMap i of
+                                                                Just j ->
+                                                                    Binding.Ok ( j, n, id )
+
+                                                                Nothing ->
+                                                                    Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                                    in
+                                                        ( info.itemAdded res, newIdxMap )
 
                                             Binding.Err err ->
-                                                ( info.itemAdded (Binding.Err err)
-                                                , \idxMap -> IndexMapping.insertButSkip idxMap i
-                                                )
+                                                \idxMap ->
+                                                    ( info.itemAdded (Binding.Err err)
+                                                    , IndexMapping.insertButSkip idxMap i
+                                                    )
 
                                             Binding.Irrelevant ->
-                                                ( info.itemAdded Binding.Irrelevant
-                                                , \idxMap -> IndexMapping.insertButSkip idxMap i
-                                                )
+                                                \idxMap ->
+                                                    ( info.itemAdded Binding.Irrelevant
+                                                    , IndexMapping.insertButSkip idxMap i
+                                                    )
 
                                     Binding.Err err ->
                                         trivialMsg (info.itemAdded (Binding.Err err))
@@ -269,15 +287,15 @@ makeListBindingWrapper in2out out2in w =
                         , itemRemoved =
                             \res ->
                                 let
-                                    msg =
+                                    msg idxMap =
                                         case res of
                                             Binding.Ok i ->
-                                                \idxMap -> IndexMapping.remove idxMap i
+                                                IndexMapping.remove idxMap i
 
                                             _ ->
-                                                identity
+                                                idxMap
                                 in
-                                    ( info.itemRemoved res, msg )
+                                    \idxMap -> ( info.itemRemoved res, msg idxMap )
                         }
                 in
                     ( Sub.map trivialMsg sub, newInfo )
@@ -287,14 +305,14 @@ makeListBindingWrapper in2out out2in w =
 
 stringOfIntBindingWrapper :
     BoundListWidget innerModel innerMsg Int
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
+    -> WrappedBoundListWidget innerModel innerMsg String
 stringOfIntBindingWrapper =
     makeListBindingWrapper (Binding.alwaysOk toString) (Binding.ofResult << String.toInt)
 
 
 intOfStringBindingWrapper :
     BoundListWidget innerModel innerMsg String
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
+    -> WrappedBoundListWidget innerModel innerMsg Int
 intOfStringBindingWrapper =
     makeListBindingWrapper (Binding.ofResult << String.toInt) (Binding.alwaysOk toString)
 
@@ -311,14 +329,14 @@ stringOfData d =
 
 dataOfStringBindingWrapper :
     BoundListWidget innerModel innerMsg String
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
+    -> WrappedBoundListWidget innerModel innerMsg Data.Data
 dataOfStringBindingWrapper =
     makeListBindingWrapper (Binding.alwaysOk Data.String) stringOfData
 
 
 stringOfDataBindingWrapper :
     BoundListWidget innerModel innerMsg Data.Data
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) String
+    -> WrappedBoundListWidget innerModel innerMsg String
 stringOfDataBindingWrapper =
     makeListBindingWrapper stringOfData (Binding.alwaysOk Data.String)
 
@@ -335,13 +353,13 @@ intOfData d =
 
 dataOfIntBindingWrapper :
     BoundListWidget innerModel innerMsg Int
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Data.Data
+    -> WrappedBoundListWidget innerModel innerMsg Data.Data
 dataOfIntBindingWrapper =
     makeListBindingWrapper (Binding.alwaysOk Data.Int) intOfData
 
 
 intOfDataBindingWrapper :
     BoundListWidget innerModel innerMsg Data.Data
-    -> BoundListWidget ( innerModel, IndexMapping ) ( innerMsg, IndexMapping -> IndexMapping ) Int
+    -> WrappedBoundListWidget innerModel innerMsg Int
 intOfDataBindingWrapper =
     makeListBindingWrapper intOfData (Binding.alwaysOk Data.Int)
