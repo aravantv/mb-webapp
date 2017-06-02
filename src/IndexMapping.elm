@@ -22,15 +22,19 @@ empty =
 -}
 insert : IndexMapping -> Index -> IndexMapping
 insert m i =
-    case m of
-        [] ->
-            [ ( i, 0 ) ]
+    let
+        insertAux m i j =
+            case m of
+                [] ->
+                    [ ( i, j ) ]
 
-        ( j, k ) :: m2 ->
-            if j < i then
-                ( j, k ) :: insert m2 i
-            else
-                ( i, k ) :: List.map (\( j, k ) -> ( j + 1, k + 1 )) m
+                ( j, k ) :: m2 ->
+                    if j < i then
+                        ( j, k ) :: insertAux m2 i (k + 1)
+                    else
+                        ( i, k ) :: List.map (\( j, k ) -> ( j + 1, k + 1 )) m2
+    in
+        insertAux m i 0
 
 
 {-| Returns the mapping after an object has been inserted at index [i] in the original list,
