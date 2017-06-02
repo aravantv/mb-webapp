@@ -23,6 +23,22 @@ type CollectionBindingUpInfo collectionPath carriedValue
     | DoNothing
 
 
+mapCollectionPath :
+    (collectionPath -> collectionPath)
+    -> CollectionBindingUpInfo collectionPath carriedValue
+    -> CollectionBindingUpInfo collectionPath carriedValue
+mapCollectionPath f info =
+    case info of
+        AddItem (Binding.Ok ( p, v )) ->
+            AddItem (Binding.Ok ( f p, v ))
+
+        RemoveItem (Binding.Ok p) ->
+            RemoveItem (Binding.Ok (f p))
+
+        x ->
+            x
+
+
 doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
 doNothing x =
     ( x, Cmd.none, DoNothing )
