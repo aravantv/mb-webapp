@@ -9,7 +9,7 @@ type alias Index =
   corresponds to index j in the target list. We always have i >= j.
 -}
 type alias IndexMapping =
-    List ( Index, Index )
+    List Index
 
 
 empty : IndexMapping
@@ -22,19 +22,15 @@ empty =
 -}
 insert : IndexMapping -> Index -> IndexMapping
 insert m i =
-    let
-        insertAux m i j =
-            case m of
-                [] ->
-                    [ ( i, j ) ]
+    case m of
+        [] ->
+            [ i ]
 
-                ( j, k ) :: m2 ->
-                    if j < i then
-                        ( j, k ) :: insertAux m2 i (k + 1)
-                    else
-                        ( i, k ) :: List.map (\( j, k ) -> ( j + 1, k + 1 )) m2
-    in
-        insertAux m i 0
+        j :: js ->
+            if j < i then
+                j :: insert js i
+            else
+                i :: List.map (\j -> j + 1) m
 
 
 {-| Returns the mapping after an object has been inserted at index [i] in the original list,
@@ -42,14 +38,15 @@ insert m i =
 -}
 insertButSkip : IndexMapping -> Index -> IndexMapping
 insertButSkip m i =
-    List.map
-        (\( j, k ) ->
+    case m of
+        [] ->
+            [ i ]
+
+        j :: js ->
             if j < i then
-                ( j, k )
+                j :: insert js i
             else
-                ( j + 1, k )
-        )
-        m
+                List.map (\j -> j + 1) m
 
 
 {-| Returns the mapping after an object has been removed at index [i] from the original list.
@@ -58,27 +55,36 @@ remove : IndexMapping -> Index -> IndexMapping
 remove m i =
     case m of
         [] ->
-            []
+            [ i ]
 
-        ( j, k ) :: m2 ->
+        j :: js ->
             if j < i then
-                ( j, k ) :: remove m2 i
-            else if j == i then
-                List.map (\( j, k ) -> ( j - 1, k - 1 )) m
+                j :: remove js i
+            else if j > i then
+                List.map (\j -> j - 1) m
             else
-                m
+                List.map (\j -> j - 1) js
 
 
-{-| Returns the index in the target list of the object at index [i] in the original list.
+{-| Returns the index in the target list of the object at index [i] in the original list if any.
 -}
 get : IndexMapping -> Index -> Maybe Index
 get m i =
-    case m of
-        [] ->
-            Nothing
+    let
+        indexedGet indexedMap =
+            case indexedMap of
+                [] ->
+                    Nothing
 
-        ( j, k ) :: m2 ->
-            if j == i then
-                Just k
-            else
-                get m2 i
+                ( j, k ) :: indexedMap2 ->
+                    if j == i then
+                        Just k
+                    else
+                        indexedGet indexedMap2
+    in
+        indexedGet <| List.indexedMap (\i x -> ( x, i )) m
+
+
+retrieve : IndexMapping -> Index -> Maybe Index
+retrieve m i =
+    List.head (List.drop i m)
