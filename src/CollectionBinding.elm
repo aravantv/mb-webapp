@@ -24,19 +24,33 @@ type CollectionBindingUpInfo collectionPath carriedValue
 
 
 mapCollectionPath :
-    (collectionPath -> collectionPath)
+    (collectionPath -> Maybe collectionPath)
     -> CollectionBindingUpInfo collectionPath carriedValue
     -> CollectionBindingUpInfo collectionPath carriedValue
 mapCollectionPath f info =
-    case info of
-        AddItem (Binding.Ok ( p, v )) ->
-            AddItem (Binding.Ok ( f p, v ))
+    let
+        errMsg =
+            "mapCollectionPath: collectionPath could not be transformed"
+    in
+        case info of
+            AddItem (Binding.Ok ( p, v )) ->
+                case f p of
+                    Just newP ->
+                        AddItem (Binding.Ok ( newP, v ))
 
-        RemoveItem (Binding.Ok p) ->
-            RemoveItem (Binding.Ok (f p))
+                    Nothing ->
+                        AddItem (Binding.Err <| trivialUnfulfillmentInfo errMsg)
 
-        x ->
-            x
+            RemoveItem (Binding.Ok p) ->
+                case f p of
+                    Just newP ->
+                        RemoveItem (Binding.Ok newP)
+
+                    Nothing ->
+                        RemoveItem (Binding.Err <| trivialUnfulfillmentInfo errMsg)
+
+            x ->
+                x
 
 
 doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
