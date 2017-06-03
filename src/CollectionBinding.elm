@@ -404,3 +404,18 @@ intOfDataBindingWrapper :
     -> WrappedBoundListWidget innerModel innerMsg Int
 intOfDataBindingWrapper =
     makeListBindingWrapper intOfData (Binding.alwaysOk Data.Int)
+
+
+makeListBindingFilter :
+    (carriedValue -> Bool)
+    -> BoundListWidget innerModel innerMsg carriedValue
+    -> WrappedBoundListWidget innerModel innerMsg carriedValue
+makeListBindingFilter p =
+    let
+        filter v =
+            if (p v) then
+                Binding.Ok v
+            else
+                Binding.Err <| trivialUnfulfillmentInfo "makeListBindingFilter: filter not satisfied"
+    in
+        makeListBindingWrapper filter filter
