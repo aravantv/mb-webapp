@@ -79,3 +79,13 @@ maybeIf b v =
         Just v
     else
         Nothing
+
+
+isInt : String -> Bool
+isInt s =
+    case String.toInt s of
+        Ok _ ->
+            True
+
+        Err _ ->
+            False
