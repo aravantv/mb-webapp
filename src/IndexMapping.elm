@@ -40,11 +40,11 @@ insertButSkip : IndexMapping -> Index -> IndexMapping
 insertButSkip m i =
     case m of
         [] ->
-            [ i ]
+            []
 
         j :: js ->
             if j < i then
-                j :: insert js i
+                j :: insertButSkip js i
             else
                 List.map (\j -> j + 1) m
 
