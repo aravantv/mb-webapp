@@ -2,8 +2,8 @@ module Main exposing (..)
 
 import Binding exposing (applyBinding, intOfStringWrapper, minus2Wrapper, stringOfIntWrapper, textBinding)
 import CircleWidget
-import CollectionBinding exposing (applyListBinding, dataOfIntBindingWrapper, dataOfStringBindingWrapper, intOfDataBindingWrapper, intOfStringBindingWrapper, listBinding, stringOfDataBindingWrapper, stringOfIntBindingWrapper)
-import Data
+import CollectionBinding exposing (applyListBinding, dataOfIntBindingWrapper, dataOfStringBindingWrapper, intOfDataBindingWrapper, intOfStringBindingWrapper, listBinding, makeListBindingFilter, stringOfDataBindingWrapper, stringOfIntBindingWrapper)
+import Data exposing (Data)
 import DataType exposing (ClassRef, DataType, DataTypeSet, FullDataType, Multiplicity, dataTypeSet)
 import GroupWidget exposing (..)
 import Label
@@ -11,6 +11,7 @@ import NewText
 import SelectableList
 import SelectableText
 import TimeTravel.Html as TimeTravel
+import Utils
 import Widget exposing (ISelectable, Index, TopWidget, makeTopWidget)
 
 
@@ -54,10 +55,15 @@ listExampleWidget =
                 , wrappedWidget1 = Label.createWidget "Only numbers:"
                 , wrappedWidget2 =
                     (applyListBinding (listBinding "org.vincent.aravantinos.todos")
-                        << dataOfStringBindingWrapper
-                        << stringOfIntBindingWrapper
-                        << intOfStringBindingWrapper
-                        << stringOfDataBindingWrapper
+                        << makeListBindingFilter
+                            (\d ->
+                                case Data.getString d of
+                                    Just s ->
+                                        Utils.isInt s
+
+                                    Nothing ->
+                                        False
+                            )
                     )
                     <|
                         SelectableList.createWidget
