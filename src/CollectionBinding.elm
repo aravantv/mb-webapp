@@ -269,14 +269,7 @@ makeListBindingWrapper in2out out2in w =
                         w.update subMsg model
 
                     newInfo =
-                        mapCollectionPath
-                            (\i ->
-                                if i == 0 then
-                                    Just 0
-                                else
-                                    IndexMapping.retrieve newIdxMap i
-                            )
-                            info
+                        mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) info
                 in
                     ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out newInfo )
         , subscriptions =
@@ -290,34 +283,45 @@ makeListBindingWrapper in2out out2in w =
                             \res ->
                                 case res of
                                     Binding.Ok ( i, s, id ) ->
-                                        case out2in s of
-                                            Binding.Ok n ->
-                                                \idxMap ->
-                                                    let
-                                                        newIdxMap =
-                                                            IndexMapping.insert idxMap i
+                                        let
+                                            _ =
+                                                Debug.log "item added at index" i
+                                        in
+                                            case Debug.log "value" <| out2in s of
+                                                Binding.Ok n ->
+                                                    \idxMap ->
+                                                        let
+                                                            newIdxMap =
+                                                                Debug.log "Ok: index map AFTER" <| IndexMapping.insert idxMap i
 
-                                                        res =
-                                                            case IndexMapping.get newIdxMap i of
-                                                                Just j ->
-                                                                    Binding.Ok ( j, n, id )
+                                                            _ =
+                                                                Debug.log "Ok: index map BEFORE" idxMap
 
-                                                                Nothing ->
-                                                                    Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
-                                                    in
-                                                        ( info.itemAdded res, newIdxMap )
+                                                            res =
+                                                                case IndexMapping.get newIdxMap i of
+                                                                    Just j ->
+                                                                        Binding.Ok ( j, n, id )
 
-                                            Binding.Err err ->
-                                                \idxMap ->
-                                                    ( info.itemAdded (Binding.Err err)
-                                                    , IndexMapping.insertButSkip idxMap i
-                                                    )
+                                                                    Nothing ->
+                                                                        Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                                        in
+                                                            ( info.itemAdded res, newIdxMap )
 
-                                            Binding.Irrelevant ->
-                                                \idxMap ->
-                                                    ( info.itemAdded Binding.Irrelevant
-                                                    , IndexMapping.insertButSkip idxMap i
-                                                    )
+                                                Binding.Err err ->
+                                                    \idxMap ->
+                                                        let
+                                                            _ =
+                                                                Debug.log "Err: index map BEFORE" idxMap
+                                                        in
+                                                            ( info.itemAdded (Binding.Err err)
+                                                            , Debug.log "Err: index map AFTER" <| IndexMapping.insertButSkip idxMap i
+                                                            )
+
+                                                Binding.Irrelevant ->
+                                                    \idxMap ->
+                                                        ( info.itemAdded Binding.Irrelevant
+                                                        , IndexMapping.insertButSkip idxMap i
+                                                        )
 
                                     Binding.Err err ->
                                         trivialMsg (info.itemAdded (Binding.Err err))
@@ -420,9 +424,9 @@ makeListBindingFilter :
 makeListBindingFilter p =
     let
         filter v =
-            if (p v) then
+            if p v then
                 Binding.Ok v
             else
                 Binding.Err <| trivialUnfulfillmentInfo "makeListBindingFilter: filter not satisfied"
     in
-        makeListBindingWrapper filter filter
+        makeListBindingWrapper Binding.Ok filter
