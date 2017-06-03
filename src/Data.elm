@@ -31,6 +31,66 @@ type Data
     | ObjectRef Object
 
 
+getString : Data -> Maybe String
+getString d =
+    case d of
+        String s ->
+            Just s
+
+        _ ->
+            Nothing
+
+
+isString : Data -> Bool
+isString d =
+    getString d /= Nothing
+
+
+getInt : Data -> Maybe Int
+getInt d =
+    case d of
+        Int n ->
+            Just n
+
+        _ ->
+            Nothing
+
+
+isInt : Data -> Bool
+isInt d =
+    getInt d /= Nothing
+
+
+getBool : Data -> Maybe Bool
+getBool d =
+    case d of
+        Bool b ->
+            Just b
+
+        _ ->
+            Nothing
+
+
+isBool : Data -> Bool
+isBool d =
+    getBool d /= Nothing
+
+
+getObject : Data -> Maybe Object
+getObject d =
+    case d of
+        ObjectRef o ->
+            Just o
+
+        _ ->
+            Nothing
+
+
+isObject : Data -> Bool
+isObject d =
+    getObject d /= Nothing
+
+
 jsonOfData : Data -> Json.Encode.Value
 jsonOfData d =
     case d of
