@@ -269,7 +269,14 @@ makeListBindingWrapper in2out out2in w =
                         w.update subMsg model
 
                     newInfo =
-                        mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) info
+                        mapCollectionPath
+                            (\i ->
+                                if i == 0 then
+                                    Just 0
+                                else
+                                    IndexMapping.retrieve newIdxMap i
+                            )
+                            info
                 in
                     ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out newInfo )
         , subscriptions =
