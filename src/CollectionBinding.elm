@@ -267,8 +267,11 @@ makeListBindingWrapper in2out out2in w =
 
                     ( newModel, cmd, info ) =
                         w.update subMsg model
+
+                    newInfo =
+                        mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) info
                 in
-                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out info )
+                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out newInfo )
         , subscriptions =
             \( model, _ ) ->
                 let
@@ -315,17 +318,25 @@ makeListBindingWrapper in2out out2in w =
                                     Binding.Irrelevant ->
                                         trivialMsg (info.itemAdded Binding.Irrelevant)
                         , itemRemoved =
-                            \res ->
-                                let
-                                    msg idxMap =
-                                        case res of
-                                            Binding.Ok i ->
+                            \res idxMap ->
+                                case res of
+                                    Binding.Ok i ->
+                                        let
+                                            newIdxMap =
                                                 IndexMapping.remove idxMap i
 
-                                            _ ->
-                                                idxMap
-                                in
-                                    \idxMap -> ( info.itemRemoved res, msg idxMap )
+                                            newRes =
+                                                case IndexMapping.get idxMap i of
+                                                    Just j ->
+                                                        Binding.Ok j
+
+                                                    Nothing ->
+                                                        Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                        in
+                                            ( info.itemRemoved newRes, newIdxMap )
+
+                                    _ ->
+                                        ( info.itemRemoved res, idxMap )
                         }
                 in
                     ( Sub.map trivialMsg sub, newInfo )
