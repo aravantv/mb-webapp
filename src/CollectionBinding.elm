@@ -9,17 +9,18 @@ import IndexMapping exposing (IndexMapping)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
 
 
-mapItemAdded :
+mapIndexValueResult :
     (fromValue -> BindingResult toValue)
     -> BindingResult ( collectionPath, fromValue )
     -> BindingResult ( collectionPath, toValue )
-mapItemAdded out2in =
+mapIndexValueResult out2in =
     Binding.andThen (\( i, v ) -> Binding.map (\n -> ( i, n )) (out2in v))
 
 
 type CollectionBindingUpInfo collectionPath carriedValue
     = AddItem (BindingResult ( collectionPath, carriedValue ))
     | RemoveItem (BindingResult collectionPath)
+    | ModifyItem (BindingResult ( collectionPath, carriedValue ))
     | DoNothing
 
 
@@ -65,7 +66,10 @@ mapUpInfo :
 mapUpInfo f i =
     case i of
         AddItem res ->
-            AddItem (mapItemAdded f res)
+            AddItem (mapIndexValueResult f res)
+
+        ModifyItem res ->
+            ModifyItem (mapIndexValueResult f res)
 
         RemoveItem res ->
             RemoveItem res
@@ -75,8 +79,10 @@ mapUpInfo f i =
 
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
-    { itemAdded : BindingResult ( collectionPath, carriedValue, DataID ) -> msg
-    , itemRemoved : BindingResult collectionPath -> msg
+    { itemAdded : BindingResult ( collectionPath, carriedValue ) -> msg
+    , itemRemoved :
+        BindingResult collectionPath -> msg
+        --, itemModified : BindingResult ( collectionPath, carriedValue ) -> msg
     }
 
 
@@ -91,7 +97,8 @@ type alias BoundListWidget model msg carriedValue =
 type alias CollectionBinding collectionPath msg carriedValue =
     { addItem : collectionPath -> carriedValue -> Cmd msg
     , removeItem : collectionPath -> Cmd msg
-    , itemAdded : (BindingResult ( collectionPath, carriedValue, DataID ) -> msg) -> Sub msg
+    , modifyItem : collectionPath -> carriedValue -> Cmd msg
+    , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
     , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
     , ask : Cmd msg
     }
@@ -106,7 +113,7 @@ type Msg subMsg
 applyListBinding :
     CollectionBinding Index msg Data
     -> BoundCollectionWidget Index model msg Data
-    -> Widget () () model (Msg msg)
+    -> Widget () () ( model, List DataID ) (Msg msg)
 applyListBinding b w =
     let
         ( newInitModel, newInitCmd ) =
@@ -125,6 +132,12 @@ applyListBinding b w =
                         AddItem _ ->
                             cmd
 
+                        ModifyItem (Binding.Ok ( idx, val )) ->
+                            Cmd.batch [ cmd, b.modifyItem idx val ]
+
+                        ModifyItem _ ->
+                            cmd
+
                         RemoveItem (Binding.Ok idx) ->
                             Cmd.batch [ cmd, b.removeItem idx ]
 
@@ -136,28 +149,28 @@ applyListBinding b w =
             in
                 ( newModel, newCmd :: cmdAcc )
     in
-        { init = ( newInitModel, newInitCmd )
+        { init = ( ( newInitModel, [] ), newInitCmd )
         , update =
-            \msg model ->
+            \msg ( model, _ ) ->
                 case msg of
                     Nop ->
-                        ( model, Cmd.none, () )
+                        ( ( model, [] ), Cmd.none, () )
 
                     Delegate subMsg ->
                         let
                             ( newModel, cmds ) =
                                 updateOneMsg subMsg ( model, [] )
                         in
-                            ( newModel, Cmd.map Delegate (Cmd.batch cmds), () )
+                            ( ( newModel, [] ), Cmd.map Delegate (Cmd.batch cmds), () )
 
                     Init msgs ->
                         let
                             ( updatedModel, allCmds ) =
                                 List.foldl updateOneMsg ( newInitModel, [] ) msgs
                         in
-                            ( updatedModel, Cmd.map Delegate <| Cmd.batch (cmdOf w.init :: allCmds), () )
+                            ( ( updatedModel, [] ), Cmd.map Delegate <| Cmd.batch (cmdOf w.init :: allCmds), () )
         , subscriptions =
-            \model ->
+            \( model, ids ) ->
                 let
                     ( sub, mapper ) =
                         w.subscriptions model
@@ -185,7 +198,7 @@ applyListBinding b w =
                                         List.map2 (\x y -> ( x, y )) ids datas
                                 in
                                     Init <|
-                                        List.indexedMap (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data, id )) id2data
+                                        List.indexedMap (\i ( id, data ) -> mapper.itemAdded <| Binding.Ok ( i, data )) id2data
 
                             _ ->
                                 Nop
@@ -199,7 +212,7 @@ applyListBinding b w =
                         )
                     , ()
                     )
-        , view = \model -> Html.map Delegate (w.view model)
+        , view = \( model, _ ) -> Html.map Delegate (w.view model)
         }
 
 
@@ -219,7 +232,7 @@ listBinding boundId =
                         (if collectionID == boundId then
                             case maybeObj of
                                 Result.Ok obj ->
-                                    Binding.Ok ( i, obj, addedEltID )
+                                    Binding.Ok ( i, obj )
 
                                 Result.Err err ->
                                     Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
@@ -239,6 +252,7 @@ listBinding boundId =
                         )
                 )
     , addItem = \i m -> DataManager.addItemCmd boundId i m
+    , modifyItem = \i m -> DataManager.modifyItemCmd boundId i m
     , removeItem = \i -> DataManager.removeItemCmd boundId i
     , ask = DataManager.askDataCmd boundId
     }
@@ -282,7 +296,7 @@ makeListBindingWrapper in2out out2in w =
                         { itemAdded =
                             \res ->
                                 case res of
-                                    Binding.Ok ( i, s, id ) ->
+                                    Binding.Ok ( i, s ) ->
                                         case out2in s of
                                             Binding.Ok n ->
                                                 \idxMap ->
@@ -293,7 +307,7 @@ makeListBindingWrapper in2out out2in w =
                                                         res =
                                                             case IndexMapping.get newIdxMap i of
                                                                 Just j ->
-                                                                    Binding.Ok ( j, n, id )
+                                                                    Binding.Ok ( j, n )
 
                                                                 Nothing ->
                                                                     Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
