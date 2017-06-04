@@ -104,6 +104,14 @@ addItemCmd id i d =
     addItemCmdPort ( id, i, Data.jsonOfData d )
 
 
+port modifyItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
+
+
+modifyItemCmd : DataID -> Index -> Data -> Cmd mssg
+modifyItemCmd id i d =
+    addItemCmdPort ( id, i, Data.jsonOfData d )
+
+
 port removeItemCmdPort : ( DataID, Index ) -> Cmd msg
 
 

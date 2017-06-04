@@ -44,6 +44,11 @@ addItemCmd id i d =
     LocalStorage.addItemCmd id i d
 
 
+modifyItemCmd : DataID -> Index -> Data -> Cmd msg
+modifyItemCmd id i d =
+    LocalStorage.modifyItemCmd id i d
+
+
 removeItemCmd : DataID -> Index -> Cmd msg
 removeItemCmd id i =
     LocalStorage.removeItemCmd id i
