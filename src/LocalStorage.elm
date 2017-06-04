@@ -7,6 +7,7 @@ port module LocalStorage
         , itemAddedSub
         , itemRemovedSub
         , addItemCmd
+        , modifyItemCmd
         , removeItemCmd
         , askDataCmd
         , DataID
