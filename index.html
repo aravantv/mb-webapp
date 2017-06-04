@@ -111,6 +111,21 @@
         }
     })
 
+    mbwebapp.ports.modifyItemCmdPort.subscribe(function (args) {
+        var id = args[0]
+        var index = args[1]
+        var valueAtId = JSON.parse(localStorage.getItem(id))
+        if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
+          console.log("ERROR: Request to modify an item to a non-array data (id: " + id + ")")
+        } else {
+          var value = args[2]
+          var shallowValue = flattenObject(value)
+          var valueId = valueAtId[index]
+          localStorage.setItem(valueId, JSON.stringify(shallowValue))
+          mbwebapp.ports.itemModifiedSubPort.send([id, index, value, valueId])
+        }
+    })
+
     mbwebapp.ports.removeItemCmdPort.subscribe(function (args) {
       var id = args[0]
       var index = args[1]
