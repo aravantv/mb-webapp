@@ -81,6 +81,7 @@ mapUpInfo f i =
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
     { itemAdded : BindingResult ( collectionPath, carriedValue, DataID ) -> msg
     , itemRemoved : BindingResult collectionPath -> msg
+    , itemModified : BindingResult ( collectionPath, carriedValue ) -> msg
     }
 
 
@@ -311,6 +312,45 @@ makeListBindingWrapper in2out out2in w =
                                                                     Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
                                                     in
                                                         ( info.itemAdded res, newIdxMap )
+
+                                            Binding.Err err ->
+                                                \idxMap ->
+                                                    ( info.itemAdded (Binding.Err err)
+                                                    , IndexMapping.insertButSkip idxMap i
+                                                    )
+
+                                            Binding.Irrelevant ->
+                                                \idxMap ->
+                                                    ( info.itemAdded Binding.Irrelevant
+                                                    , IndexMapping.insertButSkip idxMap i
+                                                    )
+
+                                    Binding.Err err ->
+                                        trivialMsg (info.itemAdded (Binding.Err err))
+
+                                    Binding.Irrelevant ->
+                                        trivialMsg (info.itemAdded Binding.Irrelevant)
+                        , itemModified =
+                            -- TODO when DataIDs removed, factorize this code with the one for itemAdded
+                            \res ->
+                                case res of
+                                    Binding.Ok ( i, s ) ->
+                                        case out2in s of
+                                            Binding.Ok n ->
+                                                \idxMap ->
+                                                    let
+                                                        newIdxMap =
+                                                            IndexMapping.insert idxMap i
+
+                                                        res =
+                                                            case IndexMapping.get newIdxMap i of
+                                                                Just j ->
+                                                                    Binding.Ok ( j, n )
+
+                                                                Nothing ->
+                                                                    Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                                    in
+                                                        ( info.itemModified res, newIdxMap )
 
                                             Binding.Err err ->
                                                 \idxMap ->
