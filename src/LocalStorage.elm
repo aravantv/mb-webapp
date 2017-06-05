@@ -10,6 +10,7 @@ port module LocalStorage
         , modifyItemCmd
         , removeItemCmd
         , askDataCmd
+        , subscribeCmd
         , DataID
         )
 
@@ -103,6 +104,14 @@ port addItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
 addItemCmd : DataID -> Index -> Data -> Cmd mssg
 addItemCmd id i d =
     addItemCmdPort ( id, i, Data.jsonOfData d )
+
+
+port subscribeCmdPort : DataID -> Cmd msg
+
+
+subscribeCmd : DataID -> Cmd mssg
+subscribeCmd =
+    subscribeCmdPort
 
 
 port modifyItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg

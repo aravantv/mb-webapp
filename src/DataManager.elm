@@ -57,3 +57,8 @@ removeItemCmd id i =
 askDataCmd : DataID -> Cmd msg
 askDataCmd id =
     LocalStorage.askDataCmd id
+
+
+subscribeCmd : DataID -> Cmd msg
+subscribeCmd id =
+    LocalStorage.subscribeCmd id
