@@ -81,6 +81,35 @@
     var state = serializedState ? JSON.parse(serializedState) : {}
     var mbwebapp = Elm.Main.fullscreen()
 
+    var parentIDs = {}
+    function updateParentIDss(id, parentID) {
+      if (!parentIDs[id]) {
+        parentIDs[id] = []
+      }
+      var alreadyPresent = parentID ? false : parentIDs[id].indexOf(parentID) == -1
+      if (parentID && alreadyPresent) {
+        parentIDs[id].push(parentID)
+      }
+      // The following condition is there to prevent potential infinite loops
+      if (!(parentID && alreadyPresent)) {
+        var valueAtId = JSON.parse(localStorage.getItem(id))
+        if (typeof obj === 'object') {
+          if (Array.isArray(valueAtId)) {
+            valueAtId.forEach(function (subId) {
+              updateParentIDss(subId, id)
+            })
+          } else {
+            Object.keys(obj).forEach(function (key) {
+              updateParentIDss(obj[key], id)
+            }
+          }
+        }
+      }
+    }
+    mbwebapp.ports.subscribeCmdPort.subscribe(function(id) {
+      updateParentIDss(id, null)
+    })
+
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
       var shallowObj = getShallowObject(id)
       mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj)])
