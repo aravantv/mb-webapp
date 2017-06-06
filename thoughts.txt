@@ -1,3 +1,10 @@
+1. need for itemModified
+2. requires knowing if the *items* of the list at a given id have changed
+3. requires that updating an element entails updating all its possible containers
+  -> "all" is too much: information might be remote
+  -> we should just inform those who depend on it
+    => need for an explicit subscribing mechanism
+NEXT: on all informations, inform also the parent. Have a "path" mechanism to inform where the change happened?
 
 CONTRAINTES:
 * dernière idée en date :
@@ -48,7 +55,11 @@ LIST BINDING
   Pour l'affichage de l'itemWidget, ce dernier va simplement être automatiquement inscrit aux updates.
 
 COURANT:
-- clairement définir comment le chemin (et le metamodele) qui doivent être lus par un binding lui sont transmis
+- comment implémenter les contraintes ? comme des composants séparés avec double-souscriptions ?
+- comment faire avaler aux widgets des contraintes ?
+- comment rendre la définition de contrainte la plus facile possible ?
+- il faut pouvoir définir des contraintes de facon délocalisée :
+  un métamodèle peut se voir ajouter des contraintes depuis n'importe quel élément extérieur
 - une factory est nécessaire pour construire la base
 - mais d'abord faire la factory à la main
 
@@ -59,3 +70,16 @@ la question "où donner l'information de chemin?" a trouvé plusieurs solutions 
 - passé en tant qu'argument au binding
 - passé en tant qu'argument au widget directement avec le binding devenant une fonction qui prend ce chemin en argument
 - passé en tant qu'argument à la continuation de la souscription
+
+
+
+où sont transmis les get/set?
+1. au widget creator
+  params -> (init: () -> model, update: model -> msg -> model)
+  les paramètres sont figés à la création
+
+2. à la fonction d'update
+  (init: () -> model, update: model -> params -> msg -> model)
+  les paramètres peuvent varier en fonction du modèle
+
+Facile à dire a posteriori. La dificulté c'est savoir quelle est la question à poser pour décrouvrir ce qui est décisif.
