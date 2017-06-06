@@ -18,7 +18,9 @@
       return serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
     }
 
-    function reconstituteObject(shallowObject) {
+    // Follows the references to reconstitue a complete object.
+    // If part of the object is already known, it can be provided as the second parameter.
+    function reconstituteObject(shallowObject, knownID, knownValue) {
       if (typeof shallowObject === 'string') {
         return shallowObject
       } else if (typeof shallowObject === 'number') {
@@ -28,13 +30,14 @@
       } else if (typeof shallowObject === 'object') {
         if (Array.isArray(shallowObject)) {
           var result = []
-          shallowObject.forEach(function(x) {
-            result.push(reconstituteObject(getShallowObject(x)))
+          shallowObject.forEach(function(id) {
+            result.push(id === knownID ? knownValue : reconstituteObject(getShallowObject(id)))
           })
           return result
         } else {
           Object.keys(shallowObject).forEach(function(key) {
-             shallowObject[key] = reconstituteObject(getShallowObject(key))
+            var id = shallowObject[key]
+            shallowObject[key] = id === knownID ? knownValue : reconstituteObject(getShallowObject(id))
           });
           return shallowObject
         }
@@ -138,12 +141,30 @@
       mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj)])
     })
 
+    function informParents(id, knownValue) {
+      var alreadySeenIDs = []
+      informParentsWithoutCycle(id,knownValue)
+      function informParentsWithoutCycle(id, knownValue) {
+        if (parentIDs[id] && alreadySeenIDs.indexOf(id) === -1) {
+          alreadySeenIDs.push(id)
+          var value = knownValue ? knownValue : reconstituteObject(getShallowObject(id))
+          parentIDs[id].forEach(function(parentID) {
+            var parentValue = reconstituteObject(parentID, id, value)
+            var shallowParentValue = getShallowObject(parentID)
+            mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue])
+            informParents(parentID, parentValue)
+          })
+        }
+      }
+    }
+
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
         var id = args[0]
         var value = args[1]
-        shallowValue = flattenObject(value, isListened(id) ? id : null)
+        var shallowValue = flattenObject(value, isListened(id) ? id : null)
         localStorage.setItem(id, JSON.stringify(shallowValue))
         mbwebapp.ports.getDataSubPort.send([id, shallowValue, value])
+        informParents(id, value)
     })
 
     mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
@@ -161,21 +182,7 @@
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
           mbwebapp.ports.itemAddedSubPort.send([id, index, value, valueId])
-        }
-    })
-
-    mbwebapp.ports.modifyItemCmdPort.subscribe(function (args) {
-        var id = args[0]
-        var index = args[1]
-        var valueAtId = JSON.parse(localStorage.getItem(id))
-        if (typeof valueAtId !== 'object' || !(Array.isArray(valueAtId))) {
-          console.log("ERROR: Request to modify an item to a non-array data (id: " + id + ")")
-        } else {
-          var value = args[2]
-          var shallowValue = flattenObject(value)
-          var valueId = valueAtId[index]
-          localStorage.setItem(valueId, JSON.stringify(shallowValue))
-          mbwebapp.ports.itemModifiedSubPort.send([id, index, value, valueId])
+          informParents(valueId, value)
         }
     })
 
@@ -188,8 +195,9 @@
       } else {
         valueAtId.splice(index,1)
         localStorage.setItem(id, JSON.stringify(valueAtId))
+        mbwebapp.ports.itemRemovedSubPort.send([id, index])
+        informParents(id, null)
       }
-      mbwebapp.ports.itemRemovedSubPort.send([id, index])
     })
 </script>
 
