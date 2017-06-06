@@ -41,6 +41,48 @@
       }
     }
 
+    var parentIDs = {}
+
+    function isListened(id) {
+      return parentIDs[id] != null
+    }
+
+    function addParentID(id, parentID) {
+      if (!parentIDs[id]) {
+        parentIDs[id] = []
+      }
+      if (parentID && parentIDs[id].indexOf(parentID) > -1) {
+        parentIDs[id].push(parentID)
+      }
+    }
+
+    function updateParentIDs(id, parentID) {
+      // must be computed before the call to [addParentID]
+      var alreadyPresent = parentID ? false : parentIDs[id].indexOf(parentID) == -1
+
+      if (parentID) {
+        addParentID(id, parentID)
+      } else {
+        parentIDs[id] = []
+      }
+
+      // The following condition is there to prevent potential infinite loops
+      if (!(parentID && alreadyPresent)) {
+        var valueAtId = JSON.parse(localStorage.getItem(id))
+        if (typeof obj === 'object') {
+          if (Array.isArray(valueAtId)) {
+            valueAtId.forEach(function (subId) {
+              updateParentIDs(subId, id)
+            })
+          } else {
+            Object.keys(obj).forEach(function (key) {
+              updateParentIDs(obj[key], id)
+            }
+          }
+        }
+      }
+    }
+
     function createNewID() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8)
@@ -48,7 +90,7 @@
       });
     }
 
-    function flattenObject(obj) {
+    function flattenObject(obj, parentID) {
       if (typeof obj === 'string') {
         return obj
       } else if (typeof obj === 'number') {
@@ -59,16 +101,22 @@
         if (Array.isArray(obj)) {
           var result = []
           obj.forEach(function(x) {
-            var shallowX = flattenObject(x)
             var xId = createNewID()
+            var shallowX = flattenObject(x, parentID ? xId : null)
+            if (parentID) {
+              addParentID(xId, parentID)
+            }
             localStorage.setItem(xId, JSON.stringify(shallowX))
             result.push(xId)
           })
         } else {
           var result = {}
           Object.keys(obj).forEach(function(key) {
-            var shallowObjKey = flattenObject(obj[key])
             var keyId = createNewID()
+            var shallowObjKey = flattenObject(obj[key], parentID ? keyId : null)
+            if (parentID) {
+              addParentID(keyId, parentID)
+            }
             localStorage.setItem(keyId, JSON.stringify(shallowObjKey))
             result[key] = keyId
           })
@@ -81,33 +129,8 @@
     var state = serializedState ? JSON.parse(serializedState) : {}
     var mbwebapp = Elm.Main.fullscreen()
 
-    var parentIDs = {}
-    function updateParentIDss(id, parentID) {
-      if (!parentIDs[id]) {
-        parentIDs[id] = []
-      }
-      var alreadyPresent = parentID ? false : parentIDs[id].indexOf(parentID) == -1
-      if (parentID && alreadyPresent) {
-        parentIDs[id].push(parentID)
-      }
-      // The following condition is there to prevent potential infinite loops
-      if (!(parentID && alreadyPresent)) {
-        var valueAtId = JSON.parse(localStorage.getItem(id))
-        if (typeof obj === 'object') {
-          if (Array.isArray(valueAtId)) {
-            valueAtId.forEach(function (subId) {
-              updateParentIDss(subId, id)
-            })
-          } else {
-            Object.keys(obj).forEach(function (key) {
-              updateParentIDss(obj[key], id)
-            }
-          }
-        }
-      }
-    }
     mbwebapp.ports.subscribeCmdPort.subscribe(function(id) {
-      updateParentIDss(id, null)
+      updateParentIDs(id, null)
     })
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
@@ -118,7 +141,7 @@
     mbwebapp.ports.setDataCmdPort.subscribe(function (args) {
         var id = args[0]
         var value = args[1]
-        shallowValue = flattenObject(value)
+        shallowValue = flattenObject(value, isListened(id) ? id : null)
         localStorage.setItem(id, JSON.stringify(shallowValue))
         mbwebapp.ports.getDataSubPort.send([id, shallowValue, value])
     })
@@ -131,8 +154,9 @@
           console.log("ERROR: Request to add an item to a non-array data (id: " + id + ")")
         } else {
           var value = args[2]
-          var shallowValue = flattenObject(value)
           var valueId = createNewID()
+          var shallowValue = flattenObject(value, isListened(id) ? valueId : null)
+          addParentID(valueId, id)
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
