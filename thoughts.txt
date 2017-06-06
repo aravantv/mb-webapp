@@ -1,10 +1,5 @@
 1. need for itemModified
 2. requires knowing if the *items* of the list at a given id have changed
-3. requires that updating an element entails updating all its possible containers
-  -> "all" is too much: information might be remote
-  -> we should just inform those who depend on it
-    => need for an explicit subscribing mechanism
-NEXT: on all informations, inform also the parent. Have a "path" mechanism to inform where the change happened?
 
 CONTRAINTES:
 * dernière idée en date :
