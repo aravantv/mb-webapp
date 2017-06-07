@@ -12,7 +12,22 @@
 </body>
 
 <script type="text/javascript">
+    /* Storage is done as follows:
+     * - every data gets a unique ID
+     * - the local storage has an entry for every such ID
+     * - every atomic data (string, boolean, number) is represented in the local storage
+     *   by a map entry from its ID to its value in the local storage
+     * - every array is represented by a map entry from its ID to an array of IDs:
+     *   the IDs of all items in the array
+     * - every object is represented by a map entry from its ID to an object where every key
+     *   is a key in the original object and the associated data is the ID of the corresponding value.
+     *
+     * An object represented in this form is called "shallow".
+     * The operation of following the IDs and replacing them by their actual values iteratively
+     * is called the "reconstitution" of the object.
+    **/
 
+    // Just retrieves the object of [id] as a Json object
     function getShallowObject(id) {
       var serializedShallowObject = localStorage.getItem(id)
       return serializedShallowObject ? JSON.parse(serializedShallowObject) : 'ID NOT FOUND - please report'
@@ -44,12 +59,31 @@
       }
     }
 
+    /* Listeners need to know when an object is modified in a deep manner:
+     * i.e., it should be notified not only when the shallow object is modified,
+     * but also when one of its children is.
+     * Furthermore, when such a deep change occurs, the listener often needs to know the path
+     * to the descendant which was modified, therefore we need to also compute this path.
+     *
+     * To fulfill these requirements, we define the [parentIDs] structure, which keeps track,
+     * for every ID, of all its parents which are transitively subscribed to: this way, as soon
+     * as an object is modified, we inform its direct listeners, and then transitively inform
+     * its parents which are to be notified. On the way, we also compute the corresponding path
+     * to inform the parent listener adequately.
+     * All in all, [parentIDs] is an object mapping IDs of (transitively) tracked objects to
+     * another object mapping IDs of the tracked parents of the object to the path of the object
+     * within the corresponding parent.
+     * We could as well use an object mapping IDs to lists of pairs parentID-pathToParent,
+     * but using an object makes [shiftParentChildrenIDs] easier to implement (and more efficient).
+    **/
     var parentIDs = {}
 
+    // True if the corresponding ID is (directly or transitively) tracked.
     function isListened(id) {
       return parentIDs[id] != null
     }
 
+    // Adds [parentID] (and the corresponding [pathToParent]) to the list of parents of [id] which are tracked.
     function addParentID(id, parentID, pathToParent) {
       if (!parentIDs[id]) {
         parentIDs[id] = {}
@@ -59,6 +93,13 @@
       }
     }
 
+    // Called in the case the object at [id] just got subscribed to.
+    // We then go down the structure of [id] recursively to update [parentIDs] accordingly:
+    // we add [parentID] (along with [pathToParent]) to the list of parent IDs associated with [id],
+    // and iterate the operation for the children of [id].
+    // Note that [parentID] can be null: this happens only for the first call, indeed,
+    // the first [id] to be updated is the one being subscribed to and therefore is the root of the process.
+    // All recursive calls, on the other hand, provide a non-null [parentID].
     function updateParentIDs(id, parentID, pathToParent) {
       // must be computed before the call to [addParentID]
       var alreadyPresent = parentID ? false : parentIDs[id].indexOf(parentID) == -1
@@ -86,6 +127,7 @@
       }
     }
 
+    // Creates a new unique ID. To be done better in the future.
     function createNewID() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8)
@@ -93,6 +135,10 @@
       });
     }
 
+    // Turn a full Json object [obj] into a shallow object:
+    // - repaces children by new unique IDs
+    // - maps these IDs to the (recursively) flattened objects in the local storage
+    // [parentID] *can* be provided to also update the listening [parentIDs] of the object on the fly.
     function flattenObject(obj, parentID) {
       if (typeof obj === 'string') {
         return obj
@@ -128,8 +174,6 @@
       }
     }
 
-    var serializedState = localStorage.getItem('MBWebappRoot')
-    var state = serializedState ? JSON.parse(serializedState) : {}
     var mbwebapp = Elm.Main.fullscreen()
 
     mbwebapp.ports.subscribeCmdPort.subscribe(function(id) {
@@ -141,6 +185,8 @@
       mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj), []])
     })
 
+    // Informs transitively all the parents of [id] which subscribed to changes.
+    // Prevents possibly cyclic data structures (don't see any use case where it would happen but let's be protective).
     function informParents(id, knownValue) {
       var alreadySeenIDs = []
       informParentsWithoutCycle(id, knownValue, [])
@@ -170,7 +216,12 @@
         informParents(id, value)
     })
 
-    function shiftParentChildrenIDs(parentID, shift) {
+    // Shifts all the *paths* stored in [parentIDs] for every child of [parentID]
+    // starting at a given [startIndex] and by a given [shift] value.
+    // Needed to adapt the paths in case of addition/removal in the middle of a list.
+    // Typically, [shift] is 1 in case an element was added just before [startIndex].
+    // It is -1 if this element was removed.
+    function shiftParentChildrenIDs(parentID, startIndex, shift) {
       parentID.forEach(function(id, i) {
         if (i >= startIndex) {
           parentIDs[id][parentID] += shift
@@ -208,7 +259,7 @@
         valueAtId.splice(index,1)
         localStorage.setItem(id, JSON.stringify(valueAtId))
         mbwebapp.ports.itemRemovedSubPort.send([id, index])
-        shiftParentChildrenIDs(id, index + 1, -1)
+        shiftParentChildrenIDs(id, index, -1)
         informParents(id, null)
       }
     })
