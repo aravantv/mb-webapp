@@ -50,21 +50,21 @@
       return parentIDs[id] != null
     }
 
-    function addParentID(id, parentID) {
+    function addParentID(id, parentID, pathToParent) {
       if (!parentIDs[id]) {
         parentIDs[id] = []
       }
       if (parentID && parentIDs[id].indexOf(parentID) > -1) {
-        parentIDs[id].push(parentID)
+        parentIDs[id].push([parentID, pathToParent])
       }
     }
 
-    function updateParentIDs(id, parentID) {
+    function updateParentIDs(id, parentID, pathToParent) {
       // must be computed before the call to [addParentID]
       var alreadyPresent = parentID ? false : parentIDs[id].indexOf(parentID) == -1
 
       if (parentID) {
-        addParentID(id, parentID)
+        addParentID(id, parentID, pathToParent)
       } else {
         parentIDs[id] = []
       }
@@ -74,12 +74,12 @@
         var valueAtId = JSON.parse(localStorage.getItem(id))
         if (typeof obj === 'object') {
           if (Array.isArray(valueAtId)) {
-            valueAtId.forEach(function (subId) {
-              updateParentIDs(subId, id)
+            valueAtId.forEach(function (subId, i) {
+              updateParentIDs(subId, id, i)
             })
           } else {
             Object.keys(obj).forEach(function (key) {
-              updateParentIDs(obj[key], id)
+              updateParentIDs(obj[key], id, key)
             }
           }
         }
@@ -103,11 +103,11 @@
       } else if (typeof obj === 'object') {
         if (Array.isArray(obj)) {
           var result = []
-          obj.forEach(function(x) {
+          obj.forEach(function(x, i) {
             var xId = createNewID()
             var shallowX = flattenObject(x, parentID ? xId : null)
             if (parentID) {
-              addParentID(xId, parentID)
+              addParentID(xId, parentID, i)
             }
             localStorage.setItem(xId, JSON.stringify(shallowX))
             result.push(xId)
@@ -118,7 +118,7 @@
             var keyId = createNewID()
             var shallowObjKey = flattenObject(obj[key], parentID ? keyId : null)
             if (parentID) {
-              addParentID(keyId, parentID)
+              addParentID(keyId, parentID, key)
             }
             localStorage.setItem(keyId, JSON.stringify(shallowObjKey))
             result[key] = keyId
@@ -138,21 +138,23 @@
 
     mbwebapp.ports.askDataCmdPort.subscribe(function (id) {
       var shallowObj = getShallowObject(id)
-      mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj)])
+      mbwebapp.ports.getDataSubPort.send([id, shallowObj, reconstituteObject(shallowObj), []])
     })
 
     function informParents(id, knownValue) {
       var alreadySeenIDs = []
-      informParentsWithoutCycle(id,knownValue)
-      function informParentsWithoutCycle(id, knownValue) {
+      informParentsWithoutCycle(id, knownValue, [])
+      function informParentsWithoutCycle(id, knownValue, currentPath) {
         if (parentIDs[id] && alreadySeenIDs.indexOf(id) === -1) {
           alreadySeenIDs.push(id)
           var value = knownValue ? knownValue : reconstituteObject(getShallowObject(id))
-          parentIDs[id].forEach(function(parentID) {
+          parentIDs[id].forEach(function(parentID, pathToParent) {
             var parentValue = reconstituteObject(parentID, id, value)
             var shallowParentValue = getShallowObject(parentID)
-            mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue])
-            informParents(parentID, parentValue)
+            newPath = currentPath.slice()
+            newPath.push(pathToParent)
+            mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue, newPath])
+            informParentsWithoutCycle(parentID, parentValue, newPath)
           })
         }
       }
@@ -163,7 +165,7 @@
         var value = args[1]
         var shallowValue = flattenObject(value, isListened(id) ? id : null)
         localStorage.setItem(id, JSON.stringify(shallowValue))
-        mbwebapp.ports.getDataSubPort.send([id, shallowValue, value])
+        mbwebapp.ports.getDataSubPort.send([id, shallowValue, value, []])
         informParents(id, value)
     })
 
@@ -177,7 +179,8 @@
           var value = args[2]
           var valueId = createNewID()
           var shallowValue = flattenObject(value, isListened(id) ? valueId : null)
-          addParentID(valueId, id)
+          addParentID(valueId, id, index)
+          // ici aussi décaler les paths des siblings
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
@@ -196,6 +199,7 @@
         valueAtId.splice(index,1)
         localStorage.setItem(id, JSON.stringify(valueAtId))
         mbwebapp.ports.itemRemovedSubPort.send([id, index])
+        // ici aussi décaler les paths des siblings
         informParents(id, null)
       }
     })
