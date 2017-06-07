@@ -1,5 +1,6 @@
 1. need for itemModified
 2. requires knowing if the *items* of the list at a given id have changed
+3. really need to provide a path: adapt the ports to take this into account
 
 CONTRAINTES:
 * dernière idée en date :
