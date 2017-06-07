@@ -52,10 +52,10 @@
 
     function addParentID(id, parentID, pathToParent) {
       if (!parentIDs[id]) {
-        parentIDs[id] = []
+        parentIDs[id] = {}
       }
       if (parentID && parentIDs[id].indexOf(parentID) > -1) {
-        parentIDs[id].push([parentID, pathToParent])
+        parentIDs[id][parentID] = pathToParent
       }
     }
 
@@ -66,7 +66,7 @@
       if (parentID) {
         addParentID(id, parentID, pathToParent)
       } else {
-        parentIDs[id] = []
+        parentIDs[id] = {}
       }
 
       // The following condition is there to prevent potential infinite loops
@@ -148,11 +148,12 @@
         if (parentIDs[id] && alreadySeenIDs.indexOf(id) === -1) {
           alreadySeenIDs.push(id)
           var value = knownValue ? knownValue : reconstituteObject(getShallowObject(id))
-          parentIDs[id].forEach(function(parentID, pathToParent) {
+          var idParentIDs = parentIDs[id]
+          Object.keys(idParentIDs).forEach(function(parentID) {
             var parentValue = reconstituteObject(parentID, id, value)
             var shallowParentValue = getShallowObject(parentID)
             newPath = currentPath.slice()
-            newPath.push(pathToParent)
+            newPath.push(idParentIDs[parentID])
             mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue, newPath])
             informParentsWithoutCycle(parentID, parentValue, newPath)
           })
@@ -169,6 +170,14 @@
         informParents(id, value)
     })
 
+    function shiftParentChildrenIDs(parentID, shift) {
+      parentID.forEach(function(id, i) {
+        if (i >= startIndex) {
+          parentIDs[id][parentID] += shift
+        }
+      })
+    }
+
     mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
         var id = args[0]
         var index = args[1]
@@ -180,7 +189,7 @@
           var valueId = createNewID()
           var shallowValue = flattenObject(value, isListened(id) ? valueId : null)
           addParentID(valueId, id, index)
-          // ici aussi décaler les paths des siblings
+          shiftParentChildrenIDs(id, index + 1, 1)
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
@@ -199,7 +208,7 @@
         valueAtId.splice(index,1)
         localStorage.setItem(id, JSON.stringify(valueAtId))
         mbwebapp.ports.itemRemovedSubPort.send([id, index])
-        // ici aussi décaler les paths des siblings
+        shiftParentChildrenIDs(id, index + 1, -1)
         informParents(id, null)
       }
     })
