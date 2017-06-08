@@ -9,7 +9,11 @@ type alias DataID =
     LocalStorage.DataID
 
 
-getDataSub : (DataID -> Result String AttributeValue -> Result String AttributeValue -> msg) -> Sub msg
+type alias DataPath =
+    LocalStorage.DataPath
+
+
+getDataSub : (DataID -> Result String AttributeValue -> Result String AttributeValue -> DataPath -> msg) -> Sub msg
 getDataSub f =
     LocalStorage.getDataSub f
 

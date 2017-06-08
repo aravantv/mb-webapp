@@ -12,6 +12,7 @@ port module LocalStorage
         , askDataCmd
         , subscribeCmd
         , DataID
+        , DataPath
         )
 
 import Data exposing (AttributeValue, Data, Object)
@@ -25,29 +26,34 @@ type alias DataID =
     String
 
 
-port getDataSubPort : (( DataID, Json.Encode.Value, Json.Encode.Value ) -> msg) -> Sub msg
+type alias DataPath =
+    List String
 
 
-{-| [getDataSub] takes three parameters:
+port getDataSubPort : (( DataID, Json.Encode.Value, Json.Encode.Value, DataPath ) -> msg) -> Sub msg
+
+
+{-| [getDataSub] takes four parameters:
  1. id of the data
  2. shallow representation of the data (e.g., for a list, the list of UUIDs)
  3. deep representation of the data (e.g., for a list, the list of recursively resolved UUIDs)
+ 4. path to the subitem which was modified
 
- If the data is of atomic type (int, string or bool) then 2 and 3 are the same.
+ If the data is of atomic type (int, string or bool) then 2 and 3 are the same and 4 is just the empty path.
 -}
-getDataSub : (DataID -> Result String AttributeValue -> Result String AttributeValue -> a) -> Sub a
+getDataSub : (DataID -> Result String AttributeValue -> Result String AttributeValue -> DataPath -> a) -> Sub a
 getDataSub msgBuilder =
     let
         objOfJson json =
             Json.Decode.decodeValue Data.attributeDecoder json
     in
-        getDataSubPort (\( id, shallowJson, deepJson ) -> msgBuilder id (objOfJson shallowJson) (objOfJson deepJson))
+        getDataSubPort (\( id, shallowJson, deepJson, path ) -> msgBuilder id (objOfJson shallowJson) (objOfJson deepJson) path)
 
 
 getStringSub : (DataID -> String -> a) -> Sub a
 getStringSub msgBuilder =
     getDataSub
-        (\id _ res ->
+        (\id _ res _ ->
             case res of
                 Ok (Data.SingleData (Just (Data.String s))) ->
                     msgBuilder id s
