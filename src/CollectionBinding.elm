@@ -79,7 +79,7 @@ mapUpInfo f i =
 
 
 type alias CollectionBindingSubInfo collectionPath carriedValue msg =
-    { itemAdded : BindingResult ( collectionPath, carriedValue, DataID ) -> msg
+    { itemAdded : BindingResult ( collectionPath, carriedValue ) -> msg
     , itemRemoved : BindingResult collectionPath -> msg
     , itemModified : BindingResult ( collectionPath, carriedValue ) -> msg
     , getFullList : BindingResult (List carriedValue) -> msg
@@ -98,7 +98,7 @@ type alias CollectionBinding collectionPath msg carriedValue =
     { addItem : collectionPath -> carriedValue -> Cmd msg
     , removeItem : collectionPath -> Cmd msg
     , modifyItem : collectionPath -> carriedValue -> Cmd msg
-    , itemAdded : (BindingResult ( collectionPath, carriedValue, DataID ) -> msg) -> Sub msg
+    , itemAdded : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
     , itemModified : (BindingResult ( collectionPath, carriedValue ) -> msg) -> Sub msg
     , itemRemoved : (BindingResult collectionPath -> msg) -> Sub msg
     , getFullList : (BindingResult (List carriedValue) -> msg) -> Sub msg
@@ -197,19 +197,17 @@ type alias Index =
     Int
 
 
-listBinding :
-    DataID
-    -> CollectionBinding Index msg Data.Data
+listBinding : DataID -> CollectionBinding Index msg Data.Data
 listBinding boundId =
     { itemAdded =
         \f ->
             DataManager.itemAddedSub
-                (\collectionID i maybeObj addedEltID ->
+                (\collectionID i maybeObj ->
                     f
                         (if collectionID == boundId then
                             case maybeObj of
                                 Result.Ok obj ->
-                                    Binding.Ok ( i, obj, addedEltID )
+                                    Binding.Ok ( i, obj )
 
                                 Result.Err err ->
                                     Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
@@ -350,7 +348,7 @@ makeListBindingWrapper in2out out2in w =
                         { itemAdded =
                             \res ->
                                 case res of
-                                    Binding.Ok ( i, s, id ) ->
+                                    Binding.Ok ( i, s ) ->
                                         case out2in s of
                                             Binding.Ok n ->
                                                 \idxMap ->
@@ -361,7 +359,7 @@ makeListBindingWrapper in2out out2in w =
                                                         res =
                                                             case IndexMapping.get newIdxMap i of
                                                                 Just j ->
-                                                                    Binding.Ok ( j, n, id )
+                                                                    Binding.Ok ( j, n )
 
                                                                 Nothing ->
                                                                     Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
