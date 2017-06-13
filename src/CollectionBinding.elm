@@ -294,7 +294,7 @@ makeListBindingWrapper in2out out2in w =
         trivialMsg m =
             \idxMap -> ( m, idxMap )
 
-        f mapper i s =
+        msgOfItemValue k ( i, s ) =
             case out2in s of
                 Binding.Ok n ->
                     \idxMap ->
@@ -310,19 +310,30 @@ makeListBindingWrapper in2out out2in w =
                                     Nothing ->
                                         Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
                         in
-                            ( mapper res, newIdxMap )
+                            ( k res, newIdxMap )
 
                 Binding.Err err ->
                     \idxMap ->
-                        ( mapper (Binding.Err err)
+                        ( k (Binding.Err err)
                         , IndexMapping.insertButSkip idxMap i
                         )
 
                 Binding.Irrelevant ->
                     \idxMap ->
-                        ( mapper Binding.Irrelevant
+                        ( k Binding.Irrelevant
                         , IndexMapping.insertButSkip idxMap i
                         )
+
+        msgOfBindingRes k okCase res =
+            case res of
+                Binding.Ok v ->
+                    okCase k v
+
+                Binding.Err err ->
+                    trivialMsg (k (Binding.Err err))
+
+                Binding.Irrelevant ->
+                    trivialMsg (k Binding.Irrelevant)
     in
         { init = ( ( modelOf w.init, IndexMapping.empty ), Cmd.map trivialMsg (cmdOf w.init) )
         , update =
@@ -345,56 +356,8 @@ makeListBindingWrapper in2out out2in w =
                         w.subscriptions model
 
                     newInfo =
-                        { itemAdded =
-                            \res ->
-                                case res of
-                                    Binding.Ok ( i, s ) ->
-                                        case out2in s of
-                                            Binding.Ok n ->
-                                                \idxMap ->
-                                                    let
-                                                        newIdxMap =
-                                                            IndexMapping.insert idxMap i
-
-                                                        res =
-                                                            case IndexMapping.get newIdxMap i of
-                                                                Just j ->
-                                                                    Binding.Ok ( j, n )
-
-                                                                Nothing ->
-                                                                    Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
-                                                    in
-                                                        ( info.itemAdded res, newIdxMap )
-
-                                            Binding.Err err ->
-                                                \idxMap ->
-                                                    ( info.itemAdded (Binding.Err err)
-                                                    , IndexMapping.insertButSkip idxMap i
-                                                    )
-
-                                            Binding.Irrelevant ->
-                                                \idxMap ->
-                                                    ( info.itemAdded Binding.Irrelevant
-                                                    , IndexMapping.insertButSkip idxMap i
-                                                    )
-
-                                    Binding.Err err ->
-                                        trivialMsg (info.itemAdded (Binding.Err err))
-
-                                    Binding.Irrelevant ->
-                                        trivialMsg (info.itemAdded Binding.Irrelevant)
-                        , itemModified =
-                            -- TODO when DataIDs removed, factorize this code with the one for itemAdded
-                            \res ->
-                                case res of
-                                    Binding.Ok ( i, s ) ->
-                                        f info.itemModified i s
-
-                                    Binding.Err err ->
-                                        trivialMsg (info.itemModified (Binding.Err err))
-
-                                    Binding.Irrelevant ->
-                                        trivialMsg (info.itemModified Binding.Irrelevant)
+                        { itemAdded = msgOfBindingRes info.itemAdded msgOfItemValue
+                        , itemModified = msgOfBindingRes info.itemModified msgOfItemValue
                         , itemRemoved =
                             \res idxMap ->
                                 case res of
@@ -416,30 +379,23 @@ makeListBindingWrapper in2out out2in w =
                                     _ ->
                                         ( info.itemRemoved res, idxMap )
                         , getFullList =
-                            \res ->
-                                case res of
-                                    Binding.Ok xs ->
-                                        let
-                                            ( newRes, idxMap, _ ) =
-                                                List.foldr
-                                                    (\outValue ( inValues, idxMap, i ) ->
-                                                        case out2in outValue of
-                                                            Binding.Ok inValue ->
-                                                                ( inValue :: inValues, IndexMapping.insert idxMap i, i + 1 )
+                            msgOfBindingRes info.getFullList <|
+                                \mapper xs ->
+                                    let
+                                        ( newRes, idxMap, _ ) =
+                                            List.foldr
+                                                (\outValue ( inValues, idxMap, i ) ->
+                                                    case out2in outValue of
+                                                        Binding.Ok inValue ->
+                                                            ( inValue :: inValues, IndexMapping.insert idxMap i, i + 1 )
 
-                                                            _ ->
-                                                                ( inValues, IndexMapping.insertButSkip idxMap i, i + 1 )
-                                                    )
-                                                    ( [], IndexMapping.empty, 0 )
-                                                    xs
-                                        in
-                                            \_ -> ( info.getFullList (Binding.Ok newRes), idxMap )
-
-                                    Binding.Err err ->
-                                        trivialMsg (info.getFullList (Binding.Err err))
-
-                                    Binding.Irrelevant ->
-                                        trivialMsg (info.getFullList Binding.Irrelevant)
+                                                        _ ->
+                                                            ( inValues, IndexMapping.insertButSkip idxMap i, i + 1 )
+                                                )
+                                                ( [], IndexMapping.empty, 0 )
+                                                xs
+                                    in
+                                        \_ -> ( mapper (Binding.Ok newRes), idxMap )
                         }
                 in
                     ( Sub.map trivialMsg sub, newInfo )
