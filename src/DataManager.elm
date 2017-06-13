@@ -33,7 +33,7 @@ setStringCmd id s =
     LocalStorage.setStringCmd id s
 
 
-itemAddedSub : (DataID -> Index -> Result String Data -> DataID -> msg) -> Sub msg
+itemAddedSub : (DataID -> Index -> Result String Data -> msg) -> Sub msg
 itemAddedSub f =
     LocalStorage.itemAddedSub f
 

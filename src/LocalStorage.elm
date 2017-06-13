@@ -76,16 +76,16 @@ setStringCmd id s =
     setDataCmd id (Data.String s)
 
 
-port itemAddedSubPort : (( DataID, Index, Json.Encode.Value, DataID ) -> msg) -> Sub msg
+port itemAddedSubPort : (( DataID, Index, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : (DataID -> Index -> Result String Data -> DataID -> c) -> Sub c
+itemAddedSub : (DataID -> Index -> Result String Data -> c) -> Sub c
 itemAddedSub msgBuilder =
     let
         objOfJson json =
             Json.Decode.decodeValue Data.dataDecoder json
     in
-        itemAddedSubPort (\( containerID, i, json, addedEltID ) -> msgBuilder containerID i (objOfJson json) addedEltID)
+        itemAddedSubPort (\( containerID, i, json ) -> msgBuilder containerID i (objOfJson json))
 
 
 port askDataCmdPort : DataID -> Cmd msg

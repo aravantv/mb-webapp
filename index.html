@@ -244,7 +244,7 @@
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
-          mbwebapp.ports.itemAddedSubPort.send([id, index, value, valueId])
+          mbwebapp.ports.itemAddedSubPort.send([id, index, value])
           informParents(valueId, value)
         }
     })
