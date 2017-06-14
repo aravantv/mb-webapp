@@ -106,79 +106,52 @@ type alias CollectionBinding collectionPath msg carriedValue =
     }
 
 
-type Msg subMsg
-    = Init (List subMsg)
-    | Delegate subMsg
-    | Nop
-
-
 applyListBinding :
     CollectionBinding Index msg Data
     -> BoundCollectionWidget Index model msg Data
-    -> Widget () () model (Msg msg)
+    -> Widget () () model msg
 applyListBinding b w =
-    let
-        ( newInitModel, newInitCmd ) =
-            ( modelOf w.init, Cmd.map Delegate <| Cmd.batch [ cmdOf w.init, b.ask ] )
-
-        updateOneMsg msg ( modelAcc, cmdAcc ) =
+    { init = ( modelOf w.init, Cmd.batch [ cmdOf w.init, b.ask ] )
+    , update =
+        \msg model ->
             let
                 ( newModel, cmd, upInfo ) =
-                    w.update msg modelAcc
+                    w.update msg model
 
                 newCmd =
-                    case upInfo of
-                        AddItem (Binding.Ok ( idx, val )) ->
-                            Cmd.batch [ cmd, b.addItem idx val ]
+                    Cmd.batch <|
+                        cmd
+                            :: case upInfo of
+                                AddItem (Binding.Ok ( idx, val )) ->
+                                    [ b.addItem idx val ]
 
-                        ModifyItem (Binding.Ok ( idx, val )) ->
-                            Cmd.batch [ cmd, b.modifyItem idx val ]
+                                ModifyItem (Binding.Ok ( idx, val )) ->
+                                    [ b.modifyItem idx val ]
 
-                        _ ->
-                            cmd
+                                RemoveItem (Binding.Ok idx) ->
+                                    [ b.removeItem idx ]
+
+                                _ ->
+                                    []
             in
-                ( newModel, newCmd :: cmdAcc )
-    in
-        { init = ( newInitModel, newInitCmd )
-        , update =
-            \msg model ->
-                case msg of
-                    Nop ->
-                        ( model, Cmd.none, () )
-
-                    Delegate subMsg ->
-                        let
-                            ( newModel, cmds ) =
-                                updateOneMsg subMsg ( model, [] )
-                        in
-                            ( newModel, Cmd.map Delegate (Cmd.batch cmds), () )
-
-                    Init msgs ->
-                        let
-                            ( updatedModel, allCmds ) =
-                                List.foldl updateOneMsg ( newInitModel, [] ) msgs
-                        in
-                            ( updatedModel, Cmd.map Delegate <| Cmd.batch (cmdOf w.init :: allCmds), () )
-        , subscriptions =
-            \model ->
-                let
-                    ( sub, mapper ) =
-                        w.subscriptions model
-
-                    embedSub sub =
-                        Sub.map Delegate sub
-                in
-                    ( Sub.batch
-                        (embedSub sub
-                            :: [ embedSub (b.itemAdded mapper.itemAdded)
-                               , embedSub (b.itemRemoved mapper.itemRemoved)
-                               , embedSub (b.getFullList mapper.getFullList)
-                               ]
-                        )
-                    , ()
+                ( newModel, newCmd, () )
+    , subscriptions =
+        \model ->
+            let
+                ( sub, mapper ) =
+                    w.subscriptions model
+            in
+                ( Sub.batch
+                    (sub
+                        :: [ b.itemAdded mapper.itemAdded
+                           , b.itemRemoved mapper.itemRemoved
+                           , b.getFullList mapper.getFullList
+                           ]
                     )
-        , view = \model -> Html.map Delegate (w.view model)
-        }
+                , ()
+                )
+    , view = w.view
+    }
 
 
 type alias Index =
