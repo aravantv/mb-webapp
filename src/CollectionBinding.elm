@@ -231,9 +231,9 @@ makeListBindingWrapper in2out out2in w =
             \idxMap -> ( m, idxMap )
 
         msgOfItemValue k ( i, s ) =
-            case out2in s of
-                Binding.Ok n ->
-                    \idxMap ->
+            \idxMap ->
+                case out2in s of
+                    Binding.Ok n ->
                         let
                             newIdxMap =
                                 IndexMapping.insert idxMap i
@@ -244,17 +244,11 @@ makeListBindingWrapper in2out out2in w =
                         in
                             ( k res, newIdxMap )
 
-                Binding.Err err ->
-                    \idxMap ->
-                        ( k (Binding.Err err)
-                        , IndexMapping.insertButSkip idxMap i
-                        )
+                    Binding.Err err ->
+                        ( k (Binding.Err err), IndexMapping.insertButSkip idxMap i )
 
-                Binding.Irrelevant ->
-                    \idxMap ->
-                        ( k Binding.Irrelevant
-                        , IndexMapping.insertButSkip idxMap i
-                        )
+                    Binding.Irrelevant ->
+                        ( k Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
 
         msgOfBindingRes k okCase res =
             case res of
