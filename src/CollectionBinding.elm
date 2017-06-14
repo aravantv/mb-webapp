@@ -1,6 +1,6 @@
 module CollectionBinding exposing (..)
 
-import Binding exposing (BindingResult, alwaysOk)
+import Binding exposing (BindingResult, alwaysOk, trivialErr)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
 import Data exposing (AttributeValue(..), Data)
 import DataManager exposing (DataID)
@@ -40,7 +40,7 @@ mapCollectionPath f info =
                         AddItem (Binding.Ok ( newP, v ))
 
                     Nothing ->
-                        AddItem (Binding.Err <| trivialUnfulfillmentInfo errMsg)
+                        AddItem (trivialErr errMsg)
 
             RemoveItem (Binding.Ok p) ->
                 case f p of
@@ -48,7 +48,7 @@ mapCollectionPath f info =
                         RemoveItem (Binding.Ok newP)
 
                     Nothing ->
-                        RemoveItem (Binding.Err <| trivialUnfulfillmentInfo errMsg)
+                        RemoveItem (trivialErr errMsg)
 
             x ->
                 x
@@ -195,16 +195,16 @@ listBinding boundId =
                                                     Binding.Ok ( i, obj )
 
                                                 Err _ ->
-                                                    Binding.Err <| trivialUnfulfillmentInfo "Path is not an index: please report"
+                                                    trivialErr "Path is not an index: please report"
 
                                         _ ->
                                             Binding.Irrelevant
 
                                 Result.Ok _ ->
-                                    Binding.Err <| trivialUnfulfillmentInfo "A list was expected but the storage contains something else: please report"
+                                    trivialErr "A list was expected but the storage contains something else: please report"
 
                                 Result.Err err ->
-                                    Binding.Err <| trivialUnfulfillmentInfo err
+                                    trivialErr err
                          else
                             Binding.Irrelevant
                         )
@@ -234,10 +234,10 @@ listBinding boundId =
                                     Binding.Ok datas
 
                                 Result.Ok _ ->
-                                    Binding.Err <| trivialUnfulfillmentInfo "A list was expected but the storage contains something else: please report"
+                                    trivialErr "A list was expected but the storage contains something else: please report"
 
                                 Result.Err err ->
-                                    Binding.Err <| trivialUnfulfillmentInfo err
+                                    trivialErr err
                         else
                             Binding.Irrelevant
                 )
@@ -273,7 +273,7 @@ makeListBindingWrapper in2out out2in w =
                                         Binding.Ok ( j, n )
 
                                     Nothing ->
-                                        Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                        trivialErr "Index not found - please report"
                         in
                             ( k res, newIdxMap )
 
