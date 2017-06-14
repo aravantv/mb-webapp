@@ -194,7 +194,7 @@ listBinding boundId =
                                                 Ok i ->
                                                     Binding.Ok ( i, obj )
 
-                                                Err err ->
+                                                Err _ ->
                                                     Binding.Err <| trivialUnfulfillmentInfo "Path is not an index: please report"
 
                                         _ ->
