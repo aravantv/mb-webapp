@@ -16,6 +16,14 @@ trivialErr =
     Err << trivialUnfulfillmentInfo
 
 
+filterIrrelevant : Bool -> BindingResult c -> BindingResult c
+filterIrrelevant condition res =
+    if condition then
+        res
+    else
+        Irrelevant
+
+
 alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
 alwaysOk f x =
     Ok (f x)
