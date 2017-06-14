@@ -35,20 +35,22 @@ mapCollectionPath f info =
     in
         case info of
             AddItem (Binding.Ok ( p, v )) ->
-                case f p of
-                    Just newP ->
-                        AddItem (Binding.Ok ( newP, v ))
+                AddItem <|
+                    case f p of
+                        Just newP ->
+                            Binding.Ok ( newP, v )
 
-                    Nothing ->
-                        AddItem (trivialErr errMsg)
+                        Nothing ->
+                            trivialErr errMsg
 
             RemoveItem (Binding.Ok p) ->
-                case f p of
-                    Just newP ->
-                        RemoveItem (Binding.Ok newP)
+                RemoveItem <|
+                    case f p of
+                        Just newP ->
+                            Binding.Ok newP
 
-                    Nothing ->
-                        RemoveItem (trivialErr errMsg)
+                        Nothing ->
+                            trivialErr errMsg
 
             x ->
                 x
