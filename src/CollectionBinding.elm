@@ -1,12 +1,11 @@
 module CollectionBinding exposing (..)
 
-import Utils exposing (Index)
-import Binding exposing (BindingResult, alwaysOk, trivialErr)
-import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
+import Binding exposing (BindingResult, alwaysOk, filterIrrelevant, trivialErr)
 import Data exposing (AttributeValue(..), Data)
 import DataManager exposing (DataID)
 import Html exposing (sub)
 import IndexMapping exposing (IndexMapping)
+import Utils exposing (Index)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
 
 
@@ -168,15 +167,13 @@ listBinding boundId =
             DataManager.itemAddedSub
                 (\collectionID i maybeObj ->
                     buildMsg
-                        (if collectionID == boundId then
+                        (filterIrrelevant (collectionID == boundId) <|
                             case maybeObj of
                                 Result.Ok obj ->
                                     Binding.Ok ( i, obj )
 
                                 Result.Err err ->
-                                    Binding.Err { unfulfillmentDescription = err, fixes = PossibleFixes [] }
-                         else
-                            Binding.Irrelevant
+                                    trivialErr err
                         )
                 )
     , itemModified =
@@ -211,14 +208,7 @@ listBinding boundId =
     , itemRemoved =
         \buildMsg ->
             DataManager.itemRemovedSub
-                (\collectionID i ->
-                    buildMsg
-                        (if collectionID == boundId then
-                            Binding.Ok i
-                         else
-                            Binding.Irrelevant
-                        )
-                )
+                (\collectionID i -> buildMsg (filterIrrelevant (collectionID == boundId) (Binding.Ok i)))
     , addItem = \i m -> DataManager.addItemCmd boundId i m
     , modifyItem = \i m -> DataManager.modifyItemCmd boundId i m
     , removeItem = \i -> DataManager.removeItemCmd boundId i
@@ -227,7 +217,7 @@ listBinding boundId =
             DataManager.getDataSub
                 (\id _ maybeObj path ->
                     f <|
-                        if id == boundId && path == [] then
+                        filterIrrelevant (id == boundId && path == []) <|
                             case maybeObj of
                                 Result.Ok (MultipleData datas) ->
                                     Binding.Ok datas
@@ -237,8 +227,6 @@ listBinding boundId =
 
                                 Result.Err err ->
                                     trivialErr err
-                        else
-                            Binding.Irrelevant
                 )
     , ask = DataManager.askDataCmd boundId
     }
