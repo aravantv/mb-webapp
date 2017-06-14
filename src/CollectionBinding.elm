@@ -118,21 +118,27 @@ applyListBinding b w =
                 ( newModel, cmd, symbolicCmd ) =
                     w.update msg model
 
+                maybeConcreteCmd =
+                    case symbolicCmd of
+                        AddItem (Binding.Ok ( idx, val )) ->
+                            Just (b.addItem idx val)
+
+                        ModifyItem (Binding.Ok ( idx, val )) ->
+                            Just (b.modifyItem idx val)
+
+                        RemoveItem (Binding.Ok idx) ->
+                            Just (b.removeItem idx)
+
+                        _ ->
+                            Nothing
+
                 newCmd =
-                    Cmd.batch <|
-                        cmd
-                            :: case symbolicCmd of
-                                AddItem (Binding.Ok ( idx, val )) ->
-                                    [ b.addItem idx val ]
+                    case maybeConcreteCmd of
+                        Just concreteCmd ->
+                            Cmd.batch [ cmd, concreteCmd ]
 
-                                ModifyItem (Binding.Ok ( idx, val )) ->
-                                    [ b.modifyItem idx val ]
-
-                                RemoveItem (Binding.Ok idx) ->
-                                    [ b.removeItem idx ]
-
-                                _ ->
-                                    []
+                        Nothing ->
+                            cmd
             in
                 ( newModel, newCmd, () )
     , subscriptions =
