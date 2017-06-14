@@ -197,10 +197,10 @@ listBinding boundId =
     , modifyItem = \i m -> DataManager.modifyItemCmd boundId i m
     , removeItem = \i -> DataManager.removeItemCmd boundId i
     , getFullList =
-        \f ->
+        \buildMsg ->
             DataManager.getDataSub
                 (\id _ maybeObj path ->
-                    f <|
+                    buildMsg <|
                         filterIrrelevant (id == boundId && path == []) <|
                             case maybeObj of
                                 Result.Ok (MultipleData datas) ->
@@ -282,28 +282,28 @@ makeListBindingWrapper in2out out2in w =
                         w.subscriptions model
 
                     newInfo =
-                        { itemAdded = msgOfBindingRes info.itemAdded msgOfItemValue
-                        , itemModified = msgOfBindingRes info.itemModified msgOfItemValue
+                        { itemAdded = \itemDesc -> msgOfBindingRes info.itemAdded msgOfItemValue itemDesc
+                        , itemModified = \itemDesc -> msgOfBindingRes info.itemModified msgOfItemValue itemDesc
                         , itemRemoved =
-                            \res idxMap ->
-                                case res of
+                            \itemDesc idxMap ->
+                                case itemDesc of
                                     Binding.Ok i ->
                                         let
                                             newIdxMap =
                                                 IndexMapping.remove idxMap i
 
-                                            newRes =
+                                            translatedItemDesc =
                                                 Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
                                         in
-                                            ( info.itemRemoved newRes, newIdxMap )
+                                            ( info.itemRemoved translatedItemDesc, newIdxMap )
 
                                     _ ->
-                                        ( info.itemRemoved res, idxMap )
+                                        ( info.itemRemoved itemDesc, idxMap )
                         , getFullList =
                             msgOfBindingRes info.getFullList <|
-                                \mapper xs ->
+                                \mapper fullList ->
                                     let
-                                        ( newRes, idxMap, _ ) =
+                                        ( newFullList, idxMap, _ ) =
                                             List.foldr
                                                 (\outValue ( inValues, idxMap, i ) ->
                                                     case out2in outValue of
@@ -314,9 +314,9 @@ makeListBindingWrapper in2out out2in w =
                                                             ( inValues, IndexMapping.insertButSkip idxMap i, i + 1 )
                                                 )
                                                 ( [], IndexMapping.empty, 0 )
-                                                xs
+                                                fullList
                                     in
-                                        \_ -> ( mapper (Binding.Ok newRes), idxMap )
+                                        \_ -> ( mapper (Binding.Ok newFullList), idxMap )
                         }
                 in
                     ( Sub.map trivialMsg sub, newInfo )
