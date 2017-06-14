@@ -268,22 +268,22 @@ makeListBindingWrapper in2out out2in w =
                     ( subMsg, newIdxMap ) =
                         msg idxMap
 
-                    ( newModel, cmd, info ) =
+                    ( newModel, cmd, symbolicCmd ) =
                         w.update subMsg model
 
-                    newInfo =
-                        mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) info
+                    newSymbolicCmd =
+                        mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) symbolicCmd
                 in
-                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapSymbolicCmd in2out newInfo )
+                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapSymbolicCmd in2out newSymbolicCmd )
         , subscriptions =
             \( model, _ ) ->
                 let
-                    ( sub, info ) =
+                    ( sub, symbolicSub ) =
                         w.subscriptions model
 
-                    newInfo =
-                        { itemAdded = \itemDesc -> msgOfBindingRes info.itemAdded msgOfItemValue itemDesc
-                        , itemModified = \itemDesc -> msgOfBindingRes info.itemModified msgOfItemValue itemDesc
+                    newSymbolicSub =
+                        { itemAdded = \itemDesc -> msgOfBindingRes symbolicSub.itemAdded msgOfItemValue itemDesc
+                        , itemModified = \itemDesc -> msgOfBindingRes symbolicSub.itemModified msgOfItemValue itemDesc
                         , itemRemoved =
                             \itemDesc idxMap ->
                                 case itemDesc of
@@ -295,12 +295,12 @@ makeListBindingWrapper in2out out2in w =
                                             translatedItemDesc =
                                                 Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
                                         in
-                                            ( info.itemRemoved translatedItemDesc, newIdxMap )
+                                            ( symbolicSub.itemRemoved translatedItemDesc, newIdxMap )
 
                                     _ ->
-                                        ( info.itemRemoved itemDesc, idxMap )
+                                        ( symbolicSub.itemRemoved itemDesc, idxMap )
                         , getFullList =
-                            msgOfBindingRes info.getFullList <|
+                            msgOfBindingRes symbolicSub.getFullList <|
                                 \mapper fullList ->
                                     let
                                         ( newFullList, idxMap, _ ) =
@@ -319,7 +319,7 @@ makeListBindingWrapper in2out out2in w =
                                         \_ -> ( mapper (Binding.Ok newFullList), idxMap )
                         }
                 in
-                    ( Sub.map trivialMsg sub, newInfo )
+                    ( Sub.map trivialMsg sub, newSymbolicSub )
         , view = \( model, _ ) -> Html.map trivialMsg (w.view model)
         }
 
