@@ -17,7 +17,7 @@ mapIndexValueResult out2in =
     Binding.andThen (\( i, v ) -> Binding.map (\n -> ( i, n )) (out2in v))
 
 
-type CollectionBindingUpInfo collectionPath carriedValue
+type CollectionBindingSymbolicCmd collectionPath carriedValue
     = AddItem (BindingResult ( collectionPath, carriedValue ))
     | RemoveItem (BindingResult collectionPath)
     | ModifyItem (BindingResult ( collectionPath, carriedValue ))
@@ -26,8 +26,8 @@ type CollectionBindingUpInfo collectionPath carriedValue
 
 mapCollectionPath :
     (collectionPath -> Maybe collectionPath)
-    -> CollectionBindingUpInfo collectionPath carriedValue
-    -> CollectionBindingUpInfo collectionPath carriedValue
+    -> CollectionBindingSymbolicCmd collectionPath carriedValue
+    -> CollectionBindingSymbolicCmd collectionPath carriedValue
 mapCollectionPath f info =
     let
         errMsg =
@@ -54,16 +54,16 @@ mapCollectionPath f info =
                 x
 
 
-doNothing : a -> ( a, Cmd msg, CollectionBindingUpInfo collectionPath carriedValue )
+doNothing : a -> ( a, Cmd msg, CollectionBindingSymbolicCmd collectionPath carriedValue )
 doNothing x =
     ( x, Cmd.none, DoNothing )
 
 
-mapUpInfo :
+mapSymbolicCmd :
     (carriedFromValue -> BindingResult carriedToValue)
-    -> CollectionBindingUpInfo collectionPath carriedFromValue
-    -> CollectionBindingUpInfo collectionPath carriedToValue
-mapUpInfo f i =
+    -> CollectionBindingSymbolicCmd collectionPath carriedFromValue
+    -> CollectionBindingSymbolicCmd collectionPath carriedToValue
+mapSymbolicCmd f i =
     case i of
         AddItem res ->
             AddItem (mapIndexValueResult f res)
@@ -87,7 +87,7 @@ type alias CollectionBindingSubInfo collectionPath carriedValue msg =
 
 
 type alias BoundCollectionWidget collectionPath model msg carriedValue =
-    Widget (CollectionBindingUpInfo collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+    Widget (CollectionBindingSymbolicCmd collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
 
 
 type alias BoundListWidget model msg carriedValue =
@@ -115,13 +115,13 @@ applyListBinding b w =
     , update =
         \msg model ->
             let
-                ( newModel, cmd, upInfo ) =
+                ( newModel, cmd, symbolicCmd ) =
                     w.update msg model
 
                 newCmd =
                     Cmd.batch <|
                         cmd
-                            :: case upInfo of
+                            :: case symbolicCmd of
                                 AddItem (Binding.Ok ( idx, val )) ->
                                     [ b.addItem idx val ]
 
@@ -309,7 +309,7 @@ makeListBindingWrapper in2out out2in w =
                     newInfo =
                         mapCollectionPath (\i -> IndexMapping.retrieve newIdxMap i) info
                 in
-                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapUpInfo in2out newInfo )
+                    ( ( newModel, newIdxMap ), Cmd.map trivialMsg cmd, mapSymbolicCmd in2out newInfo )
         , subscriptions =
             \( model, _ ) ->
                 let
