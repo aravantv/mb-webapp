@@ -1,5 +1,6 @@
 module CollectionBinding exposing (..)
 
+import Utils exposing (Index)
 import Binding exposing (BindingResult, alwaysOk, trivialErr)
 import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
 import Data exposing (AttributeValue(..), Data)
@@ -158,10 +159,6 @@ applyListBinding b w =
                 ( Sub.batch (sub :: concreteSubs), () )
     , view = w.view
     }
-
-
-type alias Index =
-    Int
 
 
 listBinding : DataID -> CollectionBinding Index msg Data.Data
