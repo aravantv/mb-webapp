@@ -230,7 +230,7 @@ makeListBindingWrapper in2out out2in w =
         trivialMsg m =
             \idxMap -> ( m, idxMap )
 
-        msgOfItemValue k ( i, s ) =
+        msgOfItemValue ( i, s ) =
             \idxMap ->
                 case out2in s of
                     Binding.Ok n ->
@@ -242,24 +242,27 @@ makeListBindingWrapper in2out out2in w =
                                 Binding.ofMaybe (IndexMapping.get newIdxMap i) "Index not found - please report"
                                     |> Binding.map (\j -> ( j, n ))
                         in
-                            ( k res, newIdxMap )
+                            ( res, newIdxMap )
 
                     Binding.Err err ->
-                        ( k (Binding.Err err), IndexMapping.insertButSkip idxMap i )
+                        ( (Binding.Err err), IndexMapping.insertButSkip idxMap i )
 
                     Binding.Irrelevant ->
-                        ( k Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
+                        ( Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
 
-        msgOfBindingRes k okCase res =
+        mapBindingRes f res =
             case res of
                 Binding.Ok v ->
-                    okCase k v
+                    f v
 
                 Binding.Err err ->
-                    trivialMsg (k (Binding.Err err))
+                    trivialMsg (Binding.Err err)
 
                 Binding.Irrelevant ->
-                    trivialMsg (k Binding.Irrelevant)
+                    trivialMsg Binding.Irrelevant
+
+        mapInnerMsg f ( innerMsg, idxMap ) =
+            ( f innerMsg, idxMap )
     in
         { init = ( ( modelOf w.init, IndexMapping.empty ), Cmd.map trivialMsg (cmdOf w.init) )
         , update =
@@ -282,41 +285,46 @@ makeListBindingWrapper in2out out2in w =
                         w.subscriptions model
 
                     newSymbolicSub =
-                        { itemAdded = \itemDesc -> msgOfBindingRes symbolicSub.itemAdded msgOfItemValue itemDesc
-                        , itemModified = \itemDesc -> msgOfBindingRes symbolicSub.itemModified msgOfItemValue itemDesc
+                        { itemAdded =
+                            \itemDesc idxMap ->
+                                mapInnerMsg symbolicSub.itemAdded <| mapBindingRes msgOfItemValue itemDesc idxMap
+                        , itemModified =
+                            \itemDesc idxMap ->
+                                mapInnerMsg symbolicSub.itemModified <| mapBindingRes msgOfItemValue itemDesc idxMap
                         , itemRemoved =
                             \itemDesc idxMap ->
-                                case itemDesc of
-                                    Binding.Ok i ->
-                                        let
-                                            newIdxMap =
-                                                IndexMapping.remove idxMap i
-
-                                            translatedItemDesc =
-                                                Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
-                                        in
-                                            ( symbolicSub.itemRemoved translatedItemDesc, newIdxMap )
-
-                                    _ ->
-                                        ( symbolicSub.itemRemoved itemDesc, idxMap )
+                                mapInnerMsg symbolicSub.itemRemoved <|
+                                    mapBindingRes
+                                        (\i idxMap ->
+                                            let
+                                                translatedItemDesc =
+                                                    Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
+                                            in
+                                                ( translatedItemDesc, IndexMapping.remove idxMap i )
+                                        )
+                                        itemDesc
+                                        idxMap
                         , getFullList =
-                            msgOfBindingRes symbolicSub.getFullList <|
-                                \mapper fullList ->
-                                    let
-                                        ( newFullList, idxMap, _ ) =
-                                            List.foldr
-                                                (\outValue ( inValues, idxMap, i ) ->
+                            \fullListDesc idxMap ->
+                                mapInnerMsg symbolicSub.getFullList <|
+                                    mapBindingRes
+                                        (\fullList _ ->
+                                            let
+                                                itemOut2In outValue ( acc, idxMap, i ) =
                                                     case out2in outValue of
                                                         Binding.Ok inValue ->
-                                                            ( inValue :: inValues, IndexMapping.insert idxMap i, i + 1 )
+                                                            ( inValue :: acc, IndexMapping.insert idxMap i, i + 1 )
 
                                                         _ ->
-                                                            ( inValues, IndexMapping.insertButSkip idxMap i, i + 1 )
-                                                )
-                                                ( [], IndexMapping.empty, 0 )
-                                                fullList
-                                    in
-                                        \_ -> ( mapper (Binding.Ok newFullList), idxMap )
+                                                            ( acc, IndexMapping.insertButSkip idxMap i, i + 1 )
+
+                                                ( newFullList, idxMap, _ ) =
+                                                    List.foldr itemOut2In ( [], IndexMapping.empty, 0 ) fullList
+                                            in
+                                                ( Binding.Ok newFullList, idxMap )
+                                        )
+                                        fullListDesc
+                                        idxMap
                         }
                 in
                     ( Sub.map trivialMsg sub, newSymbolicSub )
