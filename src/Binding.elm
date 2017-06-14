@@ -11,6 +11,11 @@ type BindingResult resType
     | Irrelevant
 
 
+trivialErr : String -> BindingResult resType
+trivialErr =
+    Err << trivialUnfulfillmentInfo
+
+
 alwaysOk : (t1 -> t2) -> (t1 -> BindingResult t2)
 alwaysOk f x =
     Ok (f x)
@@ -23,7 +28,7 @@ ofResult res =
             Ok v
 
         Result.Err err ->
-            Err (trivialUnfulfillmentInfo err)
+            trivialErr err
 
 
 map : (res1 -> res2) -> BindingResult res1 -> BindingResult res2
