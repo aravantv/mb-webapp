@@ -35,22 +35,10 @@ mapCollectionPath f info =
     in
         case info of
             AddItem (Binding.Ok ( p, v )) ->
-                AddItem <|
-                    case f p of
-                        Just newP ->
-                            Binding.Ok ( newP, v )
-
-                        Nothing ->
-                            trivialErr errMsg
+                AddItem (Binding.ofMaybe (f p) errMsg |> Binding.map (\fp -> ( fp, v )))
 
             RemoveItem (Binding.Ok p) ->
-                RemoveItem <|
-                    case f p of
-                        Just newP ->
-                            Binding.Ok newP
-
-                        Nothing ->
-                            trivialErr errMsg
+                RemoveItem (Binding.ofMaybe (f p) errMsg)
 
             x ->
                 x
@@ -186,12 +174,8 @@ listBinding boundId =
                                 Result.Ok (SingleData (Just obj)) ->
                                     case path of
                                         [ s ] ->
-                                            case String.toInt s of
-                                                Ok i ->
-                                                    Binding.Ok ( i, obj )
-
-                                                Err _ ->
-                                                    trivialErr "Path is not an index: please report"
+                                            Binding.ofMaybe (String.toInt s |> Result.toMaybe) "Path is not an index: please report"
+                                                |> Binding.map (\i -> ( i, obj ))
 
                                         _ ->
                                             Binding.Irrelevant
@@ -255,12 +239,8 @@ makeListBindingWrapper in2out out2in w =
                                 IndexMapping.insert idxMap i
 
                             res =
-                                case IndexMapping.get newIdxMap i of
-                                    Just j ->
-                                        Binding.Ok ( j, n )
-
-                                    Nothing ->
-                                        trivialErr "Index not found - please report"
+                                Binding.ofMaybe (IndexMapping.get newIdxMap i) "Index not found - please report"
+                                    |> Binding.map (\j -> ( j, n ))
                         in
                             ( k res, newIdxMap )
 
@@ -319,12 +299,7 @@ makeListBindingWrapper in2out out2in w =
                                                 IndexMapping.remove idxMap i
 
                                             newRes =
-                                                case IndexMapping.get idxMap i of
-                                                    Just j ->
-                                                        Binding.Ok j
-
-                                                    Nothing ->
-                                                        trivialErr "Index not found - please report"
+                                                Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
                                         in
                                             ( info.itemRemoved newRes, newIdxMap )
 
