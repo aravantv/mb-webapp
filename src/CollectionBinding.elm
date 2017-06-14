@@ -78,7 +78,7 @@ mapSymbolicCmd f i =
             DoNothing
 
 
-type alias CollectionBindingSubInfo collectionPath carriedValue msg =
+type alias CollectionBindingSymbolicSub collectionPath carriedValue msg =
     { itemAdded : BindingResult ( collectionPath, carriedValue ) -> msg
     , itemRemoved : BindingResult collectionPath -> msg
     , itemModified : BindingResult ( collectionPath, carriedValue ) -> msg
@@ -87,7 +87,7 @@ type alias CollectionBindingSubInfo collectionPath carriedValue msg =
 
 
 type alias BoundCollectionWidget collectionPath model msg carriedValue =
-    Widget (CollectionBindingSymbolicCmd collectionPath carriedValue) (CollectionBindingSubInfo collectionPath carriedValue msg) model msg
+    Widget (CollectionBindingSymbolicCmd collectionPath carriedValue) (CollectionBindingSymbolicSub collectionPath carriedValue msg) model msg
 
 
 type alias BoundListWidget model msg carriedValue =
@@ -138,18 +138,16 @@ applyListBinding b w =
     , subscriptions =
         \model ->
             let
-                ( sub, mapper ) =
+                ( sub, symbolicSub ) =
                     w.subscriptions model
+
+                concreteSubs =
+                    [ b.itemAdded symbolicSub.itemAdded
+                    , b.itemRemoved symbolicSub.itemRemoved
+                    , b.getFullList symbolicSub.getFullList
+                    ]
             in
-                ( Sub.batch
-                    (sub
-                        :: [ b.itemAdded mapper.itemAdded
-                           , b.itemRemoved mapper.itemRemoved
-                           , b.getFullList mapper.getFullList
-                           ]
-                    )
-                , ()
-                )
+                ( Sub.batch (sub :: concreteSubs), () )
     , view = w.view
     }
 
