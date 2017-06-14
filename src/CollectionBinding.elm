@@ -131,22 +131,10 @@ applyListBinding b w =
                         AddItem (Binding.Ok ( idx, val )) ->
                             Cmd.batch [ cmd, b.addItem idx val ]
 
-                        AddItem _ ->
-                            cmd
-
                         ModifyItem (Binding.Ok ( idx, val )) ->
                             Cmd.batch [ cmd, b.modifyItem idx val ]
 
-                        ModifyItem _ ->
-                            cmd
-
-                        RemoveItem (Binding.Ok idx) ->
-                            Cmd.batch [ cmd, b.removeItem idx ]
-
-                        RemoveItem _ ->
-                            cmd
-
-                        DoNothing ->
+                        _ ->
                             cmd
             in
                 ( newModel, newCmd :: cmdAcc )
