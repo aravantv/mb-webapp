@@ -1,7 +1,7 @@
 module CollectionBinding exposing (..)
 
 import Binding exposing (BindingResult, alwaysOk, trivialErr)
-import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
+import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo)
 import Data exposing (AttributeValue(..), Data)
 import DataManager exposing (DataID)
 import Html exposing (sub)
@@ -337,7 +337,7 @@ makeListBindingWrapper in2out out2in w =
                                                         Binding.Ok j
 
                                                     Nothing ->
-                                                        Binding.Err <| trivialUnfulfillmentInfo "Index not found - please report"
+                                                        trivialErr "Index not found - please report"
                                         in
                                             ( info.itemRemoved newRes, newIdxMap )
 
@@ -389,7 +389,7 @@ stringOfData d =
             Binding.Ok s
 
         _ ->
-            Binding.Err (trivialUnfulfillmentInfo "Not a string")
+            trivialErr "Not a string"
 
 
 dataOfStringBindingWrapper :
@@ -413,7 +413,7 @@ intOfData d =
             Binding.Ok n
 
         _ ->
-            Binding.Err (trivialUnfulfillmentInfo "Not an integer")
+            trivialErr "Not an integer"
 
 
 dataOfIntBindingWrapper :
@@ -440,6 +440,6 @@ makeListBindingFilter p =
             if p v then
                 Binding.Ok v
             else
-                Binding.Err <| trivialUnfulfillmentInfo "makeListBindingFilter: filter not satisfied"
+                trivialErr "makeListBindingFilter: filter not satisfied"
     in
         makeListBindingWrapper Binding.Ok filter
