@@ -165,10 +165,10 @@ type alias Index =
 listBinding : DataID -> CollectionBinding Index msg Data.Data
 listBinding boundId =
     { itemAdded =
-        \f ->
+        \buildMsg ->
             DataManager.itemAddedSub
                 (\collectionID i maybeObj ->
-                    f
+                    buildMsg
                         (if collectionID == boundId then
                             case maybeObj of
                                 Result.Ok obj ->
@@ -181,10 +181,10 @@ listBinding boundId =
                         )
                 )
     , itemModified =
-        \f ->
+        \buildMsg ->
             DataManager.getDataSub
                 (\id _ maybeObj path ->
-                    f
+                    buildMsg
                         (if id == boundId then
                             case maybeObj of
                                 Result.Ok (SingleData (Just obj)) ->
@@ -210,10 +210,10 @@ listBinding boundId =
                         )
                 )
     , itemRemoved =
-        \f ->
+        \buildMsg ->
             DataManager.itemRemovedSub
                 (\collectionID i ->
-                    f
+                    buildMsg
                         (if collectionID == boundId then
                             Binding.Ok i
                          else
