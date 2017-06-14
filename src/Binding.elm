@@ -29,6 +29,16 @@ alwaysOk f x =
     Ok (f x)
 
 
+ofMaybe : Maybe res -> String -> BindingResult res
+ofMaybe maybe err =
+    case maybe of
+        Just v ->
+            Ok v
+
+        Nothing ->
+            trivialErr err
+
+
 ofResult : Result String res -> BindingResult res
 ofResult res =
     case res of
