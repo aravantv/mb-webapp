@@ -75,27 +75,27 @@ andThen f res =
             Irrelevant
 
 
-type BindingUpInfo carriedValue
+type BindingSymbolicCmd carriedValue
     = Set (BindingResult carriedValue)
     | DoNothing
 
 
-type alias BindingSubInfo carriedValue msg =
+type alias BindingSymbolicSub carriedValue msg =
     BindingResult carriedValue -> msg
 
 
-doNothing : a -> ( a, Cmd msg, BindingUpInfo carriedValue )
+doNothing : a -> ( a, Cmd msg, BindingSymbolicCmd carriedValue )
 doNothing x =
     ( x, Cmd.none, DoNothing )
 
 
-set : a -> carriedValue -> ( a, Cmd msg, BindingUpInfo carriedValue )
+set : a -> carriedValue -> ( a, Cmd msg, BindingSymbolicCmd carriedValue )
 set x v =
     ( x, Cmd.none, Set (Ok v) )
 
 
 type alias BoundWidget model msg carriedValue =
-    Widget (BindingUpInfo carriedValue) (BindingSubInfo carriedValue msg) model msg
+    Widget (BindingSymbolicCmd carriedValue) (BindingSymbolicSub carriedValue msg) model msg
 
 
 type alias Binding msg carriedValue =
@@ -114,11 +114,11 @@ applyBinding b w =
     , update =
         \msg model ->
             let
-                ( newModel, cmd, upInfo ) =
+                ( newModel, cmd, symbolicCmd ) =
                     w.update msg model
 
                 newCmd =
-                    case upInfo of
+                    case symbolicCmd of
                         Set (Ok v) ->
                             Cmd.batch [ cmd, b.set v ]
 
@@ -129,10 +129,10 @@ applyBinding b w =
     , subscriptions =
         \model ->
             let
-                ( sub, mapper ) =
+                ( sub, symbolicSub ) =
                     w.subscriptions model
             in
-                ( Sub.batch [ sub, b.get mapper ], () )
+                ( Sub.batch [ sub, b.get symbolicSub ], () )
     , view = w.view
     }
 
@@ -164,8 +164,8 @@ makeBindingWrapper :
     -> BoundWidget model msg outerCarriedValue
 makeBindingWrapper in2out out2in =
     let
-        in2outUp upInfo =
-            case upInfo of
+        in2outUp symbolicCmd =
+            case symbolicCmd of
                 Set v ->
                     case map in2out v of
                         Ok res ->
@@ -177,7 +177,7 @@ makeBindingWrapper in2out out2in =
                 DoNothing ->
                     DoNothing
     in
-        mapParamsUp in2outUp << mapParamsSub (\subInfo -> subInfo << andThen out2in)
+        mapParamsUp in2outUp << mapParamsSub (\symbolicSub -> symbolicSub << andThen out2in)
 
 
 stringOfIntWrapper :
