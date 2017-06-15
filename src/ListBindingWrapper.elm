@@ -4,12 +4,61 @@ import Binding exposing (BindingResult, alwaysOk, filterIrrelevant, trivialErr)
 import CollectionBinding exposing (BoundListWidget, mapCollectionPath, mapSymbolicCmd)
 import Data exposing (AttributeValue(..), Data)
 import Html exposing (sub)
-import IndexMapping exposing (IndexMapping)
+import IndexMapping exposing (IndexMapping, Index)
 import Widget exposing (TopWidget, Widget, cmdOf, cmdOfMsg, mapParamsSub, mapParamsUp, modelOf)
 
 
-type alias WrappedBoundListWidget model msg carriedValue =
-    BoundListWidget ( model, IndexMapping ) (IndexMapping -> ( msg, IndexMapping )) carriedValue
+type alias Msg wrappedMsg =
+    IndexMapping -> ( wrappedMsg, IndexMapping )
+
+
+trivialMsg : wrappedMsg -> Msg wrappedMsg
+trivialMsg m =
+    \idxMap -> ( m, idxMap )
+
+
+mapWrappedMsg : (wrappedMsg1 -> wrappedMsg2) -> Msg wrappedMsg1 -> Msg wrappedMsg2
+mapWrappedMsg f msg idxMap =
+    let
+        ( innerMsg, newIdxMap ) =
+            msg idxMap
+    in
+        ( f innerMsg, idxMap )
+
+
+type alias Model wrappedModel =
+    ( wrappedModel, IndexMapping )
+
+
+getTranslatedIndex : IndexMapping -> Index -> BindingResult Index
+getTranslatedIndex idxMap i =
+    Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
+
+
+type alias Item carriedValue =
+    ( Index, carriedValue )
+
+
+getTranslatedItem : IndexMapping -> Item carriedValue -> BindingResult (Item carriedValue)
+getTranslatedItem idxMap ( i, v ) =
+    getTranslatedIndex idxMap i |> Binding.map (\j -> ( j, v ))
+
+
+type alias WrappedBoundListWidget wrappedModel wrappedMsg carriedValue =
+    BoundListWidget (Model wrappedModel) (Msg wrappedMsg) carriedValue
+
+
+mapBindingRes : (a -> Msg (BindingResult resType)) -> BindingResult a -> Msg (BindingResult resType)
+mapBindingRes f res =
+    case res of
+        Binding.Ok v ->
+            f v
+
+        Binding.Err err ->
+            trivialMsg (Binding.Err err)
+
+        Binding.Irrelevant ->
+            trivialMsg Binding.Irrelevant
 
 
 makeListBindingWrapper :
@@ -19,18 +68,7 @@ makeListBindingWrapper :
     -> WrappedBoundListWidget innerModel innerMsg outCarriedValue
 makeListBindingWrapper in2out out2in w =
     let
-        trivialMsg m =
-            \idxMap -> ( m, idxMap )
-
-        getTranslatedIndex idxMap i =
-            Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
-
-        getTranslatedItem idxMap ( i, v ) =
-            getTranslatedIndex idxMap i |> Binding.map (\j -> ( j, v ))
-
-        -- NEXT: séparer la fonction suivante entre traitement de l'indice et traitement de l'idxMap?
-        -- définir des sous-fonctions pour chaque cas: modified/added/removed...
-        msgOfItemValue ( i, outVal ) =
+        msgOfAddedItem ( i, outVal ) =
             \idxMap ->
                 case out2in outVal of
                     Binding.Ok inVal ->
@@ -46,19 +84,37 @@ makeListBindingWrapper in2out out2in w =
                     Binding.Irrelevant ->
                         ( Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
 
-        mapBindingRes f res =
-            case res of
-                Binding.Ok v ->
-                    f v
+        msgOfModifiedItem ( i, outVal ) =
+            \idxMap ->
+                case out2in outVal of
+                    Binding.Ok inVal ->
+                        ( getTranslatedItem idxMap ( i, inVal ), idxMap )
 
-                Binding.Err err ->
-                    trivialMsg (Binding.Err err)
+                    Binding.Err err ->
+                        ( (Binding.Err err), IndexMapping.insertButSkip idxMap i )
 
-                Binding.Irrelevant ->
-                    trivialMsg Binding.Irrelevant
+                    Binding.Irrelevant ->
+                        ( Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
 
-        mapInnerMsg f ( innerMsg, idxMap ) =
-            ( f innerMsg, idxMap )
+        msgOfRemovedIndex i =
+            \idxMap ->
+                ( getTranslatedIndex idxMap i, IndexMapping.remove idxMap i )
+
+        msgOfFullList fullList =
+            \_ ->
+                let
+                    itemOut2In outValue ( acc, idxMap, i ) =
+                        case out2in outValue of
+                            Binding.Ok inValue ->
+                                ( inValue :: acc, IndexMapping.insert idxMap i, i + 1 )
+
+                            _ ->
+                                ( acc, IndexMapping.insertButSkip idxMap i, i + 1 )
+
+                    ( newFullList, idxMap, _ ) =
+                        List.foldr itemOut2In ( [], IndexMapping.empty, 0 ) fullList
+                in
+                    ( Binding.Ok newFullList, idxMap )
     in
         { init = ( ( modelOf w.init, IndexMapping.empty ), Cmd.map trivialMsg (cmdOf w.init) )
         , update =
@@ -82,41 +138,17 @@ makeListBindingWrapper in2out out2in w =
 
                     newSymbolicSub =
                         { itemAdded =
-                            \itemDesc idxMap ->
-                                mapInnerMsg symbolicSub.itemAdded <| mapBindingRes msgOfItemValue itemDesc idxMap
+                            \resultItem ->
+                                mapWrappedMsg symbolicSub.itemAdded <| mapBindingRes msgOfAddedItem resultItem
                         , itemModified =
-                            \itemDesc idxMap ->
-                                mapInnerMsg symbolicSub.itemModified <| mapBindingRes msgOfItemValue itemDesc idxMap
+                            \resultItem ->
+                                mapWrappedMsg symbolicSub.itemModified <| mapBindingRes msgOfModifiedItem resultItem
                         , itemRemoved =
-                            \itemDesc idxMap ->
-                                mapInnerMsg symbolicSub.itemRemoved <|
-                                    mapBindingRes
-                                        (\i idxMap ->
-                                            ( getTranslatedIndex idxMap i, IndexMapping.remove idxMap i )
-                                        )
-                                        itemDesc
-                                        idxMap
+                            \resultIndex ->
+                                mapWrappedMsg symbolicSub.itemRemoved <| mapBindingRes msgOfRemovedIndex resultIndex
                         , getFullList =
-                            \fullListDesc idxMap ->
-                                mapInnerMsg symbolicSub.getFullList <|
-                                    mapBindingRes
-                                        (\fullList _ ->
-                                            let
-                                                itemOut2In outValue ( acc, idxMap, i ) =
-                                                    case out2in outValue of
-                                                        Binding.Ok inValue ->
-                                                            ( inValue :: acc, IndexMapping.insert idxMap i, i + 1 )
-
-                                                        _ ->
-                                                            ( acc, IndexMapping.insertButSkip idxMap i, i + 1 )
-
-                                                ( newFullList, idxMap, _ ) =
-                                                    List.foldr itemOut2In ( [], IndexMapping.empty, 0 ) fullList
-                                            in
-                                                ( Binding.Ok newFullList, idxMap )
-                                        )
-                                        fullListDesc
-                                        idxMap
+                            \resultFullList ->
+                                mapWrappedMsg symbolicSub.getFullList <| mapBindingRes msgOfFullList resultFullList
                         }
                 in
                     ( Sub.map trivialMsg sub, newSymbolicSub )
