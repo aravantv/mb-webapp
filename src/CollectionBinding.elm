@@ -230,19 +230,23 @@ makeListBindingWrapper in2out out2in w =
         trivialMsg m =
             \idxMap -> ( m, idxMap )
 
-        msgOfItemValue ( i, s ) =
+        getTranslatedIndex idxMap i =
+            Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
+
+        getTranslatedItem idxMap ( i, v ) =
+            getTranslatedIndex idxMap i |> Binding.map (\j -> ( j, v ))
+
+        -- NEXT: séparer la fonction suivante entre traitement de l'indice et traitement de l'idxMap?
+        -- définir des sous-fonctions pour chaque cas: modified/added/removed...
+        msgOfItemValue ( i, outVal ) =
             \idxMap ->
-                case out2in s of
-                    Binding.Ok n ->
+                case out2in outVal of
+                    Binding.Ok inVal ->
                         let
                             newIdxMap =
                                 IndexMapping.insert idxMap i
-
-                            res =
-                                Binding.ofMaybe (IndexMapping.get newIdxMap i) "Index not found - please report"
-                                    |> Binding.map (\j -> ( j, n ))
                         in
-                            ( res, newIdxMap )
+                            ( getTranslatedItem newIdxMap ( i, inVal ), newIdxMap )
 
                     Binding.Err err ->
                         ( (Binding.Err err), IndexMapping.insertButSkip idxMap i )
@@ -296,11 +300,7 @@ makeListBindingWrapper in2out out2in w =
                                 mapInnerMsg symbolicSub.itemRemoved <|
                                     mapBindingRes
                                         (\i idxMap ->
-                                            let
-                                                translatedItemDesc =
-                                                    Binding.ofMaybe (IndexMapping.get idxMap i) "Index not found - please report"
-                                            in
-                                                ( translatedItemDesc, IndexMapping.remove idxMap i )
+                                            ( getTranslatedIndex idxMap i, IndexMapping.remove idxMap i )
                                         )
                                         itemDesc
                                         idxMap
