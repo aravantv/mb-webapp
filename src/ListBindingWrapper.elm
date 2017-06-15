@@ -86,15 +86,25 @@ makeListBindingWrapper in2out out2in w =
 
         msgOfModifiedItem ( i, outVal ) =
             \idxMap ->
-                case out2in outVal of
-                    Binding.Ok inVal ->
-                        ( getTranslatedItem idxMap ( i, inVal ), idxMap )
+                case ( out2in outVal, IndexMapping.get idxMap i ) of
+                    ( Binding.Ok inVal, Just j ) ->
+                        ( Binding.Ok ( j, inVal ), idxMap )
 
-                    Binding.Err err ->
-                        ( Binding.Err err, IndexMapping.insertButSkip idxMap i )
+                    ( Binding.Ok inVal, Nothing ) ->
+                        let
+                            ( newIdxMap, newIdx ) =
+                                IndexMapping.insertAndGet idxMap i
+                        in
+                            ( Binding.Ok ( newIdx, inVal ), newIdxMap )
 
-                    Binding.Irrelevant ->
-                        ( Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
+                    ( Binding.Err err, Nothing ) ->
+                        ( Binding.Err err, idxMap )
+
+                    ( Binding.Err err, Just _ ) ->
+                        ( Binding.Err err, IndexMapping.remove idxMap i )
+
+                    ( Binding.Irrelevant, _ ) ->
+                        ( Binding.Irrelevant, idxMap )
 
         msgOfRemovedIndex i =
             \idxMap ->
