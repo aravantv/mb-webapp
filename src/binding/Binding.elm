@@ -1,7 +1,6 @@
 module Binding exposing (..)
 
-import BindingResult exposing (BindingResult)
-import ConstraintUtils exposing (Fixes(..), UnfulfillmentInfo, trivialUnfulfillmentInfo)
+import BindingResult exposing (BindingResult(..))
 import DataManager exposing (DataID)
 import Widget exposing (ISelectable, Index, Widget, cmdOf, mapParamsSub, mapParamsUp, modelOf)
 
@@ -22,7 +21,7 @@ doNothing x =
 
 set : a -> carriedValue -> ( a, Cmd msg, BindingSymbolicCmd carriedValue )
 set x v =
-    ( x, Cmd.none, Set (Ok v) )
+    ( x, Cmd.none, Set (BindingResult.Ok v) )
 
 
 type alias BoundWidget model msg carriedValue =
@@ -50,7 +49,7 @@ applyBinding b w =
 
                 newCmd =
                     case symbolicCmd of
-                        Set (Ok v) ->
+                        Set (BindingResult.Ok v) ->
                             Cmd.batch [ cmd, b.set v ]
 
                         _ ->
@@ -77,9 +76,9 @@ textBinding boundId =
                     let
                         res =
                             if id == boundId then
-                                Ok s
+                                BindingResult.Ok s
                             else
-                                Irrelevant
+                                BindingResult.Irrelevant
                     in
                         f res
                 )
@@ -98,8 +97,8 @@ makeBindingWrapper in2out out2in =
         in2outUp symbolicCmd =
             case symbolicCmd of
                 Set v ->
-                    case map in2out v of
-                        Ok res ->
+                    case BindingResult.map in2out v of
+                        BindingResult.Ok res ->
                             Set res
 
                         _ ->
@@ -108,25 +107,25 @@ makeBindingWrapper in2out out2in =
                 DoNothing ->
                     DoNothing
     in
-        mapParamsUp in2outUp << mapParamsSub (\symbolicSub -> symbolicSub << andThen out2in)
+        mapParamsUp in2outUp << mapParamsSub (\symbolicSub -> symbolicSub << BindingResult.andThen out2in)
 
 
 stringOfIntWrapper :
     BoundWidget model msg Int
     -> BoundWidget model msg String
 stringOfIntWrapper =
-    makeBindingWrapper (alwaysOk toString) (ofResult << String.toInt)
+    makeBindingWrapper (BindingResult.alwaysOk toString) (BindingResult.ofResult << String.toInt)
 
 
 intOfStringWrapper :
     BoundWidget model msg String
     -> BoundWidget model msg Int
 intOfStringWrapper =
-    makeBindingWrapper (ofResult << String.toInt) (alwaysOk toString)
+    makeBindingWrapper (BindingResult.ofResult << String.toInt) (BindingResult.alwaysOk toString)
 
 
 minus2Wrapper :
     BoundWidget model msg Int
     -> BoundWidget model msg Int
 minus2Wrapper =
-    makeBindingWrapper (alwaysOk (\n -> n + 2)) (alwaysOk (\n -> n - 2))
+    makeBindingWrapper (BindingResult.alwaysOk (\n -> n + 2)) (BindingResult.alwaysOk (\n -> n - 2))
