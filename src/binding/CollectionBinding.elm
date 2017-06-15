@@ -1,6 +1,6 @@
 module CollectionBinding exposing (..)
 
-import Binding exposing (BindingResult, alwaysOk, filterIrrelevant, trivialErr)
+import BindingResult exposing (BindingResult, alwaysOk, filterIrrelevant, trivialErr)
 import Data exposing (AttributeValue(..), Data)
 import DataManager exposing (DataID)
 import Utils exposing (Index)
@@ -12,7 +12,7 @@ mapIndexValueResult :
     -> BindingResult ( collectionPath, fromValue )
     -> BindingResult ( collectionPath, toValue )
 mapIndexValueResult out2in =
-    Binding.andThen (\( i, v ) -> Binding.map (\n -> ( i, n )) (out2in v))
+    BindingResult.andThen (\( i, v ) -> BindingResult.map (\n -> ( i, n )) (out2in v))
 
 
 type CollectionBindingSymbolicCmd collectionPath carriedValue
@@ -32,11 +32,11 @@ mapCollectionPath f info =
             "mapCollectionPath: collectionPath could not be transformed"
     in
         case info of
-            AddItem (Binding.Ok ( p, v )) ->
-                AddItem (Binding.ofMaybe (f p) errMsg |> Binding.map (\fp -> ( fp, v )))
+            AddItem (BindingResult.Ok ( p, v )) ->
+                AddItem (BindingResult.ofMaybe (f p) errMsg |> BindingResult.map (\fp -> ( fp, v )))
 
-            RemoveItem (Binding.Ok p) ->
-                RemoveItem (Binding.ofMaybe (f p) errMsg)
+            RemoveItem (BindingResult.Ok p) ->
+                RemoveItem (BindingResult.ofMaybe (f p) errMsg)
 
             x ->
                 x
@@ -108,13 +108,13 @@ applyListBinding b w =
 
                 maybeConcreteCmd =
                     case symbolicCmd of
-                        AddItem (Binding.Ok ( idx, val )) ->
+                        AddItem (BindingResult.Ok ( idx, val )) ->
                             Just (b.addItem idx val)
 
-                        ModifyItem (Binding.Ok ( idx, val )) ->
+                        ModifyItem (BindingResult.Ok ( idx, val )) ->
                             Just (b.modifyItem idx val)
 
-                        RemoveItem (Binding.Ok idx) ->
+                        RemoveItem (BindingResult.Ok idx) ->
                             Just (b.removeItem idx)
 
                         _ ->
@@ -156,7 +156,7 @@ listBinding boundId =
                         (filterIrrelevant (collectionID == boundId) <|
                             case maybeObj of
                                 Result.Ok obj ->
-                                    Binding.Ok ( i, obj )
+                                    BindingResult.Ok ( i, obj )
 
                                 Result.Err err ->
                                     trivialErr err
@@ -172,11 +172,11 @@ listBinding boundId =
                                 Result.Ok (SingleData (Just obj)) ->
                                     case path of
                                         [ s ] ->
-                                            Binding.ofMaybe (String.toInt s |> Result.toMaybe) "Path is not an index: please report"
-                                                |> Binding.map (\i -> ( i, obj ))
+                                            BindingResult.ofMaybe (String.toInt s |> Result.toMaybe) "Path is not an index: please report"
+                                                |> BindingResult.map (\i -> ( i, obj ))
 
                                         _ ->
-                                            Binding.Irrelevant
+                                            BindingResult.Irrelevant
 
                                 Result.Ok _ ->
                                     trivialErr "A list was expected but the storage contains something else: please report"
@@ -184,13 +184,13 @@ listBinding boundId =
                                 Result.Err err ->
                                     trivialErr err
                          else
-                            Binding.Irrelevant
+                            BindingResult.Irrelevant
                         )
                 )
     , itemRemoved =
         \buildMsg ->
             DataManager.itemRemovedSub
-                (\collectionID i -> buildMsg (filterIrrelevant (collectionID == boundId) (Binding.Ok i)))
+                (\collectionID i -> buildMsg (filterIrrelevant (collectionID == boundId) (BindingResult.Ok i)))
     , addItem = \i m -> DataManager.addItemCmd boundId i m
     , modifyItem = \i m -> DataManager.modifyItemCmd boundId i m
     , removeItem = \i -> DataManager.removeItemCmd boundId i
@@ -202,7 +202,7 @@ listBinding boundId =
                         filterIrrelevant (id == boundId && path == []) <|
                             case maybeObj of
                                 Result.Ok (MultipleData datas) ->
-                                    Binding.Ok datas
+                                    BindingResult.Ok datas
 
                                 Result.Ok _ ->
                                     trivialErr "A list was expected but the storage contains something else: please report"
