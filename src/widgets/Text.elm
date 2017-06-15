@@ -50,7 +50,7 @@ type Msg
     | NoOp
 
 
-update : Msg -> Model -> ( Model, Cmd Msg, BindingUpInfo String )
+update : Msg -> Model -> ( Model, Cmd Msg, BindingSymbolicCmd String )
 update msg model =
     case msg of
         UIChange newContent ->
@@ -87,7 +87,7 @@ update msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> ( Sub Msg, BindingSubInfo String Msg )
+subscriptions : Model -> ( Sub Msg, BindingSymbolicSub String Msg )
 subscriptions m =
     let
         f bindingRes =

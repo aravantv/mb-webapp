@@ -1,6 +1,6 @@
 module SelectableText exposing (..)
 
-import Binding exposing (Binding, BindingResult, BindingSubInfo, BindingUpInfo(..), BoundWidget, doNothing)
+import Binding exposing (Binding, BindingResult, BindingSymbolicSub, BindingUpInfo(..), BoundWidget, doNothing)
 import Html exposing (Html, input, label, span, text)
 import Html.Events exposing (onDoubleClick, onInput)
 import Text
@@ -95,7 +95,7 @@ update textWidget msg model =
 -- SUBSCRIPTIONS
 
 
-subscriptions : BoundWidget Text.Model Text.Msg String -> Model -> ( Sub Msg, BindingSubInfo String Msg )
+subscriptions : BoundWidget Text.Model Text.Msg String -> Model -> ( Sub Msg, BindingSymbolicSub String Msg )
 subscriptions textWidget m =
     let
         ( sub, subInfo ) =

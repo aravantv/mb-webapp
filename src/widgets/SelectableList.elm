@@ -1,7 +1,7 @@
 module SelectableList exposing (..)
 
 import Binding exposing (Binding)
-import CollectionBinding exposing (BoundCollectionWidget, CollectionBindingSubInfo, CollectionBindingUpInfo, CollectionBindingUpInfo(..), doNothing)
+import CollectionBinding exposing (BoundCollectionWidget, CollectionBindingSymbolicSub, CollectionBindingSymbolicCmd, CollectionBindingSymbolicCmd(..), doNothing)
 import Data exposing (Data)
 import DataManager exposing (DataID)
 import Html exposing (..)
@@ -12,7 +12,7 @@ import Widget exposing (Factory, IDecision, ISelectable, Index, Widget, cmdOf, c
 
 
 type alias ItemWidget model msg =
-    ISelectable model msg { makeWidget : DataID -> Widget () () model msg }
+    ISelectable model msg { widget : Widget () () model msg }
 
 
 type alias NewItemWidget model msg =
@@ -83,7 +83,7 @@ update :
     Parameters newItemModel itemModel newItemMsg itemMsg
     -> Msg newItemMsg itemMsg itemModel
     -> Model newItemModel itemModel
-    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel), CollectionBindingUpInfo Index Data )
+    -> ( Model newItemModel itemModel, Cmd (Msg newItemMsg itemMsg itemModel), CollectionBindingSymbolicCmd Index Data )
 update params msg model =
     case msg of
         Remove i ->
@@ -210,7 +210,7 @@ delegateUpdateToItem params contents ( itemIndex, itemMsg ) =
 subscriptions :
     Parameters newItemModel itemModel newItemMsg itemMsg
     -> Model newItemModel itemModel
-    -> ( Sub (Msg newItemMsg itemMsg itemModel), CollectionBindingSubInfo Index Data (Msg newItemMsg itemMsg itemModel) )
+    -> ( Sub (Msg newItemMsg itemMsg itemModel), CollectionBindingSymbolicSub Index Data (Msg newItemMsg itemMsg itemModel) )
 subscriptions params model =
     let
         itemSub i modelWithID =
