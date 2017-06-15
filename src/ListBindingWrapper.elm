@@ -73,10 +73,10 @@ makeListBindingWrapper in2out out2in w =
                 case out2in outVal of
                     Binding.Ok inVal ->
                         let
-                            newIdxMap =
-                                IndexMapping.insert idxMap i
+                            ( newIdxMap, newIdx ) =
+                                IndexMapping.insertAndGet idxMap i
                         in
-                            ( getTranslatedItem newIdxMap ( i, inVal ), newIdxMap )
+                            ( Binding.Ok ( newIdx, inVal ), newIdxMap )
 
                     Binding.Err err ->
                         ( (Binding.Err err), IndexMapping.insertButSkip idxMap i )
@@ -91,7 +91,7 @@ makeListBindingWrapper in2out out2in w =
                         ( getTranslatedItem idxMap ( i, inVal ), idxMap )
 
                     Binding.Err err ->
-                        ( (Binding.Err err), IndexMapping.insertButSkip idxMap i )
+                        ( Binding.Err err, IndexMapping.insertButSkip idxMap i )
 
                     Binding.Irrelevant ->
                         ( Binding.Irrelevant, IndexMapping.insertButSkip idxMap i )
