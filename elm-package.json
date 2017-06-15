@@ -6,7 +6,8 @@
     "source-directories": [
         "nesting",
         "src",
-        "src/widgets"
+        "src/widgets",
+        "src/binding"
     ],
     "exposed-modules": [],
     "dependencies": {
