@@ -85,6 +85,30 @@ get m i =
         indexedGet <| List.indexedMap (\i x -> ( x, i )) m
 
 
+{-| Combines [insert] and [get]: returns both the index map after insertion of index [i]
+as well as the resulting corresponding index.
+-}
+insertAndGet : IndexMapping -> Index -> ( IndexMapping, Index )
+insertAndGet m i =
+    let
+        indexedInsertAndGet m originalIdx =
+            case m of
+                [] ->
+                    ( [ i ], originalIdx )
+
+                j :: js ->
+                    if j < i then
+                        let
+                            ( newMap, resIdx ) =
+                                indexedInsertAndGet js (originalIdx + 1)
+                        in
+                            ( (j :: newMap), resIdx )
+                    else
+                        ( i :: List.map (\j -> j + 1) m, originalIdx )
+    in
+        indexedInsertAndGet m 0
+
+
 retrieve : IndexMapping -> Index -> Maybe Index
 retrieve m i =
     List.head (List.drop i m)
