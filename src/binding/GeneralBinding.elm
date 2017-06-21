@@ -21,7 +21,7 @@ type alias Path =
 type BindingSymbolicCmd carriedValue
     = Add (BindingResult ( Path, carriedValue ))
     | Remove (BindingResult Path)
-    | Modify (BindingResult ( Path, carriedValue ))
+    | Set (BindingResult ( Path, carriedValue ))
     | DoNothing
 
 
@@ -56,8 +56,8 @@ mapBindingSymbolicCmd f i =
         Add res ->
             Add (mapIndexValueResult f res)
 
-        Modify res ->
-            Modify (mapIndexValueResult f res)
+        Set res ->
+            Set (mapIndexValueResult f res)
 
         Remove res ->
             Remove res
@@ -69,7 +69,7 @@ mapBindingSymbolicCmd f i =
 type alias BindingSymbolicSub carriedValue msg =
     { added : BindingResult ( Path, carriedValue ) -> msg
     , removed : BindingResult Path -> msg
-    , modified : BindingResult ( Path, carriedValue ) -> msg
+    , get : BindingResult ( Path, carriedValue ) -> msg
     }
 
 
@@ -80,9 +80,9 @@ type alias BoundCollectionWidget model msg carriedValue =
 type alias Binding msg carriedValue =
     { addCmd : Path -> carriedValue -> Cmd msg
     , removeCmd : Path -> Cmd msg
-    , modifyCmd : Path -> carriedValue -> Cmd msg
+    , setCmd : Path -> carriedValue -> Cmd msg
     , addedSub : (BindingResult ( Path, carriedValue ) -> msg) -> Sub msg
-    , modifiedSub : (BindingResult ( Path, carriedValue ) -> msg) -> Sub msg
+    , getSub : (BindingResult ( Path, carriedValue ) -> msg) -> Sub msg
     , removedSub : (BindingResult Path -> msg) -> Sub msg
     , askCmd : Cmd msg
     }
@@ -102,8 +102,8 @@ applyBinding b w =
                         Add (BindingResult.Ok ( p, val )) ->
                             Just (b.addCmd p val)
 
-                        Modify (BindingResult.Ok ( p, val )) ->
-                            Just (b.modifyCmd p val)
+                        Set (BindingResult.Ok ( p, val )) ->
+                            Just (b.setCmd p val)
 
                         Remove (BindingResult.Ok p) ->
                             Just (b.removeCmd p)
@@ -152,7 +152,7 @@ listBinding boundId =
                                     trivialErr err
                         )
                 )
-    , modifiedSub =
+    , getSub =
         \buildMsg ->
             DataManager.getDataSub
                 (\id _ maybeObj path ->
@@ -182,7 +182,7 @@ listBinding boundId =
             DataManager.itemRemovedSub
                 (\collectionID i -> buildMsg (filterIrrelevant (collectionID == boundId) (BindingResult.Ok i)))
     , addCmd = \i m -> DataManager.addItemCmd boundId i m
-    , modifyCmd = \i m -> DataManager.modifyItemCmd boundId i m
+    , setCmd = \i m -> DataManager.setItemCmd boundId i m
     , removeCmd = \i -> DataManager.removeItemCmd boundId i
     , askCmd = DataManager.askDataCmd boundId
     }
