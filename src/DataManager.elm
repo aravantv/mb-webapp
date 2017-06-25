@@ -32,10 +32,6 @@ setStringCmd id s =
     LocalStorage.setStringCmd id s
 
 
-
--- NEXT: all ports are developed with list in mind, make them use paths
-
-
 addedSub : (DataID -> DataPath -> Result String Data -> msg) -> Sub msg
 addedSub f =
     LocalStorage.itemAddedSub f
