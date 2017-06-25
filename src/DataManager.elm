@@ -2,7 +2,6 @@ module DataManager exposing (..)
 
 import Data exposing (AttributeValue, Data(..))
 import LocalStorage
-import Utils exposing (Index)
 
 
 type alias DataID =
@@ -33,27 +32,31 @@ setStringCmd id s =
     LocalStorage.setStringCmd id s
 
 
-itemAddedSub : (DataID -> Index -> Result String Data -> msg) -> Sub msg
-itemAddedSub f =
+
+-- NEXT: all ports are developed with list in mind, make them use paths
+
+
+addedSub : (DataID -> DataPath -> Result String Data -> msg) -> Sub msg
+addedSub f =
     LocalStorage.itemAddedSub f
 
 
-itemRemovedSub : (DataID -> Index -> msg) -> Sub msg
-itemRemovedSub f =
+removedSub : (DataID -> DataPath -> msg) -> Sub msg
+removedSub f =
     LocalStorage.itemRemovedSub f
 
 
-addItemCmd : DataID -> Index -> Data -> Cmd msg
+addItemCmd : DataID -> DataPath -> Data -> Cmd msg
 addItemCmd id i d =
     LocalStorage.addItemCmd id i d
 
 
-modifyItemCmd : DataID -> Index -> Data -> Cmd msg
+modifyItemCmd : DataID -> DataPath -> Data -> Cmd msg
 modifyItemCmd id i d =
     LocalStorage.modifyItemCmd id i d
 
 
-removeItemCmd : DataID -> Index -> Cmd msg
+removeItemCmd : DataID -> DataPath -> Cmd msg
 removeItemCmd id i =
     LocalStorage.removeItemCmd id i
 

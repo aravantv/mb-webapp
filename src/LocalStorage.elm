@@ -19,7 +19,6 @@ import Data exposing (AttributeValue, Data, Object)
 import Json.Decode
 import Json.Encode
 import Platform.Sub
-import Utils exposing (Index)
 
 
 type alias DataID =
@@ -76,10 +75,10 @@ setStringCmd id s =
     setDataCmd id (Data.String s)
 
 
-port itemAddedSubPort : (( DataID, Index, Json.Encode.Value ) -> msg) -> Sub msg
+port itemAddedSubPort : (( DataID, DataPath, Json.Encode.Value ) -> msg) -> Sub msg
 
 
-itemAddedSub : (DataID -> Index -> Result String Data -> c) -> Sub c
+itemAddedSub : (DataID -> DataPath -> Result String Data -> c) -> Sub c
 itemAddedSub msgBuilder =
     let
         objOfJson json =
@@ -96,18 +95,18 @@ askDataCmd =
     askDataCmdPort
 
 
-port itemRemovedSubPort : (( DataID, Index ) -> msg) -> Sub msg
+port itemRemovedSubPort : (( DataID, DataPath ) -> msg) -> Sub msg
 
 
-itemRemovedSub : (DataID -> Index -> c) -> Sub c
+itemRemovedSub : (DataID -> DataPath -> c) -> Sub c
 itemRemovedSub msgBuilder =
     itemRemovedSubPort (\( id, i ) -> msgBuilder id i)
 
 
-port addItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
+port addItemCmdPort : ( DataID, DataPath, Json.Encode.Value ) -> Cmd msg
 
 
-addItemCmd : DataID -> Index -> Data -> Cmd mssg
+addItemCmd : DataID -> DataPath -> Data -> Cmd mssg
 addItemCmd id i d =
     addItemCmdPort ( id, i, Data.jsonOfData d )
 
@@ -120,17 +119,17 @@ subscribeCmd =
     subscribeCmdPort
 
 
-port modifyItemCmdPort : ( DataID, Index, Json.Encode.Value ) -> Cmd msg
+port modifyItemCmdPort : ( DataID, DataPath, Json.Encode.Value ) -> Cmd msg
 
 
-modifyItemCmd : DataID -> Index -> Data -> Cmd mssg
+modifyItemCmd : DataID -> DataPath -> Data -> Cmd mssg
 modifyItemCmd id i d =
     addItemCmdPort ( id, i, Data.jsonOfData d )
 
 
-port removeItemCmdPort : ( DataID, Index ) -> Cmd msg
+port removeItemCmdPort : ( DataID, DataPath ) -> Cmd msg
 
 
-removeItemCmd : DataID -> Index -> Cmd msg
+removeItemCmd : DataID -> DataPath -> Cmd msg
 removeItemCmd id i =
     removeItemCmdPort ( id, i )
