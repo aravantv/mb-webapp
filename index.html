@@ -176,6 +176,10 @@
 
     var mbwebapp = Elm.Main.fullscreen()
 
+    var ADDED = 1
+    var REMOVED = -1
+    var MODIFIED = 0
+
     mbwebapp.ports.subscribeCmdPort.subscribe(function(id) {
       updateParentIDs(id, null)
     })
@@ -187,9 +191,10 @@
 
     // Informs transitively all the parents of [id] which subscribed to changes.
     // Prevents possibly cyclic data structures (don't see any use case where it would happen but let's be protective).
-    function informParents(id, knownValue) {
+    function informParents(id, knownValue, eventType) {
       var alreadySeenIDs = []
       informParentsWithoutCycle(id, knownValue, [])
+      additionalInfo = eventType === ADDED ? knownValue : null
       function informParentsWithoutCycle(id, knownValue, currentPath) {
         if (parentIDs[id] && alreadySeenIDs.indexOf(id) === -1) {
           alreadySeenIDs.push(id)
@@ -200,7 +205,15 @@
             var shallowParentValue = getShallowObject(parentID)
             newPath = currentPath.slice()
             newPath.push(idParentIDs[parentID])
-            mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue, newPath])
+            if (eventType === MODIFIED) {
+              mbwebapp.ports.getDataSubPort.send([parentID, shallowParentValue, parentValue, newPath])
+            }
+            if (eventType === ADDED) {
+              mbwebapp.ports.itemAddedSubPort.send([parentID, newPath, additionalInfo])
+            }
+            if (eventType === REMOVED) {
+              mbwebapp.ports.itemRemovedSubPort.send([parentID, newPath])
+            }
             informParentsWithoutCycle(parentID, parentValue, newPath)
           })
         }
@@ -213,7 +226,7 @@
         var shallowValue = flattenObject(value, isListened(id) ? id : null)
         localStorage.setItem(id, JSON.stringify(shallowValue))
         mbwebapp.ports.getDataSubPort.send([id, shallowValue, value, []])
-        informParents(id, value)
+        informParents(id, value, MODIFIED)
     })
 
     // Shifts all the *paths* stored in [parentIDs] for every child of [parentID]
@@ -228,6 +241,9 @@
         }
       })
     }
+
+
+    // NEXT: all ports are developed with indexes in mind, make them use paths
 
     mbwebapp.ports.addItemCmdPort.subscribe(function (args) {
         var id = args[0]
@@ -244,8 +260,8 @@
           localStorage.setItem(valueId, JSON.stringify(shallowValue))
           valueAtId.splice(index, 0, valueId)
           localStorage.setItem(id, JSON.stringify(valueAtId))
-          mbwebapp.ports.itemAddedSubPort.send([id, index, value])
-          informParents(valueId, value)
+          mbwebapp.ports.itemAddedSubPort.send([id, [index], value])
+          informParents(valueId, value, ADDED)
         }
     })
 
@@ -258,9 +274,9 @@
       } else {
         valueAtId.splice(index,1)
         localStorage.setItem(id, JSON.stringify(valueAtId))
-        mbwebapp.ports.itemRemovedSubPort.send([id, index])
+        mbwebapp.ports.itemRemovedSubPort.send([id, [index]])
         shiftParentChildrenIDs(id, index, -1)
-        informParents(id, null)
+        informParents(id, null, REMOVED)
       }
     })
 </script>
